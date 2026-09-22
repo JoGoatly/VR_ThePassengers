@@ -36,9 +36,10 @@ Das Objekt `PSX Volume (Fog)` in der Szene nutzt das Profil `Assets/Environment/
 
 | Einstellung | Wert |
 |---|---|
-| Nebel beginnt / ist dicht bei | 4 m / 42 m (zylindrisch um die Kamera) |
+| Nebel beginnt / ist dicht bei | 1,5 m / 12 m (zylindrisch um die Kamera) |
 | Nebelfarbe (= Himmelfarbe) | fast schwarz |
-| Sichtweite (Geometrie wird danach ausgeblendet) | 55 m |
+| Sichtweite (Geometrie wird danach ausgeblendet) | 16 m |
+| PSX-Qualität (Hauptschalter für Licht, Nebel, Pixelung) | an, 480×270 |
 | Dynamisches Licht (Scheinwerfer, Laternen) | an, bis 8 Lichter pro Objekt |
 
 Weitere Overrides (Auflösung, Farbtiefe, CRT-Effekt, …) über **Add Override → HauntedPS1** im Profil.
