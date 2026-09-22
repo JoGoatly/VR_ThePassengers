@@ -132,7 +132,7 @@ public class BoardingManager : MonoBehaviour
     void HandleKeys()
     {
         var kb = Keyboard.current;
-        if (kb == null || GameUI.TerminalTyping) return;
+        if (kb == null || GameUI.TerminalTyping || GameUI.DialogueOpen) return;
 
         if (kb.eKey.wasPressedThisFrame && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
         if (PendingCard != null)
@@ -204,7 +204,7 @@ public class BoardingManager : MonoBehaviour
             "Na, egal. Hier, mein Ausweis. (E zum Ausblenden)",
             "Schauen Sie im Computer nach. Unter REGISTER meinen Namen eingeben.",
             "Geburtsdatum, Ausweisnummer, gültig bis... das muss alles genau stimmen.",
-            "Sie können mich auch etwas fragen. (1-5)",
+            "Sie können mich auch etwas fragen. (T)",
             "Was ich sage, sollte zum Register passen. Sonst stimmt was nicht mit mir.",
             "Wenn alles passt, lassen Sie mich rein. (J)",
             "Wenn nicht, schicken Sie mich weg. (N) Ich nehm's Ihnen nicht übel.",
@@ -584,7 +584,7 @@ public class BoardingManager : MonoBehaviour
                 prompt = "Fahrgast kommt zur Tür";
                 break;
             case Phase.AwaitingDecision:
-                prompt = "Ausweis prüfen, Fragen stellen [1-5]  -  Einlassen [J]   Abweisen [N]";
+                prompt = "Ausweis prüfen, Ansprechen [T]  -  Einlassen [J]   Abweisen [N]";
                 break;
             case Phase.PassengerEntering:
                 prompt = "Fahrgast steigt ein";

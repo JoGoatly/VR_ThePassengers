@@ -139,7 +139,7 @@ public class ComputerTerminal : MonoBehaviour
         UpdatePointer();
         var kb = Keyboard.current;
         var mouse = Mouse.current;
-        click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame;
+        click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen;
 
         if (typing && kb != null)
         {
