@@ -83,6 +83,9 @@ MonoBehaviour:
   m_Name: PrecisionVolume
   m_EditorClassIdentifier: 
   active: 1
+  affineTextureWarping:
+    m_OverrideState: 1
+    m_Value: 0.35
   drawDistanceFalloffMode:
     m_OverrideState: 1
     m_Value: 1
@@ -142,10 +145,10 @@ MonoBehaviour:
   active: 1
   targetRasterizationResolutionWidth:
     m_OverrideState: 1
-    m_Value: 480
+    m_Value: 640
   targetRasterizationResolutionHeight:
     m_OverrideState: 1
-    m_Value: 270
+    m_Value: 360
 --- !u!114 &3100000000000000007
 MonoBehaviour:
   m_ObjectHideFlags: 3
