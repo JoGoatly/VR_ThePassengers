@@ -1,5 +1,7 @@
+using HauntedPSX.RenderPipelines.PSX.Runtime;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Headlights (L: off -> low beam -> high beam -> off), tail lights and a dim,
@@ -18,7 +20,13 @@ public class BusLights : MonoBehaviour
     // HPSXRP lights fall off with 1/distance² and the colour is gamma-linearised (intensity^2.2),
     // so a headlight needs a high intensity to still light the road 15-30 m ahead.
     public float lowRange = 35f, lowAngle = 75f, lowIntensity = 15f, lowPitch = 6f;
-    public float highRange = 80f, highAngle = 40f, highIntensity = 34f, highPitch = 1.5f;
+    [Header("High beam")]
+    [Tooltip("Extra far lights placed this far ahead of the bus, so the road far away gets light without blinding the near field")]
+    public float farLightAhead = 12f;
+    public float farRange = 45f, farAngle = 34f, farIntensity = 22f, farPitch = 3f;
+    [Header("Fog per light mode (distance where the fog is opaque)")]
+    public float fogOff = 10f, fogLow = 12f, fogHigh = 24f;
+    public float drawOff = 14f, drawLow = 16f, drawHigh = 30f;
     public Material glowMaterial;
 
     [Header("Tail and cabin lights")]
@@ -29,13 +37,17 @@ public class BusLights : MonoBehaviour
     /// <summary>Raised when the mode changes (for the switch sound).</summary>
     public event System.Action<Mode> Switched;
 
-    Light left, right, tail, cabin;
+    Light left, right, farLeft, farRight, tail, cabin;
+    FogVolume fog;
+    PrecisionVolume precision;
     GameObject glowLeft, glowRight;
 
     void Awake()
     {
         left = CreateSpot("Headlight L", headlightLeft);
         right = CreateSpot("Headlight R", headlightRight);
+        farLeft = CreateSpot("High Beam L", headlightLeft + new Vector3(0f, 1.4f, farLightAhead));
+        farRight = CreateSpot("High Beam R", headlightRight + new Vector3(0f, 1.4f, farLightAhead));
         glowLeft = CreateGlow(headlightLeft);
         glowRight = CreateGlow(headlightRight);
 
@@ -83,6 +95,26 @@ public class BusLights : MonoBehaviour
         return go;
     }
 
+    void Start()
+    {
+        // Runtime copy of the volume profile, so the fog can follow the light mode.
+        var volume = FindAnyObjectByType<Volume>();
+        if (volume != null && volume.profile != null)
+        {
+            volume.profile.TryGet(out fog);
+            volume.profile.TryGet(out precision);
+        }
+    }
+
+    void LateUpdate()
+    {
+        float targetFog = mode == Mode.HighBeam ? fogHigh : mode == Mode.LowBeam ? fogLow : fogOff;
+        float targetDraw = mode == Mode.HighBeam ? drawHigh : mode == Mode.LowBeam ? drawLow : drawOff;
+        float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
+        if (fog != null) fog.distanceMax.value = Mathf.Lerp(fog.distanceMax.value, targetFog, k);
+        if (precision != null) precision.drawDistance.value = Mathf.Lerp(precision.drawDistance.value, targetDraw, k);
+    }
+
     void Update()
     {
         var kb = Keyboard.current;
@@ -98,13 +130,22 @@ public class BusLights : MonoBehaviour
     {
         bool on = mode != Mode.Off;
         bool high = mode == Mode.HighBeam;
+        // Low beam lights the near field in both modes; high beam adds far lights.
         foreach (var l in new[] { left, right })
         {
             l.enabled = on;
-            l.range = high ? highRange : lowRange;
-            l.spotAngle = high ? highAngle : lowAngle;
-            l.intensity = high ? highIntensity : lowIntensity;
-            l.transform.localRotation = Quaternion.Euler(high ? highPitch : lowPitch, 0f, 0f);
+            l.range = lowRange;
+            l.spotAngle = lowAngle;
+            l.intensity = lowIntensity;
+            l.transform.localRotation = Quaternion.Euler(lowPitch, 0f, 0f);
+        }
+        foreach (var l in new[] { farLeft, farRight })
+        {
+            l.enabled = high;
+            l.range = farRange;
+            l.spotAngle = farAngle;
+            l.intensity = farIntensity;
+            l.transform.localRotation = Quaternion.Euler(farPitch, 0f, 0f);
         }
         if (glowLeft) glowLeft.SetActive(on);
         if (glowRight) glowRight.SetActive(on);
