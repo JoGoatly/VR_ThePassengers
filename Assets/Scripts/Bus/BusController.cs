@@ -34,12 +34,12 @@ public class BusController : MonoBehaviour
     public float rollingDeceleration = 0.4f;
 
     [Header("Steering")]
-    [Tooltip("Maximum front wheel angle in degrees")]
+    [Tooltip("Maximum front wheel angle in degrees. Fixed lock, the steering wheel never turns further.")]
     public float maxSteerAngle = 38f;
-    [Tooltip("Maximum front wheel angle at top speed in degrees")]
-    public float maxSteerAngleAtTopSpeed = 12f;
-    [Tooltip("How fast the front wheels turn, degrees per second")]
+    [Tooltip("How fast the front wheels turn when standing still, degrees per second")]
     public float steerSpeed = 70f;
+    [Tooltip("How fast the front wheels turn at top speed, degrees per second")]
+    public float steerSpeedAtTopSpeed = 20f;
     [Tooltip("How fast the front wheels return to center, degrees per second")]
     public float steerReturnSpeed = 90f;
     [Tooltip("Steering wheel degrees per front wheel degree")]
@@ -67,6 +67,10 @@ public class BusController : MonoBehaviour
     public float Speed { get; private set; }
     public float SpeedKmh => Speed * 3.6f;
     public float SteerAngle => steerAngle;
+    /// <summary>Steering wheel rotation in degrees, positive = clockwise (right) as seen by the driver.</summary>
+    public float SteeringWheelTurn => steerAngle * steeringWheelRatio;
+    public float ThrottleInput => throttleInput;
+    public float BrakeInput => brakeInput;
 
     Rigidbody rb;
     float steerAngle;
@@ -288,12 +292,13 @@ public class BusController : MonoBehaviour
         speed = Mathf.Clamp(speed + accel * dt, -maxReverse, maxSpeed);
         Speed = speed;
 
-        // Less steering lock at high speed.
+        // Fixed steering lock; at high speed the wheel just turns more slowly.
         float speedFactor = Mathf.Clamp01(Mathf.Abs(speed) / maxSpeed);
-        float steerLimit = Mathf.Lerp(maxSteerAngle, maxSteerAngleAtTopSpeed, speedFactor);
-        float targetSteer = steerInput * steerLimit;
-        float rate = Mathf.Abs(targetSteer) < Mathf.Abs(steerAngle) ? steerReturnSpeed : steerSpeed;
-        steerAngle = Mathf.MoveTowards(steerAngle, targetSteer, rate * dt);
+        float targetSteer = steerInput * maxSteerAngle;
+        float rate = Mathf.Abs(targetSteer) < Mathf.Abs(steerAngle)
+            ? steerReturnSpeed
+            : Mathf.Lerp(steerSpeed, steerSpeedAtTopSpeed, speedFactor);
+        steerAngle = Mathf.Clamp(Mathf.MoveTowards(steerAngle, targetSteer, rate * dt), -maxSteerAngle, maxSteerAngle);
 
         // Bicycle model: yaw rate = v / L * tan(delta), rotating around the rear axle.
         float yawRate = speed / wheelbase * Mathf.Tan(steerAngle * Mathf.Deg2Rad);

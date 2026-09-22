@@ -9,8 +9,12 @@ using UnityEngine.InputSystem;
 /// V / right stick click: look straight ahead again
 /// Esc: release the mouse cursor, click to capture it again
 /// </summary>
+[DefaultExecutionOrder(200)] // after DriverBody posed the character
 public class DriverCamera : MonoBehaviour
 {
+    [Tooltip("Optional: follow this point (e.g. the driver's eyes). Set automatically by DriverBody.")]
+    public Transform eyeAnchor;
+
     [Header("Look")]
     public float mouseSensitivity = 0.12f;
     [Tooltip("Degrees per second at full stick deflection")]
@@ -97,6 +101,8 @@ public class DriverCamera : MonoBehaviour
         smoothPitch = Mathf.Lerp(smoothPitch, pitch, t);
         transform.localRotation = restRotation * Quaternion.Euler(-smoothPitch, smoothYaw, 0f);
 
+        if (eyeAnchor != null)
+            restPosition = transform.parent != null ? transform.parent.InverseTransformPoint(eyeAnchor.position) : eyeAnchor.position;
         transform.localPosition = restPosition + HeadMotion();
     }
 
