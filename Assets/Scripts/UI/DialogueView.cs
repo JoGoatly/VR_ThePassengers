@@ -27,6 +27,8 @@ public class DialogueView : MonoBehaviour
     IdCard lastCard;
     float answerAt = -1f;
     string pendingAnswer;
+    readonly Queue<string> intro = new Queue<string>();
+    float nextIntroAt;
 
     void Start()
     {
@@ -40,9 +42,22 @@ public class DialogueView : MonoBehaviour
         {
             log.Clear();
             pendingAnswer = null;
+            intro.Clear();
             lastCard = card;
+            // Story passengers start talking on their own.
+            if (card != null && card.IntroLines != null)
+                foreach (var line in card.IntroLines) intro.Enqueue(line);
+            nextIntroAt = Time.time + 0.6f;
         }
         if (card == null) return;
+
+        if (intro.Count > 0 && pendingAnswer == null && Time.time >= nextIntroAt)
+        {
+            string line = intro.Dequeue();
+            log.Add((card.FirstName, line));
+            Spoke?.Invoke(card);
+            nextIntroAt = Time.time + 1.6f + line.Length * 0.05f;   // time to read it
+        }
 
         // The answer comes after a short pause.
         if (pendingAnswer != null && Time.time >= answerAt)
@@ -50,6 +65,7 @@ public class DialogueView : MonoBehaviour
             log.Add((card.FirstName, pendingAnswer));
             pendingAnswer = null;
             Spoke?.Invoke(card);
+            nextIntroAt = Mathf.Max(nextIntroAt, Time.time + 2f);
         }
 
         var kb = Keyboard.current;

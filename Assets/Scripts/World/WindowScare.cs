@@ -9,6 +9,7 @@ public class WindowScare : MonoBehaviour
 {
     public BusController bus;
     public SoundManager sound;
+    [Tooltip("Figure prefab(s) - Killer 09")]
     public GameObject[] figures;
 
     [Tooltip("Seconds between scare attempts")]
@@ -20,17 +21,19 @@ public class WindowScare : MonoBehaviour
     [Tooltip("Seconds the player has to look at it")]
     public float lookTime = 0.35f;
     public float blackoutTime = 0.18f;
+    [Tooltip("Seconds between knocks while it is at the window")]
+    public Vector2 knockInterval = new Vector2(3f, 6f);
 
     // Bus-local spots just outside the windows, figure faces into the bus.
     static readonly (Vector3 pos, float yaw)[] Spots =
     {
-        (new Vector3(-1.45f, 0.35f, 4.0f), 90f),    // driver window (left)
-        (new Vector3(1.45f, 0.35f, -2.6f), -90f),   // back right
-        (new Vector3(1.45f, 0.35f, -3.8f), -90f),
+        (new Vector3(-1.7f, 0.2f, 4.0f), 90f),    // driver window (left)
+        (new Vector3(1.7f, 0.2f, -2.6f), -90f),   // back right
+        (new Vector3(1.7f, 0.2f, -3.8f), -90f),
     };
 
     GameObject current;
-    float nextAt, despawnAt, lookedFor, blackoutUntil = -1f;
+    float nextAt, despawnAt, nextKnockAt, lookedFor, blackoutUntil = -1f;
     Texture2D black;
 
     void Start()
@@ -65,6 +68,12 @@ public class WindowScare : MonoBehaviour
             return;
         }
 
+        if (Time.time >= nextKnockAt)
+        {
+            nextKnockAt = Time.time + Random.Range(knockInterval.x, knockInterval.y);
+            if (sound != null) sound.PlayKnock(current.transform.position + current.transform.forward * 0.4f + Vector3.up * 1.9f);
+        }
+
         Vector3 head = current.transform.position + current.transform.up * 1.6f;
         lookedFor = Angle(cam, head) < 20f ? lookedFor + Time.deltaTime : 0f;
         if (lookedFor >= lookTime)
@@ -84,15 +93,15 @@ public class WindowScare : MonoBehaviour
         current = Instantiate(figures[Random.Range(0, figures.Length)], bus.transform);
         current.name = "Window Figure";
         current.transform.localPosition = local;
-        current.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(8f, 0f, 0f);
-        // Bind pose: arms spread out, as if pressed against the glass.
+        current.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(6f, 0f, 0f);
         foreach (var a in current.GetComponentsInChildren<Animator>()) a.enabled = false;
         foreach (var smr in current.GetComponentsInChildren<SkinnedMeshRenderer>()) smr.updateWhenOffscreen = true;
+        PoseAgainstGlass(current.transform);
 
         // A faint cold light so it can be seen in the dark.
         var lightGo = new GameObject("Figure Light");
         lightGo.transform.SetParent(current.transform, false);
-        lightGo.transform.localPosition = new Vector3(0f, 1.7f, 0.9f);
+        lightGo.transform.localPosition = new Vector3(0f, 1.8f, 0.6f);
         var l = lightGo.AddComponent<Light>();
         l.type = LightType.Point;
         l.color = new Color(0.6f, 0.7f, 0.8f);
@@ -100,7 +109,43 @@ public class WindowScare : MonoBehaviour
         l.range = 2.2f;
 
         despawnAt = Time.time + lifetime;
+        nextKnockAt = Time.time + 0.5f;
         lookedFor = 0f;
+    }
+
+    // Hands up flat against the window, head tilted: no T-pose. The Animator is off,
+    // so the pose set once stays.
+    static void PoseAgainstGlass(Transform figure)
+    {
+        Vector3 f = figure.forward, u = figure.up, r = figure.right;
+        foreach (var (side, outward) in new[] { ("Left", -r), ("Right", r) })
+        {
+            var arm = FindBone(figure, side + "Arm");
+            var fore = FindBone(figure, side + "ForeArm");
+            var hand = FindBone(figure, side + "Hand");
+            Aim(arm, fore, (f * 0.5f + u * 0.45f + outward * 0.65f).normalized);
+            Aim(fore, hand, (f * 0.3f + u * 0.95f - outward * 0.15f).normalized);
+        }
+        var head = FindBone(figure, "Head");
+        if (head != null) head.rotation = Quaternion.AngleAxis(18f, f) * Quaternion.AngleAxis(-10f, r) * head.rotation;
+    }
+
+    static void Aim(Transform bone, Transform child, Vector3 direction)
+    {
+        if (bone == null || child == null) return;
+        bone.rotation = Quaternion.FromToRotation(child.position - bone.position, direction) * bone.rotation;
+    }
+
+    static Transform FindBone(Transform root, string boneName)
+    {
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            string n = t.name;
+            int colon = n.LastIndexOf(':');
+            if (colon >= 0) n = n.Substring(colon + 1);
+            if (n == boneName) return t;
+        }
+        return null;
     }
 
     void OnGUI()

@@ -24,6 +24,7 @@ public class SoundManager : MonoBehaviour
     public AudioClip roadNoise;
     public AudioClip[] maleVoices, femaleVoices;
     public AudioClip scare;
+    public AudioClip knock;
 
     [Header("Mix")]
     [Range(0f, 1f)] public float engineVolume = 0.35f;
@@ -108,6 +109,9 @@ public class SoundManager : MonoBehaviour
     {
         if (scare != null) ui.PlayOneShot(scare, 3.5f);
     }
+
+    /// <summary>Knocking on a window at the given position.</summary>
+    public void PlayKnock(Vector3 position) => PlayAt(knock, position, 1f, 0.85f);
 
     AudioSource CreateSource(string name, Transform parent, bool loop, float volume, AudioClip clip = null)
     {

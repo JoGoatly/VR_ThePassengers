@@ -7,13 +7,13 @@ using UnityEngine.InputSystem;
 /// Game loop at the bus stops:
 ///   1. A passenger waits at each stop ahead of the bus.
 ///   2. Stop with the front door at the stop and open the doors (F).
-///   3. The passenger walks to the door and shows the ID card (E to look at it).
+///   3. The passenger steps in right next to the driver and shows the ID card (E hides it).
 ///   4. Check the name in the register on the on-board computer (Tab), read the mails.
 ///   5. Let them in (J) or turn them away (N). Until then the bus can't drive off.
 /// </summary>
 public class BoardingManager : MonoBehaviour
 {
-    public enum Phase { Driving, PassengerComing, AwaitingDecision, PassengerEntering }
+    public enum Phase { Driving, PassengerComing, AwaitingDecision, PassengerEntering, PassengerLeaving }
 
     [Header("References")]
     public ForestRoad road;
@@ -31,6 +31,9 @@ public class BoardingManager : MonoBehaviour
         new Vector3(-0.3f, 0, -0.4f), new Vector3(0.3f, 0, -1.2f), new Vector3(-0.3f, 0, -2.0f), new Vector3(0.3f, 0, -2.8f),
         new Vector3(-0.3f, 0, -3.6f), new Vector3(0.3f, 0, -4.4f),
     };
+
+    [Tooltip("Where a passenger stands while being checked: x = how far in from the door, y = forward(+)/back(-)")]
+    public Vector2 entryOffset = new Vector2(0.75f, -0.35f);
 
     [Header("Rules")]
     public float spawnDistance = 200f;
@@ -63,6 +66,8 @@ public class BoardingManager : MonoBehaviour
     Passenger active;
     BusStop activeStop;
     Vector3 doorLocal;        // front door centre in bus space
+    Vector3 driverLocal;      // driver seat in bus space
+    readonly HashSet<int> storyDone = new HashSet<int>();
     RenderTexture portrait;
     Camera portraitCamera;
     System.Random rng;
@@ -80,6 +85,9 @@ public class BoardingManager : MonoBehaviour
         if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
         doorLocal = FindDoorCentre();
+        var seat = bus.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "DriverSeat");
+        driverLocal = seat != null ? bus.transform.InverseTransformPoint(seat.position) : new Vector3(-0.83f, 0f, 4.15f);
+        driverLocal.y = 0f;
         Mail.Received += m => ShowToast("Neue Mail: " + m.Subject);
         SendWelcomeMails();
     }
@@ -160,7 +168,13 @@ public class BoardingManager : MonoBehaviour
 
     Passenger SpawnPassenger(BusStop stop)
     {
-        var card = Registry.CreatePassengerCard(knownRules);
+        int story = NextStoryIndex();
+        var card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null);
+        if (story >= 0)
+        {
+            card.StoryIndex = story;
+            card.IntroLines = StoryPassengers[story].lines;
+        }
         var pool = card.Gender == Gender.Male ? malePassengers : femalePassengers;
         if (pool == null || pool.Length == 0) pool = malePassengers != null && malePassengers.Length > 0 ? malePassengers : femalePassengers;
         if (pool == null || pool.Length == 0) return null;
@@ -173,6 +187,56 @@ public class BoardingManager : MonoBehaviour
         p.Stop = stop;
         return p;
     }
+
+    // ------------------------------------------------------------------ story
+
+    // The first passengers of the night are scripted: two real ones (the first explains the
+    // job), then one that is not what it seems.
+    static readonly (Discrepancy truth, string[] lines)[] StoryPassengers =
+    {
+        (Discrepancy.None, new[]
+        {
+            "Oh. Ein neues Gesicht.",
+            "Sie sehen anders aus als der letzte Busfahrer. ...Der war auf einmal nicht mehr da.",
+            "Die wechseln oft auf der 13. Keiner weiß so recht, wohin.",
+            "Na, egal. Hier ist mein Ausweis, links sehen Sie ihn. [E] blendet ihn aus und ein.",
+            "Rechts am Computer: auf REGISTER klicken, meinen Namen eintippen, Enter.",
+            "Geburtsdatum, Ausweisnummer und GÜLTIG BIS müssen genau zum Register passen.",
+            "Fragen Sie mich ruhig was, mit den Tasten 1 bis 5. Die Antworten müssen stimmen.",
+            "Passt alles, drücken Sie [J] und ich steige ein.",
+            "Passt etwas nicht: [N]. Dann bleibe ich draußen.",
+            "Und lesen Sie Ihre Mails. Die Leitstelle schreibt nicht ohne Grund.",
+        }),
+        (Discrepancy.None, new[]
+        {
+            "Abend. Schon wieder ein Neuer, hm?",
+            "Ihr Vorgänger hat zwei Wochen durchgehalten. Der davor nur eine Nacht.",
+            "Seinen Bus haben sie am Waldfriedhof gefunden. Türen offen, Licht an. Keiner drin.",
+            "...Aber Sie machen das bestimmt gut. Hier, mein Ausweis.",
+        }),
+        (Discrepancy.NotRegistered, new[]
+        {
+            "Guten Abend.",
+            "Ich fahre jeden Abend mit dieser Linie. Seit Jahren schon.",
+            "Die anderen Fahrer kennen mich alle. Sie lassen mich immer einsteigen.",
+        }),
+    };
+
+    int NextStoryIndex()
+    {
+        for (int i = 0; i < StoryPassengers.Length; i++)
+        {
+            if (storyDone.Contains(i)) continue;
+            // Still waiting at a stop? Then that one keeps the role.
+            bool waiting = road.Stops.Any(st => st != null && st.WaitingPassenger != null &&
+                                                st.WaitingPassenger.Card != null && st.WaitingPassenger.Card.StoryIndex == i);
+            if (!waiting) return i;
+            return -1;   // keep the order: the next story passenger only after this one
+        }
+        return -1;
+    }
+
+    // ------------------------------------------------------------------ boarding
 
     BusStop StopAtDoor()
     {
@@ -212,19 +276,25 @@ public class BoardingManager : MonoBehaviour
         active.CurrentState = Passenger.State.WalkingToDoor;
         CurrentPhase = Phase.PassengerComing;
 
-        // Walk to just outside the front door (bus space, the bus doesn't move now).
+        // Up the steps and right next to the driver (bus space, the bus doesn't move now).
         active.SetSpace(bus.transform);
         Vector3 start = bus.transform.InverseTransformPoint(active.transform.position);
         float side = DoorSide;
         var outside = new Vector3(doorLocal.x + side * 0.75f, start.y, doorLocal.z);
-        active.WalkPath(new[] { outside }, bus.transform, () =>
+        var step = new Vector3(doorLocal.x, floorHeight * 0.5f, doorLocal.z);
+        var front = EntrySpot;
+        var toDriver = driverLocal - new Vector3(front.x, 0f, front.z);
+        active.WalkPath(new[] { outside, step, front }, bus.transform, () =>
         {
             active.CurrentState = Passenger.State.AtDoor;
             CurrentPhase = Phase.AwaitingDecision;
             RenderPortrait(active);
             ShowToast("Fahrgast zeigt den Ausweis");
-        }, faceAtEnd: -side * Vector3.right);
+        }, faceAtEnd: toDriver);
     }
+
+    /// <summary>Where the passenger stands while being checked: top of the steps, facing the driver.</summary>
+    Vector3 EntrySpot => new Vector3(doorLocal.x - DoorSide * entryOffset.x, floorHeight, doorLocal.z + entryOffset.y);
 
     // ------------------------------------------------------------------ decision
 
@@ -237,6 +307,7 @@ public class BoardingManager : MonoBehaviour
         bool shouldBoard = card.Truth == Discrepancy.None;
         bool correct = letIn == shouldBoard;
         if (correct) Correct++; else Wrong++;
+        if (card.StoryIndex >= 0) storyDone.Add(card.StoryIndex);
         decisions++;
         ScheduleFeedback(card, letIn, correct);
         Decided?.Invoke(letIn);
@@ -250,7 +321,6 @@ public class BoardingManager : MonoBehaviour
             Vector3 spot = FreeSpot();
             var path = new[]
             {
-                new Vector3(doorLocal.x - DoorSide * 0.45f, floorHeight, doorLocal.z),
                 new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f),
                 new Vector3(spot.x, floorHeight, spot.z),
             };
@@ -266,12 +336,22 @@ public class BoardingManager : MonoBehaviour
         }
         else
         {
-            // Back to the stop; the bus may leave right away.
+            // Down the steps and back to the stop; the bus may leave once they are out.
             p.CurrentState = Passenger.State.Leaving;
-            p.SetSpace(null);
-            p.WalkPath(new[] { activeStop.waitPoint.position }, null, null, activeStop.waitPoint.forward);
-            active = null;
-            CurrentPhase = Phase.Driving;
+            CurrentPhase = Phase.PassengerLeaving;
+            var stop = activeStop;
+            var outside = new[]
+            {
+                new Vector3(doorLocal.x, floorHeight * 0.5f, doorLocal.z),
+                new Vector3(doorLocal.x + DoorSide * 0.9f, 0f, doorLocal.z),
+            };
+            p.WalkPath(outside, bus.transform, () =>
+            {
+                p.SetSpace(null);
+                p.WalkPath(new[] { stop.waitPoint.position }, null, null, stop.waitPoint.forward);
+                active = null;
+                CurrentPhase = Phase.Driving;
+            });
         }
     }
 
@@ -505,6 +585,9 @@ public class BoardingManager : MonoBehaviour
                 break;
             case Phase.PassengerEntering:
                 prompt = "Fahrgast steigt ein";
+                break;
+            case Phase.PassengerLeaving:
+                prompt = "Fahrgast steigt aus";
                 break;
         }
         if (prompt != null) RetroGUI.ShadowLabel(new Rect(0, 300, w, 14), prompt, new Color(1f, 0.85f, 0.3f));
