@@ -113,7 +113,7 @@ public class ComputerTerminal : MonoBehaviour
         glow.type = LightType.Point;
         glow.color = new Color(0.4f, 1f, 0.55f);
         glow.range = 1.4f;
-        glow.intensity = 0.35f;
+        glow.intensity = 0.45f;
         glow.shadows = LightShadows.None;
     }
 
