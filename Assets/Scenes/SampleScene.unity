@@ -914,6 +914,7 @@ GameObject:
   - component: {fileID: 2100000007}
   - component: {fileID: 2100000008}
   - component: {fileID: 2100000009}
+  - component: {fileID: 2100000010}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1122,6 +1123,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   game: {fileID: 2100000003}
+--- !u!114 &2100000010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c1e7a9d3b8f4e2a9d6c0b7f1a2e3d4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 1500000004}
+  sound: {fileID: 2100000006}
+  figures:
+  - {fileID: 919132149155446097, guid: 9480e8ae864d7a04e9d448c875da5669, type: 3}
+  - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
+  - {fileID: 919132149155446097, guid: 38e6c61bdb5fb83438c25f23521ffbde, type: 3}
+  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
+  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
+  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
+  interval: {x: 120, y: 300}
+  firstDelay: 150
+  chance: 0.6
+  lifetime: 40
+  lookTime: 0.35
+  blackoutTime: 0.18
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
