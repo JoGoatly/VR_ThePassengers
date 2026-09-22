@@ -48,6 +48,11 @@ public class BoardingManager : MonoBehaviour
     public int Wrong { get; private set; }
     public string ClockText => FormatClock(GameMinutes);
 
+    /// <summary>Raised after a decision (true = let in).</summary>
+    public event System.Action<bool> Decided;
+    /// <summary>Raised when a passenger disappears from the bus.</summary>
+    public event System.Action<Vector3> PassengerVanished;
+
     readonly HashSet<Discrepancy> knownRules = new HashSet<Discrepancy>
     {
         Discrepancy.None, Discrepancy.Expired, Discrepancy.WrongBirthDate, Discrepancy.WrongIdNumber, Discrepancy.NotRegistered,
@@ -230,6 +235,7 @@ public class BoardingManager : MonoBehaviour
         if (correct) Correct++; else Wrong++;
         decisions++;
         ScheduleFeedback(card, letIn, correct);
+        Decided?.Invoke(letIn);
         UnlockRules();
 
 
@@ -287,6 +293,7 @@ public class BoardingManager : MonoBehaviour
     {
         if (p == null) return;
         riders.Remove(p);
+        PassengerVanished?.Invoke(p.transform.position);
         Destroy(p.gameObject);
         ShowToast("...");
     }

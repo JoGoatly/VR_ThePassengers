@@ -70,6 +70,9 @@ public class BusController : MonoBehaviour
     [Header("HUD")]
     public bool showSpeedometer = true;
 
+    /// <summary>Raised when the doors start opening (true) or closing (false).</summary>
+    public event System.Action<bool> DoorsChanged;
+
     /// <summary>Signed speed along the bus forward axis in m/s.</summary>
     public float Speed { get; private set; }
     public float SpeedKmh => Speed * 3.6f;
@@ -281,7 +284,10 @@ public class BusController : MonoBehaviour
         steerInput = Mathf.Clamp(steer, -1f, 1f);
         handbrakeInput = handbrake;
         if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
+        {
             doorsOpen = !doorsOpen;
+            DoorsChanged?.Invoke(doorsOpen);
+        }
     }
 
     void FixedUpdate()
