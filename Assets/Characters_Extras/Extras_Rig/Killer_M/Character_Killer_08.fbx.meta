@@ -3,7 +3,12 @@ guid: 9480e8ae864d7a04e9d448c875da5669
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Character_Killer_08
+    second: {fileID: 2100000, guid: 3a0b12d1b5c1475187a6526e5bed7264, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

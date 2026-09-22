@@ -3,7 +3,12 @@ guid: db711bbafdc22d444b9d7dc87ab72cc8
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Character_Sheriff_N
+    second: {fileID: 2100000, guid: c3e8c4709a8d4e6f8c126516eb0bf16c, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
