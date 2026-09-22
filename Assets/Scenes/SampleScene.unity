@@ -986,7 +986,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   game: {fileID: 2100000003}
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
-  screenMaterial: {fileID: 2100000, guid: 31a707e1fb034a0dbf99314cf1049e48, type: 2}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
 --- !u!114 &2100000005
 MonoBehaviour:
   m_ObjectHideFlags: 0

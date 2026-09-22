@@ -4,38 +4,80 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// On-board computer: a monitor next to the steering wheel, and (Tab) a full screen
-/// terminal with the resident register search and the mail inbox.
+/// The on-board computer as a real screen in the cockpit. Aim at it with the crosshair,
+/// a mouse pointer appears on the screen, left click uses it. Apps: REGISTER (resident
+/// search), POSTFACH (mails) and KONTROLLE (let the passenger in / turn them away).
+/// Click the search field to type; while typing, driving keys are ignored (Esc/Enter ends typing).
 /// </summary>
 public class ComputerTerminal : MonoBehaviour
 {
     public BoardingManager game;
 
-    [Header("Monitor in the cockpit (bus space)")]
-    public Vector3 monitorPosition = new Vector3(1.12f, 1.22f, 4.45f);
+    [Header("Monitor (bus space)")]
+    public Vector3 monitorPosition = new Vector3(-0.2f, 1.34f, 3.98f);
+    [Tooltip("Where the driver's eyes roughly are, the screen is turned towards it")]
+    public Vector3 viewerPosition = new Vector3(-0.83f, 1.72f, 4.3f);
+    public Vector2 screenSize = new Vector2(0.4f, 0.3f);
     public Material caseMaterial;
+    [Tooltip("Unlit PSXLit material, its texture is replaced by the screen image")]
     public Material screenMaterial;
+    public int resolutionX = 320, resolutionY = 240;
+    public float maxUseDistance = 2.2f;
 
-    enum Tab { Register, Mail }
-    Tab tab = Tab.Register;
+    public event System.Action Clicked, Typed, ErrorBeep;
+
+    enum App { None, Register, Mail, Control }
+    App app = App.None;
+
+    PixelCanvas canvas;
+    Transform screen;
+    Camera cam;
+
+    // Pointer state for this frame.
+    Vector2Int pointer;
+    bool hover, click;
+
+    // Register.
     string query = "";
+    bool typing, searched;
     List<Citizen> results = new List<Citizen>();
     Citizen selected;
-    Mail openMail;
-    bool focusSearch;
+    int resultScroll;
 
-    static readonly Color Bg = new Color(0.02f, 0.07f, 0.04f);
-    static readonly Color Panel = new Color(0.04f, 0.12f, 0.07f);
-    static readonly Color Line = new Color(0.2f, 0.55f, 0.3f);
-    static readonly Color Text = new Color(0.62f, 1f, 0.7f);
-    static readonly Color Dim = new Color(0.35f, 0.65f, 0.42f);
-    static readonly Color Alert = new Color(1f, 0.35f, 0.3f);
-    static readonly Color Warn = new Color(1f, 0.8f, 0.3f);
+    // Mail.
+    Mail openMail;
+    int mailScroll, bodyScroll;
+
+    float blink;
+
+    static readonly Color32 Bg = new Color32(6, 14, 9, 255);
+    static readonly Color32 Panel = new Color32(12, 30, 18, 255);
+    static readonly Color32 Line = new Color32(40, 110, 60, 255);
+    static readonly Color32 Text = new Color32(150, 255, 170, 255);
+    static readonly Color32 Dim = new Color32(70, 140, 90, 255);
+    static readonly Color32 Hi = new Color32(35, 95, 52, 255);
+    static readonly Color32 White = new Color32(230, 255, 235, 255);
+    static readonly Color32 Alert = new Color32(255, 90, 80, 255);
+    static readonly Color32 Warn = new Color32(255, 200, 80, 255);
+    static readonly Color32 Green = new Color32(30, 110, 45, 255);
+    static readonly Color32 Red = new Color32(120, 25, 20, 255);
+
+    const int TopBar = 12, TaskBar = 13;
+
+    public bool IsHovered => hover;
 
     void Start()
     {
         if (game == null) game = FindAnyObjectByType<BoardingManager>();
+        canvas = new PixelCanvas(resolutionX, resolutionY);
         BuildMonitor();
+        if (Keyboard.current != null) Keyboard.current.onTextInput += OnTextInput;
+    }
+
+    void OnDestroy()
+    {
+        if (Keyboard.current != null) Keyboard.current.onTextInput -= OnTextInput;
+        GameUI.TerminalTyping = false;
     }
 
     void BuildMonitor()
@@ -45,187 +87,372 @@ public class ComputerTerminal : MonoBehaviour
         var root = new GameObject("Board Computer").transform;
         root.SetParent(bus, false);
         root.localPosition = monitorPosition;
+        root.localRotation = Quaternion.LookRotation(monitorPosition - viewerPosition);
 
-        // Face the driver (roughly towards the seat on the left of the monitor).
-        Vector3 toDriver = new Vector3(-0.6f, 0.25f, -0.35f);
-        root.localRotation = Quaternion.LookRotation(-toDriver.normalized);
+        float w = screenSize.x, h = screenSize.y;
+        var caseGo = MeshKit.Spawn("Case", root, MeshKit.Box(new Vector3(w + 0.06f, h + 0.06f, 0.24f), 0.5f), caseMaterial,
+                                   root.position, root.rotation, false);
+        caseGo.transform.localPosition = new Vector3(0f, -(h + 0.06f) * 0.5f, 0f);
+        var arm = MeshKit.Spawn("Arm", root, MeshKit.Box(new Vector3(0.05f, 0.35f, 0.05f), 0.5f), caseMaterial, root.position, root.rotation, false);
+        arm.transform.localPosition = new Vector3(0f, -h * 0.5f - 0.38f, 0.05f);
 
-        var caseMesh = MeshKit.Box(new Vector3(0.34f, 0.26f, 0.22f), 0.34f);
-        var screenMesh = MeshKit.Box(new Vector3(0.28f, 0.2f, 0.01f), 0.28f);
-        var c = MeshKit.Spawn("Case", root, caseMesh, caseMaterial, root.position, root.rotation, false);
-        c.transform.localPosition = Vector3.zero;
-        var s = MeshKit.Spawn("Screen", root, screenMesh, screenMaterial, root.position, root.rotation, false);
-        s.transform.localPosition = new Vector3(0f, 0.03f, -0.115f);
-        var foot = MeshKit.Spawn("Stand", root, MeshKit.Box(new Vector3(0.08f, 0.1f, 0.08f), 0.1f), caseMaterial, root.position, root.rotation, false);
-        foot.transform.localPosition = new Vector3(0f, -0.1f, 0f);
+        // Screen quad with UVs 0..1, facing the driver (-Z).
+        var mb = new MeshKit.Builder();
+        float z = -0.121f;
+        mb.Quad(new Vector3(-w / 2, -h / 2, z), new Vector3(-w / 2, h / 2, z), new Vector3(w / 2, h / 2, z), new Vector3(w / 2, -h / 2, z),
+                new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
+        var mat = screenMaterial != null ? new Material(screenMaterial) : null;
+        if (mat != null) mat.SetTexture("_MainTex", canvas.Texture);
+        var screenGo = MeshKit.Spawn("Screen", root, mb.ToMesh("Screen"), mat, root.position, root.rotation, false);
+        screen = screenGo.transform;
+
+        // Faint green glow on the driver's face.
+        var glow = new GameObject("Screen Glow").AddComponent<Light>();
+        glow.transform.SetParent(root, false);
+        glow.transform.localPosition = new Vector3(0f, 0f, -0.4f);
+        glow.type = LightType.Point;
+        glow.color = new Color(0.4f, 1f, 0.55f);
+        glow.range = 1.4f;
+        glow.intensity = 0.35f;
+        glow.shadows = LightShadows.None;
     }
+
+    // Crosshair in the middle of the view (hidden while the pointer is on the screen).
+    void OnGUI()
+    {
+        if (hover || Event.current.type != EventType.Repaint) return;
+        float s = Mathf.Max(2f, Mathf.Round(RetroGUI.Scale * 1.5f));
+        var r = new Rect(Mathf.Round(Screen.width * 0.5f - s * 0.5f), Mathf.Round(Screen.height * 0.5f - s * 0.5f), s, s);
+        GUI.DrawTexture(r, RetroGUI.Tex(new Color(1f, 1f, 1f, 0.55f)));
+    }
+
+    // ------------------------------------------------------------------ input
 
     void Update()
     {
+        if (canvas == null || screen == null) return;
+        if (cam == null) cam = Camera.main;
+        blink += Time.deltaTime;
+
+        UpdatePointer();
         var kb = Keyboard.current;
-        if (kb == null) return;
+        var mouse = Mouse.current;
+        click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame;
 
-        if (kb.tabKey.wasPressedThisFrame)
+        if (typing && kb != null)
         {
-            GameUI.ComputerOpen = !GameUI.ComputerOpen;
-            if (GameUI.ComputerOpen) { GameUI.IdCardOpen = false; focusSearch = tab == Tab.Register; }
+            if (kb.backspaceKey.wasPressedThisFrame && query.Length > 0) { query = query.Substring(0, query.Length - 1); Typed?.Invoke(); }
+            if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) { typing = false; RunSearch(); }
+            if (kb.escapeKey.wasPressedThisFrame) typing = false;
         }
-        if (GameUI.ComputerOpen && kb.escapeKey.wasPressedThisFrame) GameUI.ComputerOpen = false;
+        // Clicking anywhere else ends typing.
+        if (typing && mouse != null && mouse.leftButton.wasPressedThisFrame && !hover) typing = false;
+
+        Draw();
+        canvas.Apply();
+        GameUI.TerminalTyping = typing;
     }
 
-    void OnGUI()
+    void UpdatePointer()
     {
-        if (!GameUI.ComputerOpen || game == null) return;
+        hover = false;
+        if (cam == null) return;
+        var ray = new Ray(cam.transform.position, cam.transform.forward);
+        Vector3 o = screen.InverseTransformPoint(ray.origin);
+        Vector3 d = screen.InverseTransformDirection(ray.direction);
+        float z = -0.121f;
+        if (Mathf.Abs(d.z) < 1e-5f) return;
+        float t = (z - o.z) / d.z;
+        if (t <= 0f) return;
+        Vector3 hit = o + d * t;
+        if (Vector3.Distance(screen.TransformPoint(hit), ray.origin) > maxUseDistance) return;
+        float u = hit.x / screenSize.x + 0.5f, v = hit.y / screenSize.y + 0.5f;
+        if (u < 0f || u > 1f || v < 0f || v > 1f) return;
+        hover = true;
+        pointer = new Vector2Int(Mathf.FloorToInt(u * canvas.Width), Mathf.FloorToInt((1f - v) * canvas.Height));
+    }
 
-        // Enter in the search field.
-        if (Event.current.type == EventType.KeyDown &&
-            (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter) &&
-            GUI.GetNameOfFocusedControl() == "search")
+    void OnTextInput(char c)
+    {
+        if (!typing || char.IsControl(c) || query.Length >= 24) return;
+        query += c;
+        Typed?.Invoke();
+    }
+
+    bool Inside(int x, int y, int w, int h) =>
+        hover && pointer.x >= x && pointer.x < x + w && pointer.y >= y && pointer.y < y + h;
+
+    bool Hit(int x, int y, int w, int h)
+    {
+        if (!click || !Inside(x, y, w, h)) return false;
+        click = false;
+        Clicked?.Invoke();
+        return true;
+    }
+
+    bool Button(int x, int y, int w, int h, string label, Color32 bg, Color32 fg)
+    {
+        bool over = Inside(x, y, w, h);
+        canvas.Fill(x, y, w, h, over ? Lighten(bg) : bg);
+        canvas.Frame(x, y, w, h, over ? White : Line);
+        canvas.Text(x + (w - PixelCanvas.TextWidth(label)) / 2, y + (h - PixelFont.CellHeight) / 2 + 1, label, fg);
+        return Hit(x, y, w, h);
+    }
+
+    static Color32 Lighten(Color32 c) => new Color32((byte)Mathf.Min(255, c.r + 30), (byte)Mathf.Min(255, c.g + 40), (byte)Mathf.Min(255, c.b + 30), 255);
+
+    // ------------------------------------------------------------------ drawing
+
+    void Draw()
+    {
+        int W = canvas.Width, H = canvas.Height;
+        canvas.Clear(Bg);
+
+        // Top bar.
+        canvas.Fill(0, 0, W, TopBar, Panel);
+        canvas.Text(3, 1, "VBN-OS 1.3  NACHTLINIE 13", Dim);
+        string clock = game != null ? game.ClockText : "--:--";
+        canvas.Text(W - PixelCanvas.TextWidth(clock) - 3, 1, clock, Text);
+
+        int top = TopBar + 1, bottom = H - TaskBar - 1;
+        switch (app)
         {
-            RunSearch();
-            Event.current.Use();
+            case App.None: DrawDesktop(top, bottom); break;
+            case App.Register: Window("REGISTER - EINWOHNERMELDEAMT", top, bottom); DrawRegister(top + 13, bottom); break;
+            case App.Mail: Window("POSTFACH", top, bottom); DrawMail(top + 13, bottom); break;
+            case App.Control: Window("FAHRGASTKONTROLLE", top, bottom); DrawControl(top + 13, bottom); break;
         }
 
-        float vw = RetroGUI.VirtualWidth;
-        float w = 560f, h = 300f;
-        float x = (vw - w) * 0.5f, y = 20f;
+        DrawTaskbar();
+        if (hover) DrawPointer();
+    }
 
-        RetroGUI.Fill(new Rect(0, 0, vw, RetroGUI.VirtualHeight), new Color(0, 0, 0, 0.55f));
-        RetroGUI.Frame(new Rect(x - 6, y - 6, w + 12, h + 12), new Color(0.72f, 0.69f, 0.6f), new Color(0.35f, 0.33f, 0.28f), 2f);
-        RetroGUI.Frame(new Rect(x, y, w, h), Bg, Line);
+    void Window(string title, int top, int bottom)
+    {
+        int W = canvas.Width;
+        canvas.Fill(0, top, W, 12, Hi);
+        canvas.Text(4, top + 1, title, White);
+        if (Button(W - 14, top + 1, 12, 10, "x", Red, White)) { app = App.None; typing = false; }
+        canvas.Frame(0, top, W, bottom - top, Line);
+    }
 
-        // Title bar.
-        RetroGUI.Fill(new Rect(x + 1, y + 1, w - 2, 16), Panel);
-        RetroGUI.Label(new Rect(x + 6, y + 4, 300, 12), "VBN BORDRECHNER 2.1  -  NACHTLINIE 13", Text, true);
-        RetroGUI.Label(new Rect(x + w - 250, y + 4, 244, 12),
-            $"{CitizenRegistry.Today:dd.MM.yyyy}  {game.ClockText}   OK {game.Correct}  FEHLER {game.Wrong}", Dim, false, false, TextAnchor.UpperRight);
+    void DrawDesktop(int top, int bottom)
+    {
+        int unread = game != null ? game.Mail.UnreadCount : 0;
+        bool someone = game != null && game.PendingCard != null;
+        int y = top + 30;
+        if (Icon(40, y, "REGISTER", 0, false)) Open(App.Register);
+        if (Icon(135, y, unread > 0 ? $"POST ({unread})" : "POSTFACH", 1, unread > 0)) Open(App.Mail);
+        if (Icon(230, y, "KONTROLLE", 2, someone)) Open(App.Control);
 
-        // Tabs.
-        int unread = game.Mail.UnreadCount;
-        if (TabButton(new Rect(x + 6, y + 22, 90, 16), "REGISTER", tab == Tab.Register)) { tab = Tab.Register; focusSearch = true; }
-        if (TabButton(new Rect(x + 100, y + 22, 110, 16), unread > 0 ? $"POSTFACH ({unread})" : "POSTFACH", tab == Tab.Mail)) tab = Tab.Mail;
-        RetroGUI.Label(new Rect(x + w - 200, y + 25, 194, 12), "[Tab] schließen", Dim, false, true, TextAnchor.UpperRight);
+        canvas.WrappedText(12, bottom - 50, canvas.Width - 24, 4,
+            "Leitstelle: Halten Sie nicht außerhalb der Haltestellen. Steigen Sie nicht aus. Lassen Sie niemanden ohne Kontrolle einsteigen.", Dim);
+    }
 
-        var content = new Rect(x + 6, y + 44, w - 12, h - 50);
-        if (tab == Tab.Register) DrawRegister(content);
-        else DrawMail(content);
-
-        // Decision buttons are available here too while someone waits at the door.
-        if (game.PendingCard != null)
+    bool Icon(int x, int y, string label, int kind, bool attention)
+    {
+        bool over = Inside(x - 12, y - 4, 56, 70);
+        if (over) canvas.Fill(x - 12, y - 4, 56, 70, Panel);
+        Color32 c = attention && Mathf.Repeat(blink, 1f) < 0.5f ? Warn : Text;
+        switch (kind)
         {
-            var card = game.PendingCard;
-            float by = y + h + 10;
-            RetroGUI.Frame(new Rect(x, by, w, 26), Panel, Line);
-            RetroGUI.Label(new Rect(x + 8, by + 8, 250, 12), "An der Tür: " + card.FullName, Warn, true);
-            if (RetroGUI.Button(new Rect(x + w - 230, by + 5, 110, 16), "EINSTEIGEN [J]", new Color(0.15f, 0.4f, 0.2f), Color.white))
-            { GameUI.ComputerOpen = false; game.Decide(true); }
-            if (RetroGUI.Button(new Rect(x + w - 115, by + 5, 108, 16), "ABWEISEN [N]", new Color(0.45f, 0.12f, 0.1f), Color.white))
-            { GameUI.ComputerOpen = false; game.Decide(false); }
+            case 0: // card with lines
+                canvas.Frame(x, y, 32, 40, c);
+                canvas.Fill(x + 4, y + 4, 10, 12, c);
+                for (int i = 0; i < 4; i++) canvas.Fill(x + 4, y + 20 + i * 5, 24, 1, c);
+                break;
+            case 1: // envelope
+                canvas.Frame(x, y + 8, 32, 24, c);
+                canvas.Line(x, y + 8, x + 16, y + 22, c);
+                canvas.Line(x + 31, y + 8, x + 16, y + 22, c);
+                break;
+            case 2: // person
+                canvas.Frame(x + 10, y + 2, 12, 12, c);
+                canvas.Fill(x + 6, y + 16, 20, 22, c);
+                canvas.Fill(x + 10, y + 20, 12, 18, Bg);
+                break;
+        }
+        canvas.Text(x + 16 - PixelCanvas.TextWidth(label) / 2, y + 48, label, c);
+        return Hit(x - 12, y - 4, 56, 70);
+    }
+
+    void Open(App a)
+    {
+        app = a;
+        typing = a == App.Register && string.IsNullOrEmpty(query);
+    }
+
+    void DrawTaskbar()
+    {
+        int W = canvas.Width, H = canvas.Height, y = H - TaskBar;
+        canvas.Fill(0, y, W, TaskBar, Panel);
+        int unread = game != null ? game.Mail.UnreadCount : 0;
+        bool someone = game != null && game.PendingCard != null;
+        if (Button(2, y + 1, 70, 11, "REGISTER", app == App.Register ? Hi : Panel, Text)) Open(App.Register);
+        if (Button(74, y + 1, 70, 11, unread > 0 ? $"POST ({unread})" : "POSTFACH", app == App.Mail ? Hi : (unread > 0 ? new Color32(70, 55, 10, 255) : Panel), Text)) Open(App.Mail);
+        Color32 ctl = app == App.Control ? Hi : (someone && Mathf.Repeat(blink, 1f) < 0.5f ? new Color32(90, 70, 10, 255) : Panel);
+        if (Button(146, y + 1, 76, 11, "KONTROLLE", ctl, Text)) Open(App.Control);
+        if (game != null)
+        {
+            string score = $"OK {game.Correct} F {game.Wrong}";
+            canvas.Text(W - PixelCanvas.TextWidth(score) - 3, y + 1, score, Dim);
         }
     }
 
-    bool TabButton(Rect r, string text, bool active)
+    void DrawPointer()
     {
-        return RetroGUI.Button(r, text, active ? new Color(0.2f, 0.5f, 0.28f) : Panel, active ? Color.white : Dim);
+        int x = pointer.x, y = pointer.y;
+        for (int i = 0; i < 9; i++)
+        {
+            canvas.Fill(x, y + i, Mathf.Max(1, i / 2 + 1), 1, White);
+            canvas.Pixel(x + i / 2 + 1, y + i, Bg);
+        }
+        canvas.Fill(x + 2, y + 8, 1, 3, White);
     }
 
-    void DrawRegister(Rect r)
-    {
-        RetroGUI.Label(new Rect(r.x, r.y + 3, 60, 12), "NAME:", Text, true);
-        query = RetroGUI.TextField(new Rect(r.x + 42, r.y, 220, 16), query, "search");
-        if (focusSearch) { GUI.FocusControl("search"); focusSearch = false; }
-        if (RetroGUI.Button(new Rect(r.x + 268, r.y, 70, 16), "SUCHEN")) RunSearch();
-        RetroGUI.Label(new Rect(r.x + 346, r.y + 3, 200, 12), "Vor- und/oder Nachname", Dim, false, true);
+    // ------------------------------------------------------------------ register
 
-        // Result list.
-        var list = new Rect(r.x, r.y + 24, 200, r.height - 24);
-        RetroGUI.Frame(list, Panel, Line);
-        if (results.Count == 0)
-        {
-            RetroGUI.Label(new Rect(list.x + 6, list.y + 6, list.width - 12, 12),
-                string.IsNullOrEmpty(query) ? "Namen eingeben..." : "KEIN EINTRAG GEFUNDEN", string.IsNullOrEmpty(query) ? Dim : Alert, true);
-        }
+    void DrawRegister(int top, int bottom)
+    {
+        int W = canvas.Width;
+        canvas.Text(4, top + 3, "NAME:", Text);
+        int fx = 38, fw = 170;
+        canvas.Fill(fx, top + 1, fw, 13, new Color32(2, 6, 3, 255));
+        canvas.Frame(fx, top + 1, fw, 13, typing ? White : Line);
+        string shown = query + (typing && Mathf.Repeat(blink, 0.8f) < 0.4f ? "_" : "");
+        canvas.Text(fx + 3, top + 2, shown.Length > 27 ? shown.Substring(shown.Length - 27) : shown, typing ? White : Text);
+        if (Hit(fx, top + 1, fw, 13)) typing = true;
+        if (Button(fx + fw + 4, top + 1, 56, 13, "SUCHEN", Green, White)) { typing = false; RunSearch(); }
+
+        // Results.
+        int ly = top + 18, lh = bottom - ly - 2, lw = 124;
+        canvas.Frame(2, ly, lw, lh, Line);
+        int rowH = 12, rows = (lh - 4) / rowH;
+        if (!searched)
+            canvas.WrappedText(6, ly + 4, lw - 8, 6, "Suchfeld anklicken, Namen tippen, ENTER.", Dim);
+        else if (results.Count == 0)
+            canvas.WrappedText(6, ly + 4, lw - 8, 4, "KEIN EINTRAG GEFUNDEN", Alert);
         else
         {
-            float rowH = 14f;
-            for (int i = 0; i < results.Count && i < 16; i++)
+            resultScroll = Mathf.Clamp(resultScroll, 0, Mathf.Max(0, results.Count - rows));
+            for (int i = 0; i < rows && i + resultScroll < results.Count; i++)
             {
-                var c = results[i];
-                var row = new Rect(list.x + 3, list.y + 3 + i * rowH, list.width - 6, rowH - 1);
-                bool isSel = c == selected;
-                if (RetroGUI.Button(row, "", isSel ? new Color(0.2f, 0.45f, 0.26f) : Panel, Text)) selected = c;
-                RetroGUI.Label(new Rect(row.x + 4, row.y + 2, row.width - 8, 12), $"{c.LastName}, {c.FirstName}", isSel ? Color.white : Text);
+                var c = results[i + resultScroll];
+                int ry = ly + 2 + i * rowH;
+                bool sel = c == selected;
+                if (sel || Inside(3, ry, lw - 12, rowH)) canvas.Fill(3, ry, lw - 12, rowH, sel ? Hi : Panel);
+                canvas.Text(5, ry + 1, $"{c.LastName}, {c.FirstName}", sel ? White : Text, 18);
+                if (Hit(3, ry, lw - 12, rowH)) selected = c;
             }
-            if (results.Count > 16)
-                RetroGUI.Label(new Rect(list.x + 6, list.yMax - 14, list.width - 12, 12), $"... {results.Count - 16} weitere, genauer suchen", Dim, false, true);
+            if (results.Count > rows)
+            {
+                if (Button(lw - 9, ly + 1, 10, 11, "^", Panel, Text)) resultScroll--;
+                if (Button(lw - 9, ly + lh - 12, 10, 11, "v", Panel, Text)) resultScroll++;
+            }
         }
 
         // Record.
-        var rec = new Rect(r.x + 206, r.y + 24, r.width - 206, r.height - 24);
-        RetroGUI.Frame(rec, Panel, Line);
+        int rx = lw + 6, rw = W - rx - 2;
+        canvas.Frame(rx, ly, rw, lh, Line);
         if (selected == null)
         {
-            RetroGUI.Label(new Rect(rec.x + 8, rec.y + 8, rec.width - 16, 12), "Eintrag auswählen.", Dim);
+            canvas.Text(rx + 4, ly + 4, "Eintrag wählen.", Dim);
             return;
         }
-
-        float ly = rec.y + 8;
-        RetroGUI.Header(new Rect(rec.x + 8, ly, rec.width - 16, 16), "EINWOHNERREGISTER - AUSZUG", Text);
-        ly += 22;
-        Field(rec.x + 8, ref ly, "NAME", selected.LastName.ToUpperInvariant() + ", " + selected.FirstName.ToUpperInvariant());
-        Field(rec.x + 8, ref ly, "GEBOREN", selected.BirthDate.ToString("dd.MM.yyyy"));
-        Field(rec.x + 8, ref ly, "AUSWEIS-NR.", selected.IdNumber);
-        Field(rec.x + 8, ref ly, "GESCHLECHT", selected.Gender == Gender.Male ? "M" : "W");
-        Field(rec.x + 8, ref ly, "WOHNBEZIRK", selected.District);
-
-        Color statusColor = selected.Status == "AKTIV" ? Text : selected.Status == "GESUCHT" ? Warn : Alert;
-        RetroGUI.Label(new Rect(rec.x + 8, ly, 90, 12), "STATUS", Dim);
-        RetroGUI.Label(new Rect(rec.x + 100, ly, 200, 12), selected.Status, statusColor, true);
-        ly += 18;
+        int y = ly + 4;
+        canvas.Text(rx + 4, y, "AUSZUG MELDEREGISTER", Dim); y += 16;
+        Field(rx + 4, ref y, "NAME", selected.LastName.ToUpperInvariant());
+        Field(rx + 4, ref y, "VORNAME", selected.FirstName);
+        Field(rx + 4, ref y, "GEBOREN", selected.BirthDate.ToString("dd.MM.yyyy"));
+        Field(rx + 4, ref y, "AUSWEIS", selected.IdNumber);
+        Field(rx + 4, ref y, "BEZIRK", selected.District);
+        Color32 sc = selected.Status == "AKTIV" ? Text : selected.Status == "GESUCHT" ? Warn : Alert;
+        canvas.Text(rx + 4, y, "STATUS", Dim);
+        canvas.Text(rx + 58, y, selected.Status, sc);
+        y += 14;
         if (!string.IsNullOrEmpty(selected.Note))
-            RetroGUI.Wrapped(new Rect(rec.x + 8, ly, rec.width - 16, 60), selected.Note, statusColor);
+            canvas.WrappedText(rx + 4, y, rw - 8, 6, selected.Note, sc);
     }
 
-    void Field(float x, ref float y, string label, string value)
+    void Field(int x, ref int y, string label, string value)
     {
-        RetroGUI.Label(new Rect(x, y, 90, 12), label, Dim);
-        RetroGUI.Label(new Rect(x + 92, y, 240, 12), value, Text, true);
-        y += 16;
+        canvas.Text(x, y, label, Dim);
+        canvas.Text(x + 54, y, value, White, 20);
+        y += 13;
     }
 
     void RunSearch()
     {
+        if (game == null || game.Registry == null) return;
         results = game.Registry.Search(query).ToList();
+        searched = true;
+        resultScroll = 0;
         selected = results.Count == 1 ? results[0] : null;
+        if (results.Count == 0) ErrorBeep?.Invoke();
     }
 
-    void DrawMail(Rect r)
+    // ------------------------------------------------------------------ mail
+
+    void DrawMail(int top, int bottom)
     {
+        int W = canvas.Width;
         var mails = game.Mail.Mails;
-        var list = new Rect(r.x, r.y, 210, r.height);
-        RetroGUI.Frame(list, Panel, Line);
-        float rowH = 26f;
-        for (int i = 0; i < mails.Count && i < 9; i++)
+        int lw = 112, ly = top + 2, lh = bottom - ly - 2, rowH = 22, rows = (lh - 4) / rowH;
+        canvas.Frame(2, ly, lw, lh, Line);
+        mailScroll = Mathf.Clamp(mailScroll, 0, Mathf.Max(0, mails.Count - rows));
+        for (int i = 0; i < rows && i + mailScroll < mails.Count; i++)
         {
-            var m = mails[i];
-            var row = new Rect(list.x + 3, list.y + 3 + i * rowH, list.width - 6, rowH - 2);
-            bool isSel = m == openMail;
-            if (RetroGUI.Button(row, "", isSel ? new Color(0.2f, 0.45f, 0.26f) : Panel, Text)) { openMail = m; m.Read = true; }
-            RetroGUI.Label(new Rect(row.x + 4, row.y + 2, row.width - 40, 12), (m.Read ? "" : "* ") + m.Subject, m.Read ? Text : Color.white, !m.Read);
-            RetroGUI.Label(new Rect(row.x + 4, row.y + 13, row.width - 8, 10), m.From, Dim, false, true);
-            RetroGUI.Label(new Rect(row.xMax - 40, row.y + 13, 36, 10), m.Time, Dim, false, true, TextAnchor.UpperRight);
+            var m = mails[i + mailScroll];
+            int ry = ly + 2 + i * rowH;
+            bool sel = m == openMail;
+            if (sel || Inside(3, ry, lw - 12, rowH - 1)) canvas.Fill(3, ry, lw - 12, rowH - 1, sel ? Hi : Panel);
+            canvas.Text(5, ry + 1, (m.Read ? "" : "*") + m.Subject, m.Read ? Text : Warn, 16);
+            canvas.Text(5, ry + 11, m.From, Dim, 16);
+            if (Hit(3, ry, lw - 12, rowH - 1)) { openMail = m; m.Read = true; bodyScroll = 0; }
+        }
+        if (mails.Count > rows)
+        {
+            if (Button(lw - 9, ly + 1, 10, 11, "^", Panel, Text)) mailScroll--;
+            if (Button(lw - 9, ly + lh - 12, 10, 11, "v", Panel, Text)) mailScroll++;
         }
 
-        var body = new Rect(r.x + 216, r.y, r.width - 216, r.height);
-        RetroGUI.Frame(body, Panel, Line);
+        int bx = lw + 6, bw = W - bx - 2;
+        canvas.Frame(bx, ly, bw, lh, Line);
         if (openMail == null)
         {
-            RetroGUI.Label(new Rect(body.x + 8, body.y + 8, body.width - 16, 12), "Mail auswählen.", Dim);
+            canvas.Text(bx + 4, ly + 4, "Mail wählen.", Dim);
             return;
         }
-        RetroGUI.Label(new Rect(body.x + 8, body.y + 8, body.width - 16, 12), "VON: " + openMail.From + "   " + openMail.Time, Dim);
-        RetroGUI.Header(new Rect(body.x + 8, body.y + 22, body.width - 16, 16), openMail.Subject, Color.white);
-        RetroGUI.Fill(new Rect(body.x + 8, body.y + 40, body.width - 16, 1), Line);
-        RetroGUI.Wrapped(new Rect(body.x + 8, body.y + 46, body.width - 16, body.height - 52), openMail.Body, Text);
+        canvas.Text(bx + 4, ly + 3, openMail.From + "  " + openMail.Time, Dim, 32);
+        canvas.WrappedText(bx + 4, ly + 15, bw - 8, 2, openMail.Subject, White);
+        canvas.Fill(bx + 4, ly + 40, bw - 8, 1, Line);
+        int lines = (lh - 48) / (PixelFont.CellHeight + 1);
+        int total = canvas.WrappedText(bx + 4, ly + 44, bw - 16, lines, openMail.Body, Text, bodyScroll);
+        if (total > lines)
+        {
+            if (Button(bx + bw - 12, ly + 42, 10, 11, "^", Panel, Text)) bodyScroll = Mathf.Max(0, bodyScroll - 3);
+            if (Button(bx + bw - 12, ly + lh - 12, 10, 11, "v", Panel, Text)) bodyScroll = Mathf.Min(total - lines, bodyScroll + 3);
+        }
+    }
+
+    // ------------------------------------------------------------------ control
+
+    void DrawControl(int top, int bottom)
+    {
+        int W = canvas.Width;
+        var card = game.PendingCard;
+        if (card == null)
+        {
+            canvas.WrappedText(8, top + 8, W - 16, 6, "Kein Fahrgast an der Tür.\n\nAn der Haltestelle anhalten und die Türen öffnen (F).", Dim);
+            return;
+        }
+        canvas.Text(8, top + 8, "FAHRGAST AN DER TÜR:", Dim);
+        canvas.Text(8, top + 22, card.FullName.ToUpperInvariant(), White);
+        canvas.WrappedText(8, top + 42, W - 16, 4,
+            "Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status.", Text);
+
+        int by = bottom - 50;
+        if (Button(12, by, 140, 34, "EINLASSEN  [J]", Green, White)) { game.Decide(true); app = App.None; }
+        if (Button(W - 152, by, 140, 34, "ABWEISEN  [N]", Red, White)) { game.Decide(false); app = App.None; }
     }
 }

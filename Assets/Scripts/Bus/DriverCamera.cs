@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 /// First person driver camera. Put it on a camera that is a child of the bus,
 /// placed at the driver's eye position.
 ///
-/// Mouse / right stick: look around (limited like a real head)
+/// Mouse / right stick: look around (limited like a real head); aim at the terminal and click to use it
 /// V / right stick click: look straight ahead again
 /// Esc: release the mouse cursor, click to capture it again
 /// </summary>
@@ -40,7 +40,6 @@ public class DriverCamera : MonoBehaviour
     Vector3 lastVelocity;
     Vector3 busAcceleration;
     Vector3 sway;
-    bool uiWasOpen;
 
     void Start()
     {
@@ -73,32 +72,22 @@ public class DriverCamera : MonoBehaviour
         var mouse = Mouse.current;
         var gp = Gamepad.current;
 
-        // Computer / ID card open: free mouse, no looking around.
-        bool uiOpen = GameUI.AnyOpen;
-        bool justClosed = !uiOpen && uiWasOpen;
-        if (uiOpen && !uiWasOpen) LockCursor(false);
-        if (justClosed) LockCursor(true);
-        uiWasOpen = uiOpen;
+        if (kb != null && kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping) LockCursor(false);
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame) LockCursor(true);
 
-        if (!uiOpen && !justClosed)
-        {
-            if (kb != null && kb.escapeKey.wasPressedThisFrame) LockCursor(false);
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame) LockCursor(true);
-        }
-
-        if (!uiOpen && mouse != null && Cursor.lockState == CursorLockMode.Locked)
+        if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
         {
             Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity;
             yaw += delta.x;
             pitch += delta.y;
         }
-        if (gp != null && !uiOpen)
+        if (gp != null)
         {
             Vector2 stick = gp.rightStick.ReadValue();
             yaw += stick.x * stickSensitivity * Time.deltaTime;
             pitch += stick.y * stickSensitivity * Time.deltaTime;
         }
-        if ((kb != null && kb.vKey.wasPressedThisFrame) || (gp != null && gp.rightStickButton.wasPressedThisFrame))
+        if ((kb != null && !GameUI.TerminalTyping && kb.vKey.wasPressedThisFrame) || (gp != null && gp.rightStickButton.wasPressedThisFrame))
         {
             yaw = 0f;
             pitch = 0f;

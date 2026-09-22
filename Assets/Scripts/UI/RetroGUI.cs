@@ -1,12 +1,14 @@
 using UnityEngine;
 
-/// <summary>Which overlay is open. Driving input and mouse look pause while one is.</summary>
+/// <summary>Shared UI state.</summary>
 public static class GameUI
 {
-    public static bool ComputerOpen;
-    public static bool IdCardOpen;
+    /// <summary>Typing into the terminal: driving and hotkeys are ignored.</summary>
+    public static bool TerminalTyping;
+    /// <summary>ID card overlay hidden by the player (E).</summary>
+    public static bool IdCardHidden;
 
-    public static bool AnyOpen => ComputerOpen || IdCardOpen;
+    public static bool AnyOpen => TerminalTyping;
 }
 
 /// <summary>

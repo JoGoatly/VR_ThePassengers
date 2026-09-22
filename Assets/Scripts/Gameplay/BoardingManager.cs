@@ -116,9 +116,9 @@ public class BoardingManager : MonoBehaviour
     void HandleKeys()
     {
         var kb = Keyboard.current;
-        if (kb == null || GameUI.ComputerOpen) return;
+        if (kb == null || GameUI.TerminalTyping) return;
 
-        if (kb.eKey.wasPressedThisFrame && PendingCard != null) GameUI.IdCardOpen = !GameUI.IdCardOpen;
+        if (kb.eKey.wasPressedThisFrame) GameUI.IdCardHidden = !GameUI.IdCardHidden;
         if (PendingCard != null)
         {
             if (kb.jKey.wasPressedThisFrame) Decide(true);
@@ -213,7 +213,7 @@ public class BoardingManager : MonoBehaviour
             active.CurrentState = Passenger.State.AtDoor;
             CurrentPhase = Phase.AwaitingDecision;
             RenderPortrait(active);
-            ShowToast("Fahrgast zeigt den Ausweis  [E]");
+            ShowToast("Fahrgast zeigt den Ausweis");
         }, faceAtEnd: -side * Vector3.right);
     }
 
@@ -222,7 +222,6 @@ public class BoardingManager : MonoBehaviour
     public void Decide(bool letIn)
     {
         if (CurrentPhase != Phase.AwaitingDecision || active == null) return;
-        GameUI.IdCardOpen = false;
 
         var p = active;
         var card = p.Card;
@@ -242,7 +241,7 @@ public class BoardingManager : MonoBehaviour
             var path = new[]
             {
                 new Vector3(doorLocal.x - DoorSide * 0.45f, floorHeight, doorLocal.z),
-                new Vector3(0f, floorHeight, doorLocal.z - 1.0f),
+                new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f),
                 new Vector3(spot.x, floorHeight, spot.z),
             };
             p.WalkPath(path, bus.transform, () =>
@@ -429,7 +428,6 @@ public class BoardingManager : MonoBehaviour
 
     void OnGUI()
     {
-        if (GameUI.ComputerOpen) return;
         float w = RetroGUI.VirtualWidth;
         var white = new Color(1f, 0.95f, 0.8f);
 
@@ -463,7 +461,7 @@ public class BoardingManager : MonoBehaviour
                 prompt = "Fahrgast kommt zur Tür";
                 break;
             case Phase.AwaitingDecision:
-                prompt = "Ausweis [E]   Computer [Tab]   Einsteigen [J]   Abweisen [N]";
+                prompt = "Ausweis prüfen, im Register abgleichen  -  Einlassen [J]   Abweisen [N]";
                 break;
             case Phase.PassengerEntering:
                 prompt = "Fahrgast steigt ein";
@@ -472,7 +470,7 @@ public class BoardingManager : MonoBehaviour
         if (prompt != null) RetroGUI.ShadowLabel(new Rect(0, 300, w, 14), prompt, new Color(1f, 0.85f, 0.3f));
 
         if (Mail.UnreadCount > 0)
-            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), $"MAIL: {Mail.UnreadCount} ungelesen  [Tab]", new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
+            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), $"MAIL: {Mail.UnreadCount} ungelesen", new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
 
         if (toast != null && Time.time < toastUntil)
             RetroGUI.ShadowLabel(new Rect(0, 24, w, 14), toast, new Color(0.7f, 0.9f, 1f), false);
