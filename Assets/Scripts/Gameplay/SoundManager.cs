@@ -21,6 +21,7 @@ public class SoundManager : MonoBehaviour
     public AudioClip forestAmbience, drone;
     public AudioClip[] forestNoises;
     public AudioClip vanish;
+    public AudioClip talk;
 
     [Header("Mix")]
     [Range(0f, 1f)] public float engineVolume = 0.5f;
@@ -69,6 +70,8 @@ public class SoundManager : MonoBehaviour
             game.PassengerVanished += pos => PlayAt(vanish, pos, 1f, 0.2f);
         }
         if (watchers != null) watchers.Vanished += pos => PlayAt(vanish, pos, 0.8f, 0.6f);
+        var dialogue = FindAnyObjectByType<DialogueView>();
+        if (dialogue != null) dialogue.Spoke += () => { if (talk != null) ui.PlayOneShot(talk, 0.9f); };
         Passenger.StepTaken += OnStep;
 
         nextForestNoise = Time.time + Random.Range(forestNoiseInterval.x, forestNoiseInterval.y);

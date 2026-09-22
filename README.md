@@ -16,7 +16,10 @@ First-person PSX-style bus driving game (Unity 6, Built-in Render Pipeline).
 | Umschauen | Maus | rechter Stick |
 | Bordcomputer bedienen | mit dem Fadenkreuz auf den Bildschirm zielen + Linksklick | – |
 | Suchfeld: tippen, Enter = suchen, Esc = fertig | Tastatur | – |
-| Ausweis aus-/einblenden | E | – |
+| Ausweis aus-/einblenden (Fahrgast an der Tür) | E | – |
+| Fragen stellen (Name, Geburt, Wohnort, Beruf, Ziel) | 1 – 5 | – |
+| Aussteigen (Bus steht) / wieder einsteigen (an der Tür) | E | – |
+| Zu Fuß: laufen / rennen / Taschenlampe | WASD / Shift / L | – |
 | Fahrgast einlassen / abweisen | J / N (oder Terminal → KONTROLLE) | – |
 | Blick nach vorne | V | rechter Stick drücken |
 
@@ -62,7 +65,9 @@ Haltestellen rechts), meist geradeaus, ab und zu eine Kurve. An jeder Haltestell
    der Bordcomputer ist **rechts** neben dir.
 3. Ziele auf den Bildschirm und klicke: **REGISTER** (Namen suchen), **POSTFACH** (Regeln und
    Nachrichten der Leitstelle), **KONTROLLE** (einlassen / abweisen).
-4. Vergleiche Name, Geburtsdatum, Ausweisnummer, Gültigkeit und Status. Neue Regeln kommen per Mail.
+4. Vergleiche Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status – und stelle Fragen (1–5):
+   Doppelgänger haben perfekte Papiere, wissen aber Geburtsdatum, Wohnort oder Beruf nicht.
+   Neue Regeln kommen per Mail.
 5. Einlassen (**J**) oder abweisen (**N**). Vorher und mit offenen Türen fährt der Bus nicht.
 
 Die Straße erzeugt `Forest Road` (`ForestRoad`, `ForestWatchers`); Länge der Geraden, Kurven und

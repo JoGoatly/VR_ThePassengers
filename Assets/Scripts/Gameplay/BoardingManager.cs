@@ -56,6 +56,7 @@ public class BoardingManager : MonoBehaviour
     readonly HashSet<Discrepancy> knownRules = new HashSet<Discrepancy>
     {
         Discrepancy.None, Discrepancy.Expired, Discrepancy.WrongBirthDate, Discrepancy.WrongIdNumber, Discrepancy.NotRegistered,
+        Discrepancy.WrongExpiry,
     };
     readonly List<Passenger> riders = new List<Passenger>();
     readonly List<(float time, System.Action action)> scheduled = new List<(float, System.Action)>();
@@ -310,7 +311,16 @@ public class BoardingManager : MonoBehaviour
                 "Gesuchte Personen dürfen NICHT befördert werden. Weisen Sie sie ab, auch wenn der Ausweis gültig ist.\n\n" +
                 "Leitstelle Nachtlinie 13", ClockText));
         }
-        if (decisions == 4 && knownRules.Add(Discrepancy.Deceased))
+        if (decisions == 3 && knownRules.Add(Discrepancy.Doppelganger))
+        {
+            Schedule(5f, () => Mail.Send("Leitstelle", "Anomalien auf Linie 13",
+                "Es wurden Fahrgäste gemeldet, deren Papiere einwandfrei sind, die aber einfache Fragen über ihr " +
+                "eigenes Leben falsch beantworten: Geburtsdatum, Wohnort, Beruf.\n\n" +
+                "Das sind nicht die Personen, für die sie sich ausgeben.\n\n" +
+                "Stellen Sie jedem Fahrgast Fragen (Tasten 1-5) und vergleichen Sie die Antworten mit dem Register. " +
+                "Stimmt eine Antwort nicht: NICHT einsteigen lassen.\n\nLeitstelle Nachtlinie 13", ClockText));
+        }
+        if (decisions == 5 && knownRules.Add(Discrepancy.Deceased))
         {
             Schedule(5f, () => Mail.Send("Leitstelle", "DRINGEND: Status VERSTORBEN",
                 "Fahrer der Nachtlinie melden Fahrgäste, deren Ausweise auf Personen ausgestellt sind, " +
@@ -353,6 +363,14 @@ public class BoardingManager : MonoBehaviour
                     subject = "Wir haben Sie gewarnt";
                     body = $"{card.FullName}.\nVerstorben.\nIn Ihrem Bus.\n\nZählen Sie Ihre Fahrgäste.";
                     break;
+                case Discrepancy.Doppelganger:
+                    subject = "Wer ist in Ihrem Bus?";
+                    body = $"Die echte {card.FullName} lag zur Zeit Ihrer Fahrt zu Hause im Bett und hat das Haus nicht verlassen.\n\n" +
+                           "Wen haben Sie mitgenommen?";
+                    break;
+                case Discrepancy.WrongExpiry:
+                    body = $"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.";
+                    break;
                 case Discrepancy.NotRegistered:
                     body = $"Eine Person namens \"{card.FullName}\" existiert in keinem Register der Stadt. " +
                            "Fahrgäste berichten, sie habe während der Fahrt die ganze Zeit Sie angestarrt.";
@@ -374,7 +392,7 @@ public class BoardingManager : MonoBehaviour
             "Jeder Fahrgast zeigt beim Einsteigen seinen Personalausweis. Prüfen Sie ihn im Register (Reiter REGISTER).\n\n" +
             "Einsteigen darf nur, wer:\n" +
             " - im Register mit genau diesem Namen eingetragen ist,\n" +
-            " - das gleiche Geburtsdatum und die gleiche Ausweisnummer hat wie im Register,\n" +
+            " - das gleiche Geburtsdatum, die gleiche Ausweisnummer und das gleiche Ablaufdatum hat wie im Register,\n" +
             " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + CitizenRegistry.Today.ToString("dd.MM.yyyy") + ").\n\n" +
             "Alle anderen weisen Sie ab. Fahren Sie erst weiter, wenn der Fahrgast versorgt ist.\n\n" +
             "Gute Fahrt.\nLeitstelle Nachtlinie 13", ClockText);
@@ -483,7 +501,7 @@ public class BoardingManager : MonoBehaviour
                 prompt = "Fahrgast kommt zur Tür";
                 break;
             case Phase.AwaitingDecision:
-                prompt = "Ausweis prüfen, im Register abgleichen  -  Einlassen [J]   Abweisen [N]";
+                prompt = "Ausweis prüfen, Fragen stellen [1-5]  -  Einlassen [J]   Abweisen [N]";
                 break;
             case Phase.PassengerEntering:
                 prompt = "Fahrgast steigt ein";

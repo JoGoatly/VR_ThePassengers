@@ -12,6 +12,8 @@ public enum Discrepancy
     NotRegistered,    // name not in the register (often a slightly misspelled real name)
     Wanted,           // register status GESUCHT
     Deceased,         // register status VERSTORBEN
+    WrongExpiry,      // expiry date on the card differs from the register (forged)
+    Doppelganger,     // papers perfect, but the person gets facts about themselves wrong when asked
 }
 
 public enum Gender { Male, Female }
@@ -26,6 +28,8 @@ public class Citizen
     public string District;
     public string Status;     // AKTIV, GESUCHT, VERSTORBEN
     public string Note;
+    public string Occupation;
+    public DateTime IdExpiry;
 
     public string FullName => FirstName + " " + LastName;
 }
@@ -40,6 +44,9 @@ public class IdCard
     public string District;
     public DateTime ExpiryDate;
     public Discrepancy Truth;   // hidden from the player
+
+    // What the person says when asked (the driver can compare it with the register).
+    public string SaidName, SaidBirth, SaidHome, SaidJob, SaidDestination;
 
     public string FullName => FirstName + " " + LastName;
 }
@@ -69,6 +76,25 @@ public class CitizenRegistry
         "Hofmann", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler", "Maier", "Huber", "Kaiser",
         "Fuchs", "Peters", "Lang", "Scholz", "Möller", "Weiß", "Jung", "Hahn", "Vogel", "Friedrich", "Keller", "Brandt",
     };
+    // (male, female) job titles
+    static readonly (string m, string f)[] Jobs =
+    {
+        ("Förster", "Försterin"), ("Bäcker", "Bäckerin"), ("Krankenpfleger", "Krankenschwester"), ("Lehrer", "Lehrerin"),
+        ("Schreiner", "Schreinerin"), ("Metzger", "Metzgerin"), ("Kellner", "Kellnerin"), ("Buchhalter", "Buchhalterin"),
+        ("Postbote", "Postbotin"), ("Pfarrer", "Pastorin"), ("Mechaniker", "Mechanikerin"), ("Nachtwächter", "Nachtwächterin"),
+        ("Bestatter", "Bestatterin"), ("Landwirt", "Landwirtin"), ("Verkäufer", "Verkäuferin"), ("Elektriker", "Elektrikerin"),
+        ("Arzt", "Ärztin"), ("Holzfäller", "Friseurin"), ("Student", "Studentin"), ("Fernfahrer", "Schneiderin"),
+    };
+    static readonly string[] Months =
+    {
+        "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember",
+    };
+    public static readonly string[] Destinations =
+    {
+        "Waldfriedhof", "Forsthaus Eichgrund", "Alte Sägemühle", "Am Moor", "Schwarzer Weiher", "Köhlerhütte",
+        "Wolfsschlucht", "Kreuzweg", "Hünengrab", "Birkenhain", "Steinbruch", "Endstation",
+    };
+
     static readonly string[] Districts =
     {
         "Altstadt", "Nordviertel", "Mühlenfeld", "Am Wasserturm", "Südhang", "Lindenau", "Bahnhofsviertel",
@@ -116,6 +142,8 @@ public class CitizenRegistry
             Status = "AKTIV",
             Note = "",
         };
+        c.Occupation = JobFor(gender, c.BirthDate);
+        c.IdExpiry = rng.NextDouble() < 0.85 ? Today.AddDays(rng.Next(60, 8 * 365)) : Today.AddDays(-rng.Next(3, 900));
         double r = rng.NextDouble();
         if (r < 0.07) { c.Status = "VERSTORBEN"; c.Note = Pick(DeceasedNotes); }
         else if (r < 0.12) { c.Status = "GESUCHT"; c.Note = Pick(WantedNotes); }
@@ -157,9 +185,10 @@ public class CitizenRegistry
         {
             Discrepancy.Wanted => Citizens.Where(c => c.Status == "GESUCHT").OrderBy(_ => rng.Next()).FirstOrDefault(),
             Discrepancy.Deceased => Citizens.Where(c => c.Status == "VERSTORBEN").OrderBy(_ => rng.Next()).FirstOrDefault(),
-            _ => Citizens.Where(c => c.Status == "AKTIV").OrderBy(_ => rng.Next()).First(),
+            Discrepancy.Expired => Citizens.Where(c => c.Status == "AKTIV" && c.IdExpiry < Today).OrderBy(_ => rng.Next()).FirstOrDefault(),
+            _ => Citizens.Where(c => c.Status == "AKTIV" && c.IdExpiry >= Today).OrderBy(_ => rng.Next()).First(),
         };
-        if (source == null) { kind = Discrepancy.None; source = Citizens.First(c => c.Status == "AKTIV"); }
+        if (source == null) { kind = Discrepancy.None; source = Citizens.First(c => c.Status == "AKTIV" && c.IdExpiry >= Today); }
 
         var card = new IdCard
         {
@@ -169,14 +198,17 @@ public class CitizenRegistry
             BirthDate = source.BirthDate,
             IdNumber = source.IdNumber,
             District = source.District,
-            ExpiryDate = Today.AddDays(rng.Next(60, 8 * 365)),
+            ExpiryDate = source.IdExpiry,
             Truth = kind,
         };
+        if (kind != Discrepancy.Expired && card.ExpiryDate < Today) card.ExpiryDate = Today.AddDays(rng.Next(60, 900));
 
         switch (kind)
         {
             case Discrepancy.Expired:
-                card.ExpiryDate = Today.AddDays(-rng.Next(3, 900));
+                break;   // card and register agree: both expired
+            case Discrepancy.WrongExpiry:
+                card.ExpiryDate = source.IdExpiry.AddYears(rng.Next(1, 4)).AddDays(rng.Next(-20, 20));
                 break;
             case Discrepancy.WrongBirthDate:
                 card.BirthDate = rng.NextDouble() < 0.5
@@ -190,7 +222,62 @@ public class CitizenRegistry
                 MakeUnregisteredName(card);
                 break;
         }
+        WriteAnswers(card, source);
         return card;
+    }
+
+    // ------------------------------------------------------------------ talking
+
+    string JobFor(Gender g, DateTime birth)
+    {
+        int age = Today.Year - birth.Year;
+        if (age >= 66) return g == Gender.Male ? "Rentner" : "Rentnerin";
+        var j = Pick(Jobs);
+        return g == Gender.Male ? j.m : j.f;
+    }
+
+    public static string SpokenDate(DateTime d) => $"{d.Day}. {Months[d.Month - 1]} {d.Year}";
+
+    static string HomePhrase(string district) =>
+        district.StartsWith("Am ") ? district : "In " + district;
+
+    void WriteAnswers(IdCard card, Citizen source)
+    {
+        string job = source.Occupation;
+        string home = source.District;
+        DateTime birth = card.BirthDate;
+
+        if (card.Truth == Discrepancy.Doppelganger)
+        {
+            // Everything on paper is right - but it doesn't know its own life.
+            switch (rng.Next(3))
+            {
+                case 0: birth = birth.AddYears(rng.NextDouble() < 0.5 ? -rng.Next(1, 6) : rng.Next(1, 6)).AddDays(rng.Next(-60, 60)); break;
+                case 1: do home = Pick(Districts); while (home == source.District); break;
+                default: do { var j = Pick(Jobs); job = source.Gender == Gender.Male ? j.m : j.f; } while (job == source.Occupation); break;
+            }
+        }
+
+        card.SaidName = card.FullName + ".";
+        card.SaidBirth = "Am " + SpokenDate(birth) + ".";
+        card.SaidHome = HomePhrase(home) + ".";
+        card.SaidJob = "Ich bin " + job + ".";
+        card.SaidDestination = "Zur Haltestelle " + Pick(Destinations) + ".";
+
+        switch (card.Truth)
+        {
+            case Discrepancy.Doppelganger:
+                if (rng.NextDouble() < 0.5) card.SaidJob = "Ich... bin... " + job + ". Ja. " + job + ".";
+                if (rng.NextDouble() < 0.4) card.SaidDestination = "Dahin, wo Sie auch hinfahren.";
+                break;
+            case Discrepancy.Deceased:
+                card.SaidHome = rng.NextDouble() < 0.5 ? "Am Waldfriedhof. Reihe vier." : HomePhrase(home) + ". Früher.";
+                card.SaidDestination = "Nach Hause. Endlich nach Hause.";
+                break;
+            case Discrepancy.Wanted:
+                if (rng.NextDouble() < 0.5) card.SaidDestination = "Weg. Einfach nur weg hier.";
+                break;
+        }
     }
 
     string MutateIdNumber(string id)
