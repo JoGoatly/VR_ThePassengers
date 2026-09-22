@@ -8,7 +8,11 @@ public static class GameUI
     /// <summary>ID card overlay hidden by the player (E).</summary>
     public static bool IdCardHidden;
 
-    public static bool AnyOpen => TerminalTyping;
+    /// <summary>The driver has left the bus and walks around.</summary>
+    public static bool PlayerOutside;
+
+    /// <summary>Driving input is ignored (typing or not in the driver's seat).</summary>
+    public static bool AnyOpen => TerminalTyping || PlayerOutside;
 }
 
 /// <summary>

@@ -17,6 +17,7 @@ public class Passenger : MonoBehaviour
 
     /// <summary>Raised for every footstep (world position).</summary>
     public static event System.Action<Vector3> StepTaken;
+    public static void RaiseStep(Vector3 position) => StepTaken?.Invoke(position);
 
     public float walkSpeed = 1.3f;
     public float turnSpeed = 360f;

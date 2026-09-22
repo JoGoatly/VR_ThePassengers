@@ -37,15 +37,15 @@ public class ForestWatchers : MonoBehaviour
             if (busS < nextCheckAt) return;
             nextCheckAt = busS + checkEvery;
             if (Random.value > chance) return;
-            if (!road.TrySample(busS + Random.Range(30f, 45f), out Vector3 p, out Vector3 t)) return;
+            if (!road.TrySample(busS + Random.Range(18f, 28f), out Vector3 p, out Vector3 t)) return;
 
             float side = Random.value < 0.5f ? -1f : 1f;
             Vector3 right = Vector3.Cross(Vector3.up, t).normalized;
-            Vector3 pos = p + right * side * (road.EdgeOffset + Random.Range(0.8f, 2.5f));
+            Vector3 pos = p + right * side * (road.EdgeOffset + Random.Range(-0.6f, 1.0f));
             current = Instantiate(figures[Random.Range(0, figures.Length)], pos, Quaternion.LookRotation(-right * side));
             current.name = "Watcher";
             current.AddComponent<Passenger>();   // only for the standing pose
-            vanishDistance = Random.Range(6.5f, 10f);
+            vanishDistance = Random.Range(4.5f, 7f);
             return;
         }
 

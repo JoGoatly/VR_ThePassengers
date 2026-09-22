@@ -400,7 +400,9 @@ public class ComputerTerminal : MonoBehaviour
         Field(rx + 4, ref y, "VORNAME", selected.FirstName);
         Field(rx + 4, ref y, "GEBOREN", selected.BirthDate.ToString("dd.MM.yyyy"));
         Field(rx + 4, ref y, "AUSWEIS", selected.IdNumber);
+        Field(rx + 4, ref y, "GÜLTIG", selected.IdExpiry.ToString("dd.MM.yyyy"), selected.IdExpiry < CitizenRegistry.Today ? Alert : White);
         Field(rx + 4, ref y, "BEZIRK", selected.District);
+        Field(rx + 4, ref y, "BERUF", selected.Occupation);
         Color32 sc = selected.Status == "AKTIV" ? Text : selected.Status == "GESUCHT" ? Warn : Alert;
         canvas.Text(rx + 4, y, "STATUS", Dim);
         canvas.Text(rx + 58, y, selected.Status, sc);
@@ -409,10 +411,12 @@ public class ComputerTerminal : MonoBehaviour
             canvas.WrappedText(rx + 4, y, rw - 8, 6, selected.Note, sc);
     }
 
-    void Field(int x, ref int y, string label, string value)
+    void Field(int x, ref int y, string label, string value) => Field(x, ref y, label, value, White);
+
+    void Field(int x, ref int y, string label, string value, Color32 color)
     {
         canvas.Text(x, y, label, Dim);
-        canvas.Text(x + 54, y, value, White, 20);
+        canvas.Text(x + 54, y, value, color, 20);
         y += 13;
     }
 
@@ -484,7 +488,7 @@ public class ComputerTerminal : MonoBehaviour
         canvas.Text(8, top + 8, "FAHRGAST AN DER TÜR:", Dim);
         canvas.Text(8, top + 22, card.FullName.ToUpperInvariant(), White);
         canvas.WrappedText(8, top + 42, W - 16, 4,
-            "Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status.", Text);
+            "Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status. Fragen stellen mit 1-5 und die Antworten prüfen.", Text);
 
         int by = bottom - 50;
         if (Button(12, by, 140, 34, "EINLASSEN  [J]", Green, White)) { game.Decide(true); app = App.None; }

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// All game sounds: diesel engine (pitch follows speed), doors, brake hiss, light switch,
+/// All game sounds: calm Shepard-tone drive sound (louder with speed), doors, brake hiss, light switch,
 /// terminal beeps, mails, footsteps, forest ambience with a dark drone, and now and then
 /// an owl or a cracking branch somewhere in the dark.
 /// </summary>
@@ -21,6 +21,7 @@ public class SoundManager : MonoBehaviour
     public AudioClip forestAmbience, drone;
     public AudioClip[] forestNoises;
     public AudioClip vanish;
+    public AudioClip talk;
 
     [Header("Mix")]
     [Range(0f, 1f)] public float engineVolume = 0.5f;
@@ -69,6 +70,8 @@ public class SoundManager : MonoBehaviour
             game.PassengerVanished += pos => PlayAt(vanish, pos, 1f, 0.2f);
         }
         if (watchers != null) watchers.Vanished += pos => PlayAt(vanish, pos, 0.8f, 0.6f);
+        var dialogue = FindAnyObjectByType<DialogueView>();
+        if (dialogue != null) dialogue.Spoke += () => { if (talk != null) ui.PlayOneShot(talk, 0.9f); };
         Passenger.StepTaken += OnStep;
 
         nextForestNoise = Time.time + Random.Range(forestNoiseInterval.x, forestNoiseInterval.y);
@@ -118,9 +121,11 @@ public class SoundManager : MonoBehaviour
         if (bus != null && engine != null)
         {
             float speed01 = Mathf.Clamp01(Mathf.Abs(bus.Speed) / (bus.maxSpeedKmh / 3.6f));
-            float targetPitch = 0.75f + speed01 * 0.9f + bus.ThrottleInput * 0.12f;
-            engine.pitch = Mathf.Lerp(engine.pitch, targetPitch, Time.deltaTime * 3f);
-            engine.volume = engineVolume * (0.7f + 0.3f * Mathf.Max(bus.ThrottleInput, speed01));
+            // Calm Shepard tone: only a gentle pitch lift with speed, louder while driving.
+            float targetPitch = 0.9f + speed01 * 0.25f;
+            engine.pitch = Mathf.Lerp(engine.pitch, targetPitch, Time.deltaTime * 1.5f);
+            float targetVolume = engineVolume * (0.25f + 0.75f * Mathf.Max(speed01, bus.ThrottleInput * 0.4f));
+            engine.volume = Mathf.Lerp(engine.volume, targetVolume, Time.deltaTime * 2f);
 
             // Air brake hiss when the bus comes to a stop.
             if (lastSpeed > 2.5f && Mathf.Abs(bus.Speed) < 0.3f) PlayAt(brakeHiss, bus.transform.position, 0.7f, 0.3f);

@@ -897,6 +897,7 @@ MonoBehaviour:
   metal: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   busStopSign: {fileID: 2100000, guid: cfbd80f3be4c4b9cba9a61b0ac671a1e, type: 2}
   guidePost: {fileID: 2100000, guid: 314f59ef6e2b4ce7814dcc70e84142f2, type: 2}
+  lampGlow: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
 --- !u!1 &2100000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -911,6 +912,8 @@ GameObject:
   - component: {fileID: 2100000005}
   - component: {fileID: 2100000006}
   - component: {fileID: 2100000007}
+  - component: {fileID: 2100000008}
+  - component: {fileID: 2100000009}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1067,6 +1070,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c5dc9ca8e34f4a03b5bdeb9629b43b65, type: 3}
   - {fileID: 8300000, guid: 0b9eafa2051740639bd8f049571c60e2, type: 3}
   vanish: {fileID: 8300000, guid: d7b0d4653ba2492f926c44d12c2f22f1, type: 3}
+  talk: {fileID: 8300000, guid: 8c0b2e78bcb646729a4d661c98d7cc84, type: 3}
 --- !u!114 &2100000007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1084,6 +1088,33 @@ MonoBehaviour:
   game: {fileID: 2100000003}
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+--- !u!114 &2100000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea0c2fadd1a2420fabd28568dbebfb2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 1500000004}
+  game: {fileID: 2100000003}
+--- !u!114 &2100000009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 909ad590a1924b15b1e72e436f582f55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
