@@ -377,7 +377,7 @@ public class BoardingManager : MonoBehaviour
             "Gute Fahrt.\nLeitstelle Nachtlinie 13", ClockText);
         Schedule(20f, () => Mail.Send("Horst (Kollege)", "Tipp",
             "Hey, du fährst jetzt die 13? Kleiner Tipp: Tippfehler im Namen sind kein Zufall. " +
-            "Und wenn einer an der Friedhofstraße einsteigen will... schau lieber zweimal ins Register.\n\nHorst", ClockText));
+            "Und wenn einer am Waldfriedhof einsteigen will... schau lieber zweimal ins Register. Und halt nicht an, wenn da draußen jemand zwischen den Bäumen steht.\n\nHorst", ClockText));
     }
 
     // ------------------------------------------------------------------ portrait
