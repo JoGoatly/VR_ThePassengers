@@ -42,8 +42,8 @@ public class BusController : MonoBehaviour
     public float steerSpeedAtTopSpeed = 20f;
     [Tooltip("How fast the front wheels return to center, degrees per second")]
     public float steerReturnSpeed = 90f;
-    [Tooltip("Steering wheel degrees per front wheel degree")]
-    public float steeringWheelRatio = 12f;
+    [Tooltip("Steering wheel rotation at full lock in degrees (keep it below DriverBody.maxHandFollow so the hands stay on the rim)")]
+    public float maxSteeringWheelTurn = 100f;
     [Tooltip("Rotation axis of the steering wheel (steering column) in the bus model's space")]
     public Vector3 steeringColumnAxis = new Vector3(0.688f, -0.726f, 0f);
     public bool invertSteeringWheel = false;
@@ -68,7 +68,7 @@ public class BusController : MonoBehaviour
     public float SpeedKmh => Speed * 3.6f;
     public float SteerAngle => steerAngle;
     /// <summary>Steering wheel rotation in degrees, positive = clockwise (right) as seen by the driver.</summary>
-    public float SteeringWheelTurn => steerAngle * steeringWheelRatio;
+    public float SteeringWheelTurn => maxSteerAngle > 0f ? steerAngle / maxSteerAngle * maxSteeringWheelTurn : 0f;
     public float ThrottleInput => throttleInput;
     public float BrakeInput => brakeInput;
 
@@ -323,7 +323,7 @@ public class BusController : MonoBehaviour
 
         if (steeringWheel != null && steeringColumnAxis.sqrMagnitude > 0f)
         {
-            float angle = steerAngle * steeringWheelRatio * (invertSteeringWheel ? 1f : -1f);
+            float angle = SteeringWheelTurn * (invertSteeringWheel ? 1f : -1f);
             steeringWheel.localRotation = Quaternion.AngleAxis(angle, steeringColumnAxis.normalized) * steeringWheelRest;
         }
 
