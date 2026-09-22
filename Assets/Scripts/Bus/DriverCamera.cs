@@ -40,6 +40,7 @@ public class DriverCamera : MonoBehaviour
     Vector3 lastVelocity;
     Vector3 busAcceleration;
     Vector3 sway;
+    bool uiWasOpen;
 
     void Start()
     {
@@ -72,16 +73,26 @@ public class DriverCamera : MonoBehaviour
         var mouse = Mouse.current;
         var gp = Gamepad.current;
 
-        if (kb != null && kb.escapeKey.wasPressedThisFrame) LockCursor(false);
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame) LockCursor(true);
+        // Computer / ID card open: free mouse, no looking around.
+        bool uiOpen = GameUI.AnyOpen;
+        bool justClosed = !uiOpen && uiWasOpen;
+        if (uiOpen && !uiWasOpen) LockCursor(false);
+        if (justClosed) LockCursor(true);
+        uiWasOpen = uiOpen;
 
-        if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+        if (!uiOpen && !justClosed)
+        {
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) LockCursor(false);
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame) LockCursor(true);
+        }
+
+        if (!uiOpen && mouse != null && Cursor.lockState == CursorLockMode.Locked)
         {
             Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity;
             yaw += delta.x;
             pitch += delta.y;
         }
-        if (gp != null)
+        if (gp != null && !uiOpen)
         {
             Vector2 stick = gp.rightStick.ReadValue();
             yaw += stick.x * stickSensitivity * Time.deltaTime;

@@ -53,6 +53,13 @@ public class BusController : MonoBehaviour
     [Tooltip("Degrees per second")]
     public float doorSpeed = 140f;
     public bool doorsOpen = false;
+    [Tooltip("Doors only open below this speed (km/h)")]
+    public float maxDoorOpenSpeedKmh = 5f;
+
+    /// <summary>Set by the game (e.g. passenger at the door): no throttle while not null.</summary>
+    [System.NonSerialized] public string throttleLockReason;
+    /// <summary>Set by the game: doors can't be opened or closed.</summary>
+    [System.NonSerialized] public bool doorsLocked;
 
     [Header("Parts (found by name if empty)")]
     public Transform[] frontWheels;
@@ -70,6 +77,10 @@ public class BusController : MonoBehaviour
     /// <summary>Steering wheel rotation in degrees, positive = clockwise (right) as seen by the driver.</summary>
     public float SteeringWheelTurn => maxSteerAngle > 0f ? steerAngle / maxSteerAngle * maxSteeringWheelTurn : 0f;
     public float ThrottleInput => throttleInput;
+    public bool DoorsFullyOpen => doorAmount >= 0.99f;
+    public bool DoorsFullyClosed => doorAmount <= 0.01f;
+    /// <summary>Why the bus can't drive right now (null = it can).</summary>
+    public string DriveLockReason => throttleLockReason ?? (DoorsFullyClosed ? null : "Türen offen");
     public float BrakeInput => brakeInput;
 
     Rigidbody rb;
@@ -250,11 +261,27 @@ public class BusController : MonoBehaviour
             toggleDoors |= gp.buttonNorth.wasPressedThisFrame;
         }
 
+        // Typing in the computer etc.: hold the bus.
+        if (GameUI.AnyOpen)
+        {
+            throttle = brake = steer = 0f;
+            handbrake = true;
+            toggleDoors = false;
+        }
+
+        // Door interlock: no throttle and no reversing while doors are open or a passenger boards.
+        if (DriveLockReason != null)
+        {
+            throttle = 0f;
+            if (Speed < 0.3f) { brake = 0f; handbrake = true; }
+        }
+
         throttleInput = throttle;
         brakeInput = brake;
         steerInput = Mathf.Clamp(steer, -1f, 1f);
         handbrakeInput = handbrake;
-        if (toggleDoors) doorsOpen = !doorsOpen;
+        if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
+            doorsOpen = !doorsOpen;
     }
 
     void FixedUpdate()
@@ -352,7 +379,8 @@ public class BusController : MonoBehaviour
         if (!showSpeedometer) return;
         var style = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold };
         style.normal.textColor = Color.black;
-        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{(doorsOpen ? "  [TÜREN OFFEN]" : "")}";
+        string lockText = DriveLockReason != null ? "  [" + DriveLockReason.ToUpperInvariant() + "]" : "";
+        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{lockText}";
         GUI.Label(new Rect(22, Screen.height - 58, 600, 40), text, style);
         style.normal.textColor = Color.yellow;
         GUI.Label(new Rect(20, Screen.height - 60, 600, 40), text, style);
