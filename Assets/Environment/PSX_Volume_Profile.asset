@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: PSX_Volume_Profile
+  m_EditorClassIdentifier: 
+  components:
+  - {fileID: 3100000000000000001}
+  - {fileID: 3100000000000000002}
+  - {fileID: 3100000000000000003}
+--- !u!114 &3100000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96575ff06efbe184aa6c6f9f90b4aab9, type: 3}
+  m_Name: FogVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  fogFalloffMode:
+    m_OverrideState: 1
+    m_Value: 1
+  blendMode:
+    m_OverrideState: 1
+    m_Value: 0
+  color:
+    m_OverrideState: 1
+    m_Value: {r: 0.44, g: 0.48, b: 0.54, a: 1}
+  distanceMin:
+    m_OverrideState: 1
+    m_Value: 12
+  distanceMax:
+    m_OverrideState: 1
+    m_Value: 85
+  fogFalloffCurve:
+    m_OverrideState: 1
+    m_Value: 0.25
+--- !u!114 &3100000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdadb30f615c5d5499a6de3fe4216ef6, type: 3}
+  m_Name: SkyVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  skyMode:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &3100000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bffa9ddd307306479a0e3689eb72441, type: 3}
+  m_Name: PrecisionVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  drawDistanceFalloffMode:
+    m_OverrideState: 1
+    m_Value: 1
+  drawDistance:
+    m_OverrideState: 1
+    m_Value: 95
