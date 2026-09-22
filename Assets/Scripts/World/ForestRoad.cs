@@ -51,7 +51,10 @@ public class ForestRoad : MonoBehaviour
     [Header("Night")]
     [Tooltip("Optional: lamp at every bus stop")]
     public bool stopLamps = true;
-    public Color lampColor = new Color(0.75f, 0.85f, 1f);
+    public Color lampColor = new Color(1f, 0.68f, 0.3f);
+    [Tooltip("Weak on purpose: just enough to notice the stop in the dark")]
+    public float lampIntensity = 3f;
+    public float lampRange = 8f;
 
     public IReadOnlyList<BusStop> Stops => stops;
 
@@ -384,8 +387,8 @@ public class ForestRoad : MonoBehaviour
             lightGo.transform.position = lampPos + Vector3.up * 4f - r * 0.4f;
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Point;
-            light.range = 12f;
-            light.intensity = 7f;
+            light.range = lampRange;
+            light.intensity = lampIntensity;
             light.color = lampColor;
             light.shadows = LightShadows.None;
             lightGo.AddComponent<FlickerLight>();

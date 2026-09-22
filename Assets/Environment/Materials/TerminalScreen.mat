@@ -61,7 +61,7 @@ Material:
     - _LightingBaked: 1
     - _LightingDynamic: 1
     - _LightingMode: 1
-    - _PrecisionColorOverrideMode: 0
+    - _PrecisionColorOverrideMode: 1
     - _PrecisionGeometryOverrideMode: 0
     - _PrecisionGeometryWeight: 1
     - _Reflection: 0

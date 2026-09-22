@@ -14,10 +14,10 @@ public class ComputerTerminal : MonoBehaviour
     public BoardingManager game;
 
     [Header("Monitor (bus space)")]
-    public Vector3 monitorPosition = new Vector3(-0.2f, 1.34f, 3.98f);
+    public Vector3 monitorPosition = new Vector3(-0.33f, 1.4f, 4.1f);
     [Tooltip("Where the driver's eyes roughly are, the screen is turned towards it")]
     public Vector3 viewerPosition = new Vector3(-0.83f, 1.72f, 4.3f);
-    public Vector2 screenSize = new Vector2(0.4f, 0.3f);
+    public Vector2 screenSize = new Vector2(0.46f, 0.345f);
     public Material caseMaterial;
     [Tooltip("Unlit PSXLit material, its texture is replaced by the screen image")]
     public Material screenMaterial;
@@ -40,6 +40,8 @@ public class ComputerTerminal : MonoBehaviour
     // Register.
     string query = "";
     bool typing, searched;
+    bool allSelected;          // Ctrl+A
+    float backspaceHeld;       // for key repeat
     List<Citizen> results = new List<Citizen>();
     Citizen selected;
     int resultScroll;
@@ -141,9 +143,30 @@ public class ComputerTerminal : MonoBehaviour
 
         if (typing && kb != null)
         {
-            if (kb.backspaceKey.wasPressedThisFrame && query.Length > 0) { query = query.Substring(0, query.Length - 1); Typed?.Invoke(); }
-            if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) { typing = false; RunSearch(); }
-            if (kb.escapeKey.wasPressedThisFrame) typing = false;
+            bool ctrl = kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed;
+            if (ctrl && kb.aKey.wasPressedThisFrame && query.Length > 0) allSelected = true;
+
+            // Backspace / Delete: once on press, then repeating while held.
+            bool erase = kb.backspaceKey.isPressed || kb.deleteKey.isPressed;
+            if (erase)
+            {
+                bool first = backspaceHeld == 0f;
+                backspaceHeld += Time.deltaTime;
+                const float delay = 0.4f, interval = 0.045f;
+                int repeatsBefore = backspaceHeld - Time.deltaTime < delay ? 0 : Mathf.FloorToInt((backspaceHeld - Time.deltaTime - delay) / interval) + 1;
+                int repeatsNow = backspaceHeld < delay ? 0 : Mathf.FloorToInt((backspaceHeld - delay) / interval) + 1;
+                int count = (first ? 1 : 0) + Mathf.Max(0, repeatsNow - repeatsBefore);
+                for (int i = 0; i < count && query.Length > 0; i++)
+                {
+                    if (allSelected) { query = ""; allSelected = false; }
+                    else query = query.Substring(0, query.Length - 1);
+                    Typed?.Invoke();
+                }
+            }
+            else backspaceHeld = 0f;
+
+            if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) { typing = false; allSelected = false; RunSearch(); }
+            if (kb.escapeKey.wasPressedThisFrame) { typing = false; allSelected = false; }
         }
         // Clicking anywhere else ends typing.
         if (typing && mouse != null && mouse.leftButton.wasPressedThisFrame && !hover) typing = false;
@@ -174,7 +197,9 @@ public class ComputerTerminal : MonoBehaviour
 
     void OnTextInput(char c)
     {
-        if (!typing || char.IsControl(c) || query.Length >= 24) return;
+        if (!typing || char.IsControl(c)) return;
+        if (allSelected) { query = ""; allSelected = false; }
+        if (query.Length >= 24) return;
         query += c;
         Typed?.Invoke();
     }
@@ -319,8 +344,18 @@ public class ComputerTerminal : MonoBehaviour
         int fx = 38, fw = 170;
         canvas.Fill(fx, top + 1, fw, 13, new Color32(2, 6, 3, 255));
         canvas.Frame(fx, top + 1, fw, 13, typing ? White : Line);
-        string shown = query + (typing && Mathf.Repeat(blink, 0.8f) < 0.4f ? "_" : "");
-        canvas.Text(fx + 3, top + 2, shown.Length > 27 ? shown.Substring(shown.Length - 27) : shown, typing ? White : Text);
+        string visible = query.Length > 26 ? query.Substring(query.Length - 26) : query;
+        if (typing && allSelected && visible.Length > 0)
+        {
+            // Selection highlight.
+            canvas.Fill(fx + 2, top + 2, PixelCanvas.TextWidth(visible) + 2, 11, Line);
+            canvas.Text(fx + 3, top + 2, visible, Bg);
+        }
+        else
+        {
+            string shown = visible + (typing && Mathf.Repeat(blink, 0.8f) < 0.4f ? "_" : "");
+            canvas.Text(fx + 3, top + 2, shown, typing ? White : Text);
+        }
         if (Hit(fx, top + 1, fw, 13)) typing = true;
         if (Button(fx + fw + 4, top + 1, 56, 13, "SUCHEN", Green, White)) { typing = false; RunSearch(); }
 
