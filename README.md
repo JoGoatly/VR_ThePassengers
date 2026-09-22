@@ -11,7 +11,10 @@ First-person PSX-style bus driving game (Unity 6, Built-in Render Pipeline).
 | Bremsen / Rückwärts (im Stand) | S / ↓ | LT |
 | Lenken | A D / ← → | linker Stick |
 | Handbremse | Leertaste | A |
-| Türen auf/zu | F | Y |
+| Türen auf/zu (nur unter 5 km/h) | F | Y |
+| Ausweis ansehen | E | – |
+| Bordcomputer (Register & Mails) | Tab | – |
+| Fahrgast einsteigen lassen / abweisen | J / N | – |
 | Umschauen | Maus | rechter Stick |
 | Blick nach vorne | V | rechter Stick drücken |
 | Maus freigeben / einfangen | Esc / Linksklick | – |
@@ -47,3 +50,20 @@ greifen das Lenkrad, die Füße stehen auf den Pedalen. Die Position lässt sich
 Objekte `DriverSeat`, `LeftFootRest`, `ThrottlePedal` und `BrakePedal` unter `PlayerBus`
 anpassen; weitere Einstellungen (Griffposition, Oberkörper-Neigung, Fingerkrümmung) an
 der Komponente `DriverBody`.
+
+## Spielablauf
+
+Du fährst die Nachtlinie 13 im Kreis durch die Stadt (Linksverkehr, Haltestellen links).
+An jeder Haltestelle wartet eine Person.
+
+1. Halte so, dass die vordere Tür bei der Person ist, und öffne die Türen (**F**).
+2. Die Person kommt zur Tür und zeigt ihren Ausweis (**E**).
+3. Suche den Namen im **Register** des Bordcomputers (**Tab**) und vergleiche Name,
+   Geburtsdatum, Ausweisnummer, Ablaufdatum und Status. Die Regeln stehen im **Postfach**,
+   neue Regeln kommen im Laufe der Schicht dazu.
+4. **J** = einsteigen lassen, **N** = abweisen. Vorher kann der Bus nicht weiterfahren;
+   mit offenen Türen gibt es kein Gas.
+
+Die Stadt wird beim Start von `Town` (`TownBuilder`) erzeugt; Route, Anzahl und Namen der
+Haltestellen lassen sich dort einstellen (die Route ist im Editor als gelbe Linie sichtbar).
+Spiellogik: `GameManager` (`BoardingManager`, `ComputerTerminal`, `IdCardView`).

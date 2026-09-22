@@ -446,7 +446,7 @@ public class BoardingManager : MonoBehaviour
         {
             case Phase.Driving:
                 if (stopHere != null)
-                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? "Anhalten" : bus.doorsOpen ? "..." : "Türen öffnen  [F]";
+                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? "Anhalten" : bus.doorsOpen ? "Türen öffnen sich..." : "Türen öffnen  [F]";
                 else if (!bus.DoorsFullyClosed)
                     prompt = "Türen schließen  [F]";
                 break;
