@@ -186,6 +186,9 @@ public class BoardingManager : MonoBehaviour
         return null;
     }
 
+    /// <summary>+1 if the door is on the bus' right side, -1 if on the left.</summary>
+    float DoorSide => doorLocal.x >= 0f ? 1f : -1f;
+
     /// <summary>The stop the bus is standing at, for the HUD.</summary>
     public BusStop NearbyStop => StopAtDoor();
 
@@ -203,14 +206,15 @@ public class BoardingManager : MonoBehaviour
         // Walk to just outside the front door (bus space, the bus doesn't move now).
         active.SetSpace(bus.transform);
         Vector3 start = bus.transform.InverseTransformPoint(active.transform.position);
-        var outside = new Vector3(doorLocal.x - 0.75f, start.y, doorLocal.z);
+        float side = DoorSide;
+        var outside = new Vector3(doorLocal.x + side * 0.75f, start.y, doorLocal.z);
         active.WalkPath(new[] { outside }, bus.transform, () =>
         {
             active.CurrentState = Passenger.State.AtDoor;
             CurrentPhase = Phase.AwaitingDecision;
             RenderPortrait(active);
             ShowToast("Fahrgast zeigt den Ausweis  [E]");
-        }, faceAtEnd: Vector3.right);
+        }, faceAtEnd: -side * Vector3.right);
     }
 
     // ------------------------------------------------------------------ decision
@@ -238,7 +242,7 @@ public class BoardingManager : MonoBehaviour
             Vector3 spot = FreeSpot();
             var path = new[]
             {
-                new Vector3(doorLocal.x + 0.45f, floorHeight, doorLocal.z),
+                new Vector3(doorLocal.x - DoorSide * 0.45f, floorHeight, doorLocal.z),
                 new Vector3(0f, floorHeight, doorLocal.z - 1.0f),
                 new Vector3(spot.x, floorHeight, spot.z),
             };

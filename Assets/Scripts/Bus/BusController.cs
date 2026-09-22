@@ -351,6 +351,7 @@ public class BusController : MonoBehaviour
         if (steeringWheel != null && steeringColumnAxis.sqrMagnitude > 0f)
         {
             float angle = SteeringWheelTurn * (invertSteeringWheel ? 1f : -1f);
+            angle *= Handedness(steeringWheel.parent);
             steeringWheel.localRotation = Quaternion.AngleAxis(angle, steeringColumnAxis.normalized) * steeringWheelRest;
         }
 
@@ -364,12 +365,20 @@ public class BusController : MonoBehaviour
     }
 
     // Steering around the bus' up axis, then rolling around the axle, both in the wheel's parent space.
+    // -1 inside a mirrored (negatively scaled) model: local rotations appear reversed in the world.
+    static float Handedness(Transform t)
+    {
+        if (t == null) return 1f;
+        Vector3 s = t.lossyScale;
+        return s.x * s.y * s.z < 0f ? -1f : 1f;
+    }
+
     Quaternion WheelRotation(Transform wheel, float steer)
     {
         Transform parent = wheel.parent;
         Vector3 up = parent != null ? parent.InverseTransformDirection(transform.up).normalized : Vector3.up;
         Vector3 forward = parent != null ? parent.InverseTransformDirection(transform.forward).normalized : Vector3.forward;
-        Quaternion steerRot = Quaternion.AngleAxis(steer, up);
+        Quaternion steerRot = Quaternion.AngleAxis(steer * Handedness(parent), up);
         Vector3 axle = Vector3.Cross(up, steerRot * forward);
         return Quaternion.AngleAxis(wheelSpin, axle) * steerRot;
     }
