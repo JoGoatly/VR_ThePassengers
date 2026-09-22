@@ -284,10 +284,15 @@ public class BusController : MonoBehaviour
         steerInput = Mathf.Clamp(steer, -1f, 1f);
         handbrakeInput = handbrake;
         if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
-        {
-            doorsOpen = !doorsOpen;
-            DoorsChanged?.Invoke(doorsOpen);
-        }
+            SetDoors(!doorsOpen);
+    }
+
+    /// <summary>Open or close the doors (with sound event).</summary>
+    public void SetDoors(bool open)
+    {
+        if (doorsOpen == open) return;
+        doorsOpen = open;
+        DoorsChanged?.Invoke(doorsOpen);
     }
 
     void FixedUpdate()

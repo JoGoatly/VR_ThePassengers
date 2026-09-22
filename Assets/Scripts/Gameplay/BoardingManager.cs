@@ -123,7 +123,7 @@ public class BoardingManager : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null || GameUI.TerminalTyping) return;
 
-        if (kb.eKey.wasPressedThisFrame) GameUI.IdCardHidden = !GameUI.IdCardHidden;
+        if (kb.eKey.wasPressedThisFrame && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
         if (PendingCard != null)
         {
             if (kb.jKey.wasPressedThisFrame) Decide(true);
@@ -204,7 +204,7 @@ public class BoardingManager : MonoBehaviour
     {
         var stop = StopAtDoor();
         if (stop == null) return;
-        if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen) return;
+        if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen || GameUI.PlayerOutside) return;
 
         activeStop = stop;
         active = stop.WaitingPassenger;

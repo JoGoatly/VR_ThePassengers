@@ -24,7 +24,7 @@ public class DriverCamera : MonoBehaviour
     public float maxHeadYaw = 175f;
     [Tooltip("When looking sideways the head leans that far in that direction (m)")]
     public float sideLean = 0.18f;
-    public float minPitch = -60f;
+    public float minPitch = -85f;
     public float maxPitch = 50f;
     [Tooltip("Higher = snappier, 0 = no smoothing")]
     public float lookSmoothing = 18f;
