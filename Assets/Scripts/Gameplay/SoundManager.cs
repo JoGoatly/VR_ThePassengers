@@ -24,8 +24,11 @@ public class SoundManager : MonoBehaviour
 
     [Header("Mix")]
     [Range(0f, 1f)] public float engineVolume = 0.5f;
-    [Range(0f, 1f)] public float ambienceVolume = 0.45f;
-    [Range(0f, 1f)] public float droneVolume = 0.25f;
+    [Range(0f, 1f)] public float ambienceVolume = 0.12f;
+    [Tooltip("Muffles the wind outside the bus (Hz)")]
+    public float ambienceLowPass = 900f;
+    [Range(0f, 1f)] public float droneVolume = 0.12f;
+    [Range(0f, 1f)] public float uiVolume = 0.25f;
     public Vector2 forestNoiseInterval = new Vector2(12f, 40f);
 
     AudioSource engine, ambience, droneSource, ui;
@@ -39,9 +42,10 @@ public class SoundManager : MonoBehaviour
         if (terminal == null) terminal = FindAnyObjectByType<ComputerTerminal>();
         if (watchers == null) watchers = FindAnyObjectByType<ForestWatchers>();
 
-        ui = CreateSource("UI", transform, false, 1f);
+        ui = CreateSource("UI", transform, false, uiVolume);
         ambience = CreateSource("Ambience", transform, true, ambienceVolume, forestAmbience);
         droneSource = CreateSource("Drone", transform, true, droneVolume, drone);
+        ambience.gameObject.AddComponent<AudioLowPassFilter>().cutoffFrequency = ambienceLowPass;
 
         if (bus != null)
         {
@@ -50,18 +54,18 @@ public class SoundManager : MonoBehaviour
             engine.spatialBlend = 0.3f;
             bus.DoorsChanged += open => PlayAt(open ? doorOpen : doorClose, bus.transform.TransformPoint(new Vector3(1f, 1.5f, 4.3f)), 0.9f);
             var lights = bus.GetComponent<BusLights>();
-            if (lights != null) lights.Switched += _ => ui.PlayOneShot(lightSwitch, 0.6f);
+            if (lights != null) lights.Switched += _ => ui.PlayOneShot(lightSwitch, 0.8f);
         }
         if (terminal != null)
         {
-            terminal.Clicked += () => ui.PlayOneShot(terminalClick, 0.35f);
-            terminal.Typed += () => ui.PlayOneShot(terminalKey, 0.5f);
-            terminal.ErrorBeep += () => ui.PlayOneShot(terminalError, 0.4f);
+            terminal.Clicked += () => ui.PlayOneShot(terminalClick, 0.5f);
+            terminal.Typed += () => ui.PlayOneShot(terminalKey, 0.4f);
+            terminal.ErrorBeep += () => ui.PlayOneShot(terminalError, 0.6f);
         }
         if (game != null)
         {
             game.Mail.Received += _ => ui.PlayOneShot(mail, 0.5f);
-            game.Decided += letIn => ui.PlayOneShot(letIn ? decisionOk : decisionReject, 0.45f);
+            game.Decided += letIn => ui.PlayOneShot(letIn ? decisionOk : decisionReject, 0.7f);
             game.PassengerVanished += pos => PlayAt(vanish, pos, 1f, 0.2f);
         }
         if (watchers != null) watchers.Vanished += pos => PlayAt(vanish, pos, 0.8f, 0.6f);
@@ -127,7 +131,7 @@ public class SoundManager : MonoBehaviour
         {
             nextForestNoise = Time.time + Random.Range(forestNoiseInterval.x, forestNoiseInterval.y);
             Vector2 dir = Random.insideUnitCircle.normalized * Random.Range(18f, 40f);
-            PlayAt(forestNoises[Random.Range(0, forestNoises.Length)], bus.transform.position + new Vector3(dir.x, 2f, dir.y), 0.8f);
+            PlayAt(forestNoises[Random.Range(0, forestNoises.Length)], bus.transform.position + new Vector3(dir.x, 2f, dir.y), 0.35f);
         }
     }
 }

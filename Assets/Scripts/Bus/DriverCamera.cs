@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 /// placed at the driver's eye position.
 ///
 /// Mouse / right stick: look around (limited like a real head); aim at the terminal and click to use it
+/// Mouse wheel: zoom in/out, hold right mouse button: full zoom
 /// V / right stick click: look straight ahead again
 /// Esc: release the mouse cursor, click to capture it again
 /// </summary>
@@ -19,11 +20,18 @@ public class DriverCamera : MonoBehaviour
     public float mouseSensitivity = 0.12f;
     [Tooltip("Degrees per second at full stick deflection")]
     public float stickSensitivity = 140f;
-    public float maxYaw = 120f;
+    public float maxYaw = 165f;
     public float minPitch = -60f;
     public float maxPitch = 50f;
     [Tooltip("Higher = snappier, 0 = no smoothing")]
     public float lookSmoothing = 18f;
+
+    [Header("Zoom (mouse wheel, hold right mouse button for full zoom)")]
+    public float normalFov = 70f;
+    public float zoomedFov = 22f;
+    [Tooltip("Zoom change per mouse wheel notch (0..1)")]
+    public float zoomStep = 0.2f;
+    public float zoomSpeed = 10f;
 
     [Header("Head motion")]
     [Tooltip("How far the head leans when the bus accelerates, brakes or turns (m per m/s²)")]
@@ -40,12 +48,16 @@ public class DriverCamera : MonoBehaviour
     Vector3 lastVelocity;
     Vector3 busAcceleration;
     Vector3 sway;
+    Camera cam;
+    float zoomTarget, zoom;
 
     void Start()
     {
         busBody = GetComponentInParent<Rigidbody>();
         restPosition = transform.localPosition;
         restRotation = transform.localRotation;
+        cam = GetComponent<Camera>();
+        if (cam != null) normalFov = cam.fieldOfView;
         LockCursor(true);
     }
 
@@ -75,17 +87,29 @@ public class DriverCamera : MonoBehaviour
         if (kb != null && kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping) LockCursor(false);
         if (mouse != null && mouse.leftButton.wasPressedThisFrame) LockCursor(true);
 
+        // Zoom: wheel steps, right mouse button = full zoom while held.
+        if (mouse != null)
+        {
+            float wheel = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(wheel) > 0.01f) zoomTarget = Mathf.Clamp01(zoomTarget + Mathf.Sign(wheel) * zoomStep);
+        }
+        float wanted = mouse != null && mouse.rightButton.isPressed ? 1f : zoomTarget;
+        zoom = Mathf.Lerp(zoom, wanted, 1f - Mathf.Exp(-zoomSpeed * Time.deltaTime));
+        float fov = Mathf.Lerp(normalFov, zoomedFov, zoom);
+        if (cam != null) cam.fieldOfView = fov;
+        float lookScale = fov / normalFov;   // slower looking when zoomed in
+
         if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
         {
-            Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity;
+            Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity * lookScale;
             yaw += delta.x;
             pitch += delta.y;
         }
         if (gp != null)
         {
             Vector2 stick = gp.rightStick.ReadValue();
-            yaw += stick.x * stickSensitivity * Time.deltaTime;
-            pitch += stick.y * stickSensitivity * Time.deltaTime;
+            yaw += stick.x * stickSensitivity * lookScale * Time.deltaTime;
+            pitch += stick.y * stickSensitivity * lookScale * Time.deltaTime;
         }
         if ((kb != null && !GameUI.TerminalTyping && kb.vKey.wasPressedThisFrame) || (gp != null && gp.rightStickButton.wasPressedThisFrame))
         {
