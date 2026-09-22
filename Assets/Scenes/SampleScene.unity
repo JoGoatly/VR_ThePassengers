@@ -910,6 +910,7 @@ GameObject:
   - component: {fileID: 2100000004}
   - component: {fileID: 2100000005}
   - component: {fileID: 2100000006}
+  - component: {fileID: 2100000007}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1066,6 +1067,23 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c5dc9ca8e34f4a03b5bdeb9629b43b65, type: 3}
   - {fileID: 8300000, guid: 0b9eafa2051740639bd8f049571c60e2, type: 3}
   vanish: {fileID: 8300000, guid: d7b0d4653ba2492f926c44d12c2f22f1, type: 3}
+--- !u!114 &2100000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b0dcb777504cd28544a564292cee13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  bus: {fileID: 1500000004}
+  game: {fileID: 2100000003}
+  caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

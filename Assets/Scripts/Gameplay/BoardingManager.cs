@@ -191,6 +191,9 @@ public class BoardingManager : MonoBehaviour
         return null;
     }
 
+    /// <summary>Front door centre in bus space (at road height).</summary>
+    public Vector3 DoorLocal => doorLocal;
+
     /// <summary>+1 if the door is on the bus' right side, -1 if on the left.</summary>
     float DoorSide => doorLocal.x >= 0f ? 1f : -1f;
 
@@ -382,26 +385,38 @@ public class BoardingManager : MonoBehaviour
 
     // ------------------------------------------------------------------ portrait
 
+    // Passport photo: only the passenger is rendered (own layer), and because the night
+    // volume is not on that layer, the photo is evenly lit without fog on a grey background.
+    const int PortraitLayer = 31;
+
     void RenderPortrait(Passenger p)
     {
         if (portrait == null)
         {
-            portrait = new RenderTexture(96, 112, 24) { filterMode = FilterMode.Point, name = "Passenger Portrait" };
+            portrait = new RenderTexture(256, 144, 24) { filterMode = FilterMode.Point, name = "Passenger Portrait" };
             var camGo = new GameObject("Portrait Camera") { hideFlags = HideFlags.HideAndDontSave };
             portraitCamera = camGo.AddComponent<Camera>();
             portraitCamera.enabled = false;
-            portraitCamera.fieldOfView = 22f;
+            portraitCamera.fieldOfView = 18f;
             portraitCamera.nearClipPlane = 0.05f;
-            portraitCamera.farClipPlane = 30f;
+            portraitCamera.farClipPlane = 10f;
+            portraitCamera.cullingMask = 1 << PortraitLayer;
+            portraitCamera.clearFlags = CameraClearFlags.SolidColor;
+            portraitCamera.backgroundColor = new Color(0.55f, 0.56f, 0.58f);
             portraitCamera.targetTexture = portrait;
         }
 
         Transform head = p.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name.EndsWith("Head"));
-        Vector3 face = head != null ? head.position + Vector3.up * 0.08f : p.transform.position + Vector3.up * 1.6f;
+        Vector3 face = head != null ? head.position + Vector3.up * 0.06f : p.transform.position + Vector3.up * 1.6f;
         Vector3 forward = p.transform.forward;
-        portraitCamera.transform.position = face + forward * 1.1f;
+        portraitCamera.transform.position = face + forward * 1.2f;
         portraitCamera.transform.LookAt(face);
-        portraitCamera.Render();
+
+        var parts = p.GetComponentsInChildren<Transform>(true);
+        var layers = new int[parts.Length];
+        for (int i = 0; i < parts.Length; i++) { layers[i] = parts[i].gameObject.layer; parts[i].gameObject.layer = PortraitLayer; }
+        try { portraitCamera.Render(); }
+        finally { for (int i = 0; i < parts.Length; i++) parts[i].gameObject.layer = layers[i]; }
     }
 
     // ------------------------------------------------------------------ helpers
