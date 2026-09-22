@@ -897,6 +897,7 @@ MonoBehaviour:
   metal: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   busStopSign: {fileID: 2100000, guid: cfbd80f3be4c4b9cba9a61b0ac671a1e, type: 2}
   guidePost: {fileID: 2100000, guid: 314f59ef6e2b4ce7814dcc70e84142f2, type: 2}
+  lampGlow: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
 --- !u!1 &2100000001
 GameObject:
   m_ObjectHideFlags: 0

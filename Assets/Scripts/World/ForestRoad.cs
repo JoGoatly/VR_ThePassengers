@@ -47,6 +47,8 @@ public class ForestRoad : MonoBehaviour
     public Material metal;
     public Material busStopSign;
     public Material guidePost;
+    [Tooltip("Unlit, no fog, no draw distance: the lamp head is visible from far away")]
+    public Material lampGlow;
 
     [Header("Night")]
     [Tooltip("Optional: lamp at every bus stop")]
@@ -382,6 +384,8 @@ public class ForestRoad : MonoBehaviour
             Vector3 lampPos = p + r * (HalfRoad + shoulderWidth + 0.6f) - t * 4f + Vector3.up * padY;
             MeshKit.Spawn("Lamp Pole", root, MeshKit.Prism(0.06f, 4.2f, 6, 1f), metal, lampPos, Quaternion.identity, true);
             MeshKit.Spawn("Lamp Head", root, MeshKit.Box(new Vector3(0.5f, 0.12f, 0.25f), 1f), metal, lampPos + Vector3.up * 4.2f - r * 0.2f, Quaternion.LookRotation(r), false);
+            if (lampGlow != null)
+                MeshKit.Spawn("Lamp Glow", root, MeshKit.Box(new Vector3(0.36f, 0.05f, 0.18f), 1f), lampGlow, lampPos + Vector3.up * 4.14f - r * 0.2f, Quaternion.LookRotation(r), false);
             var lightGo = new GameObject("Lamp Light");
             lightGo.transform.SetParent(root, false);
             lightGo.transform.position = lampPos + Vector3.up * 4f - r * 0.4f;
