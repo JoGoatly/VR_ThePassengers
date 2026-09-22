@@ -129,6 +129,21 @@ public class ForestRoad : MonoBehaviour
 
     public float BusArcLength => bus != null ? ArcLengthAt(bus.position) : 0f;
 
+    /// <summary>Distance from the centre line to the forest edge.</summary>
+    public float EdgeOffset => HalfRoad + shoulderWidth;
+
+    /// <summary>Point and direction on the centre line at distance s (only where the road exists).</summary>
+    public bool TrySample(float s, out Vector3 position, out Vector3 tangent)
+    {
+        position = tangent = Vector3.zero;
+        if (points.Count < 2 || s < distances[0] || s >= distances[distances.Count - 1]) return false;
+        int i = Mathf.Clamp((int)((s - distances[0]) / sampleSpacing), 0, points.Count - 2);
+        float t = Mathf.Clamp01((s - distances[i]) / sampleSpacing);
+        position = Vector3.Lerp(points[i], points[i + 1], t);
+        tangent = Vector3.Slerp(tangents[i], tangents[i + 1], t).normalized;
+        return true;
+    }
+
     // ---------------------------------------------------------------- generation
 
     void UpdateRoad()

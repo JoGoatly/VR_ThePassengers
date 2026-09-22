@@ -389,7 +389,9 @@ public class BusController : MonoBehaviour
         var style = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold };
         style.normal.textColor = Color.black;
         string lockText = DriveLockReason != null ? "  [" + DriveLockReason.ToUpperInvariant() + "]" : "";
-        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{lockText}";
+        var lights = GetComponent<BusLights>();
+        string lightText = lights != null ? "   " + lights.ModeText : "";
+        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{lockText}{lightText}";
         GUI.Label(new Rect(22, Screen.height - 58, 600, 40), text, style);
         style.normal.textColor = Color.yellow;
         GUI.Label(new Rect(20, Screen.height - 60, 600, 40), text, style);

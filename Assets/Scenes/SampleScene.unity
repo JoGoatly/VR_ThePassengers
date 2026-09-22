@@ -20,13 +20,13 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.022, g: 0.026, b: 0.038, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -323,8 +323,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 1
+  m_Color: {r: 0.42, g: 0.5, b: 0.75, a: 1}
+  m_Intensity: 0.12
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -509,6 +509,7 @@ GameObject:
   - component: {fileID: 1500000002}
   - component: {fileID: 1500000003}
   - component: {fileID: 1500000004}
+  - component: {fileID: 1500000006}
   m_Layer: 0
   m_Name: PlayerBus
   m_TagString: Player
@@ -851,6 +852,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2000000002}
   - component: {fileID: 2000000003}
+  - component: {fileID: 2000000004}
   m_Layer: 0
   m_Name: Forest Road
   m_TagString: Untagged
@@ -998,6 +1000,39 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   game: {fileID: 2100000003}
+--- !u!114 &1500000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3acf191576a34a109edaf167c1716cf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
+--- !u!114 &2000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ebe0a309e8b40dc85167e0c0ad69f36, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  figures:
+  - {fileID: 919132149155446097, guid: 9480e8ae864d7a04e9d448c875da5669, type: 3}
+  - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
+  - {fileID: 919132149155446097, guid: 38e6c61bdb5fb83438c25f23521ffbde, type: 3}
+  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
+  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
+  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
