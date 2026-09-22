@@ -12,7 +12,7 @@ public class DialogueView : MonoBehaviour
     public BoardingManager game;
 
     /// <summary>Raised when the passenger answers (for a voice sound).</summary>
-    public event System.Action Spoke;
+    public event System.Action<IdCard> Spoke;
 
     static readonly string[] Questions =
     {
@@ -49,7 +49,7 @@ public class DialogueView : MonoBehaviour
         {
             log.Add((card.FirstName, pendingAnswer));
             pendingAnswer = null;
-            Spoke?.Invoke();
+            Spoke?.Invoke(card);
         }
 
         var kb = Keyboard.current;

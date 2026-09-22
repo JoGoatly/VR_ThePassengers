@@ -1070,7 +1070,14 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c5dc9ca8e34f4a03b5bdeb9629b43b65, type: 3}
   - {fileID: 8300000, guid: 0b9eafa2051740639bd8f049571c60e2, type: 3}
   vanish: {fileID: 8300000, guid: d7b0d4653ba2492f926c44d12c2f22f1, type: 3}
-  talk: {fileID: 8300000, guid: 8c0b2e78bcb646729a4d661c98d7cc84, type: 3}
+  roadNoise: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
+  maleVoices:
+  - {fileID: 8300000, guid: b3860453af4648659a33eac37dc16799, type: 3}
+  - {fileID: 8300000, guid: f6737d4b09674a2db4a41dcf24c5114e, type: 3}
+  femaleVoices:
+  - {fileID: 8300000, guid: 11e385015ca2427dac35f51cef1547a6, type: 3}
+  - {fileID: 8300000, guid: cd5bf661eb894058b08d8c68cd58ea2c, type: 3}
+  scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
 --- !u!114 &2100000007
 MonoBehaviour:
   m_ObjectHideFlags: 0

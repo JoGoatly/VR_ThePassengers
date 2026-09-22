@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// All game sounds: calm Shepard-tone drive sound (louder with speed), doors, brake hiss, light switch,
+/// All game sounds: electric bus motor hum and road noise (silent when standing), doors, brake hiss, light switch,
 /// terminal beeps, mails, footsteps, forest ambience with a dark drone, and now and then
 /// an owl or a cracking branch somewhere in the dark.
 /// </summary>
@@ -21,10 +21,13 @@ public class SoundManager : MonoBehaviour
     public AudioClip forestAmbience, drone;
     public AudioClip[] forestNoises;
     public AudioClip vanish;
-    public AudioClip talk;
+    public AudioClip roadNoise;
+    public AudioClip[] maleVoices, femaleVoices;
+    public AudioClip scare;
 
     [Header("Mix")]
-    [Range(0f, 1f)] public float engineVolume = 0.5f;
+    [Range(0f, 1f)] public float engineVolume = 0.35f;
+    [Range(0f, 1f)] public float roadVolume = 0.35f;
     [Range(0f, 1f)] public float ambienceVolume = 0.12f;
     [Tooltip("Muffles the wind outside the bus (Hz)")]
     public float ambienceLowPass = 900f;
@@ -32,7 +35,7 @@ public class SoundManager : MonoBehaviour
     [Range(0f, 1f)] public float uiVolume = 0.25f;
     public Vector2 forestNoiseInterval = new Vector2(12f, 40f);
 
-    AudioSource engine, ambience, droneSource, ui;
+    AudioSource engine, road, ambience, droneSource, ui;
     float lastSpeed;
     float nextForestNoise;
 
@@ -53,6 +56,8 @@ public class SoundManager : MonoBehaviour
             engine = CreateSource("Engine", bus.transform, true, engineVolume, engineLoop);
             engine.transform.localPosition = new Vector3(0f, 1f, -4.5f);
             engine.spatialBlend = 0.3f;
+            engine.volume = 0f;
+            road = CreateSource("Road", bus.transform, true, 0f, roadNoise);
             bus.DoorsChanged += open => PlayAt(open ? doorOpen : doorClose, bus.transform.TransformPoint(new Vector3(1f, 1.5f, 4.3f)), 0.9f);
             var lights = bus.GetComponent<BusLights>();
             if (lights != null) lights.Switched += _ => ui.PlayOneShot(lightSwitch, 0.8f);
@@ -71,13 +76,38 @@ public class SoundManager : MonoBehaviour
         }
         if (watchers != null) watchers.Vanished += pos => PlayAt(vanish, pos, 0.8f, 0.6f);
         var dialogue = FindAnyObjectByType<DialogueView>();
-        if (dialogue != null) dialogue.Spoke += () => { if (talk != null) ui.PlayOneShot(talk, 0.9f); };
+        if (dialogue != null) dialogue.Spoke += PlayVoice;
         Passenger.StepTaken += OnStep;
 
         nextForestNoise = Time.time + Random.Range(forestNoiseInterval.x, forestNoiseInterval.y);
     }
 
     void OnDestroy() => Passenger.StepTaken -= OnStep;
+
+    // Male / female murmur, and every person has a slightly different pitch.
+    void PlayVoice(IdCard card)
+    {
+        var pool = card.Gender == Gender.Male ? maleVoices : femaleVoices;
+        if (pool == null || pool.Length == 0) return;
+        int hash = Mathf.Abs(card.FullName.GetHashCode());
+        var clip = pool[hash % pool.Length];
+        float pitch = 0.9f + (hash / 7 % 20) / 100f;
+        if (card.Truth == Discrepancy.Doppelganger) pitch *= 0.93f;   // a little off
+        var go = new GameObject("Voice");
+        var s = go.AddComponent<AudioSource>();
+        s.clip = clip;
+        s.pitch = pitch;
+        s.volume = uiVolume * 2.4f;
+        s.spatialBlend = 0f;
+        s.Play();
+        Destroy(go, clip.length / pitch + 0.1f);
+    }
+
+    /// <summary>Loud hit for jump scares.</summary>
+    public void PlayScare()
+    {
+        if (scare != null) ui.PlayOneShot(scare, 3.5f);
+    }
 
     AudioSource CreateSource(string name, Transform parent, bool loop, float volume, AudioClip clip = null)
     {
@@ -121,11 +151,16 @@ public class SoundManager : MonoBehaviour
         if (bus != null && engine != null)
         {
             float speed01 = Mathf.Clamp01(Mathf.Abs(bus.Speed) / (bus.maxSpeedKmh / 3.6f));
-            // Calm Shepard tone: only a gentle pitch lift with speed, louder while driving.
-            float targetPitch = 0.9f + speed01 * 0.25f;
-            engine.pitch = Mathf.Lerp(engine.pitch, targetPitch, Time.deltaTime * 1.5f);
-            float targetVolume = engineVolume * (0.25f + 0.75f * Mathf.Max(speed01, bus.ThrottleInput * 0.4f));
-            engine.volume = Mathf.Lerp(engine.volume, targetVolume, Time.deltaTime * 2f);
+            // Electric motor: pitch rises with speed, silent when standing still.
+            float moving = Mathf.Clamp01(speed01 * 6f);
+            engine.pitch = Mathf.Lerp(engine.pitch, 0.6f + speed01 * 1.1f, Time.deltaTime * 4f);
+            float targetVolume = engineVolume * moving * (0.65f + 0.35f * bus.ThrottleInput);
+            engine.volume = Mathf.Lerp(engine.volume, targetVolume, Time.deltaTime * 4f);
+            if (road != null)
+            {
+                road.volume = Mathf.Lerp(road.volume, roadVolume * speed01, Time.deltaTime * 3f);
+                road.pitch = 0.8f + speed01 * 0.4f;
+            }
 
             // Air brake hiss when the bus comes to a stop.
             if (lastSpeed > 2.5f && Mathf.Abs(bus.Speed) < 0.3f) PlayAt(brakeHiss, bus.transform.position, 0.7f, 0.3f);
