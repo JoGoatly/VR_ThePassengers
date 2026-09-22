@@ -1,15 +1,19 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Talking to the passenger at the door: keys 1-5 ask a question, the answer appears as a
-/// subtitle. Compare the answers with the register - a doppelganger has perfect papers
+/// Talking to the passenger at the door: keys 1-5 ask a question, the answer appears in one
+/// dialogue box that is replaced with every new line. Story passengers talk on their own;
+/// F shows their next line, and while they talk the camera looks at their face.
+/// Compare the answers with the register - a doppelganger has perfect papers
 /// but gets facts about its own life wrong.
 /// </summary>
 public class DialogueView : MonoBehaviour
 {
     public BoardingManager game;
+    public DriverCamera driverCamera;
 
     /// <summary>Raised when the passenger answers (for a voice sound).</summary>
     public event System.Action<IdCard> Spoke;
@@ -23,16 +27,22 @@ public class DialogueView : MonoBehaviour
         "Wohin fahren Sie?",
     };
 
-    readonly List<(string who, string text)> log = new List<(string, string)>();
     IdCard lastCard;
     float answerAt = -1f;
     string pendingAnswer;
+    string question;          // last thing the driver asked
+    string line;              // what the passenger says right now
     readonly Queue<string> intro = new Queue<string>();
-    float nextIntroAt;
+    float introStartAt;
+    bool introStarted;
+    float focusUntil;
+
+    bool Talking => introStarted && intro.Count > 0;
 
     void Start()
     {
         if (game == null) game = FindAnyObjectByType<BoardingManager>();
+        if (driverCamera == null) driverCamera = FindAnyObjectByType<DriverCamera>();
     }
 
     void Update()
@@ -40,35 +50,42 @@ public class DialogueView : MonoBehaviour
         var card = game != null ? game.PendingCard : null;
         if (card != lastCard)
         {
-            log.Clear();
             pendingAnswer = null;
+            question = null;
+            line = null;
             intro.Clear();
+            introStarted = false;
+            focusUntil = -1f;
             lastCard = card;
             // Story passengers start talking on their own.
             if (card != null && card.IntroLines != null)
-                foreach (var line in card.IntroLines) intro.Enqueue(line);
-            nextIntroAt = Time.time + 0.6f;
+                foreach (var l in card.IntroLines) intro.Enqueue(l);
+            introStartAt = Time.time + 0.6f;
         }
+        UpdateFocus(card);
         if (card == null) return;
 
-        if (intro.Count > 0 && pendingAnswer == null && Time.time >= nextIntroAt)
+        var kb = Keyboard.current;
+
+        // First line comes by itself, the rest with F.
+        if (!introStarted && intro.Count > 0 && Time.time >= introStartAt)
         {
-            string line = intro.Dequeue();
-            log.Add((card.FirstName, line));
-            Spoke?.Invoke(card);
-            nextIntroAt = Time.time + 1.6f + line.Length * 0.05f;   // time to read it
+            introStarted = true;
+            Say(card, intro.Dequeue());
+        }
+        else if (introStarted && intro.Count > 0 && pendingAnswer == null && kb != null && !GameUI.TerminalTyping && kb.fKey.wasPressedThisFrame)
+        {
+            question = null;
+            Say(card, intro.Dequeue());
         }
 
         // The answer comes after a short pause.
         if (pendingAnswer != null && Time.time >= answerAt)
         {
-            log.Add((card.FirstName, pendingAnswer));
+            Say(card, pendingAnswer);
             pendingAnswer = null;
-            Spoke?.Invoke(card);
-            nextIntroAt = Mathf.Max(nextIntroAt, Time.time + 2f);
         }
 
-        var kb = Keyboard.current;
         if (kb == null || GameUI.TerminalTyping || pendingAnswer != null) return;
         for (int i = 0; i < Questions.Length; i++)
         {
@@ -77,6 +94,27 @@ public class DialogueView : MonoBehaviour
             break;
         }
     }
+
+    void Say(IdCard card, string text)
+    {
+        line = text;
+        if (introStarted && intro.Count == 0 && card.IntroLines != null && focusUntil < 0f) focusUntil = Time.time + 3f;
+        Spoke?.Invoke(card);
+    }
+
+    // While a story passenger is still talking, look at their face.
+    void UpdateFocus(IdCard card)
+    {
+        if (driverCamera == null) return;
+        Transform head = null;
+        if (card != null && (Talking || Time.time < focusUntil))
+        {
+            var p = game.PendingPassenger;
+            if (p != null) head = p.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name.EndsWith("Head"));
+        }
+        driverCamera.focusTarget = head;
+    }
+
 
     static bool KeyPressed(Keyboard kb, int i)
     {
@@ -90,10 +128,11 @@ public class DialogueView : MonoBehaviour
         }
     }
 
-    void Ask(IdCard card, int question)
+    void Ask(IdCard card, int index)
     {
-        log.Add(("Du", Questions[question]));
-        pendingAnswer = question switch
+        question = Questions[index];
+        line = null;
+        pendingAnswer = index switch
         {
             0 => card.SaidName,
             1 => card.SaidBirth,
@@ -116,17 +155,20 @@ public class DialogueView : MonoBehaviour
         for (int i = 0; i < Questions.Length; i++) menu += $"[{i + 1}] {Questions[i]}   ";
         RetroGUI.ShadowLabel(new Rect(0, 284, w, 14), menu, new Color(0.7f, 0.85f, 1f), false);
 
-        // Last lines of the conversation.
-        int first = Mathf.Max(0, log.Count - 4);
-        float y = 222;
-        for (int i = first; i < log.Count; i++)
+        // One dialogue box, replaced with every line.
+        if (question == null && line == null && pendingAnswer == null) return;
+        var box = new Rect(232, 226, 340, 54);
+        RetroGUI.Frame(box, new Color(0f, 0f, 0f, 0.72f), new Color(0.55f, 0.5f, 0.4f, 0.9f));
+        float y = box.y + 4;
+        if (question != null)
         {
-            var (who, text) = log[i];
-            Color c = who == "Du" ? new Color(0.75f, 0.75f, 0.75f) : Color.white;
-            RetroGUI.ShadowLabel(new Rect(0, y, w, 14), $"{who}: \"{text}\"", c, who != "Du");
-            y += 14;
+            RetroGUI.Label(new Rect(box.x + 8, y, box.width - 16, 12), "Du: " + question, new Color(0.7f, 0.7f, 0.7f), false, true);
+            y += 11;
         }
-        if (pendingAnswer != null)
-            RetroGUI.ShadowLabel(new Rect(0, y, w, 14), "...", Color.white, false);
+        RetroGUI.Label(new Rect(box.x + 8, y, box.width - 16, 12), card.FirstName + ":", new Color(1f, 0.85f, 0.55f), true, true);
+        string text = pendingAnswer != null ? "..." : line;
+        RetroGUI.Wrapped(new Rect(box.x + 8, y + 10, box.width - 16, box.yMax - y - 12), text ?? "", Color.white);
+        if (introStarted && intro.Count > 0 && pendingAnswer == null)
+            RetroGUI.Label(new Rect(box.x, box.yMax - 11, box.width - 6, 10), "weiter [F]", new Color(1f, 0.85f, 0.3f), false, true, TextAnchor.UpperRight);
     }
 }

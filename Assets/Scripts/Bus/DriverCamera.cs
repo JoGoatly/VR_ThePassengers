@@ -16,6 +16,11 @@ public class DriverCamera : MonoBehaviour
     [Tooltip("Optional: follow this point (e.g. the driver's eyes). Set automatically by DriverBody.")]
     public Transform eyeAnchor;
 
+    /// <summary>While set (e.g. a passenger's head in a conversation) the camera turns to it and mouse look pauses.</summary>
+    [System.NonSerialized] public Transform focusTarget;
+    [Tooltip("How fast the camera turns to the focus target")]
+    public float focusSpeed = 4f;
+
     [Header("Look")]
     public float mouseSensitivity = 0.12f;
     [Tooltip("Degrees per second at full stick deflection")]
@@ -102,7 +107,23 @@ public class DriverCamera : MonoBehaviour
         if (cam != null) cam.fieldOfView = fov;
         float lookScale = fov / normalFov;   // slower looking when zoomed in
 
-        if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+        if (focusTarget != null)
+        {
+            // Turn the head to the target; yaw/pitch stay there when the focus ends.
+            Transform space = transform.parent;
+            Quaternion rest = (space != null ? space.rotation : Quaternion.identity) * restRotation;
+            Vector3 dir = Quaternion.Inverse(rest) * (focusTarget.position - transform.position);
+            if (dir.sqrMagnitude > 1e-4f)
+            {
+                dir.Normalize();
+                float targetYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+                float targetPitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+                float k = 1f - Mathf.Exp(-focusSpeed * Time.deltaTime);
+                yaw = Mathf.LerpAngle(yaw, targetYaw, k);
+                pitch = Mathf.Lerp(pitch, targetPitch, k);
+            }
+        }
+        else if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
         {
             Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity * lookScale;
             yaw += delta.x;
