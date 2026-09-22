@@ -16,7 +16,7 @@ public class BoardingManager : MonoBehaviour
     public enum Phase { Driving, PassengerComing, AwaitingDecision, PassengerEntering }
 
     [Header("References")]
-    public TownBuilder town;
+    public ForestRoad road;
     public BusController bus;
     public GameObject[] malePassengers;
     public GameObject[] femalePassengers;
@@ -37,7 +37,6 @@ public class BoardingManager : MonoBehaviour
     public float despawnBehind = 50f;
     [Tooltip("How far the front door may be from the passenger along the road")]
     public float stopTolerance = 7f;
-    public float stopCooldown = 60f;
     public int seed = 1311;
 
     public CitizenRegistry Registry { get; private set; }
@@ -72,7 +71,7 @@ public class BoardingManager : MonoBehaviour
         rng = new System.Random(seed);
         Registry = new CitizenRegistry(seed);
         if (bus == null) bus = FindAnyObjectByType<BusController>();
-        if (town == null) town = FindAnyObjectByType<TownBuilder>();
+        if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
         doorLocal = FindDoorCentre();
         Mail.Received += m => ShowToast("Neue Mail: " + m.Subject);
@@ -129,26 +128,26 @@ public class BoardingManager : MonoBehaviour
 
     void UpdateSpawns()
     {
-        if (town == null || town.Stops == null) return;
-        float busS = town.ArcLengthAt(bus.transform.position);
+        if (road == null) return;
+        float busS = road.BusArcLength;
 
-        foreach (var stop in town.Stops)
+        foreach (var stop in road.Stops)
         {
-            float ahead = town.DistanceAhead(busS, stop.arcLength);
-            float behind = town.PathLength - ahead;
+            if (stop == null) continue;
+            float ahead = stop.arcLength - busS;
             var waiting = stop.WaitingPassenger;
 
-            if (waiting == null)
+            // One passenger per stop, spawned before the bus sees the stop.
+            if (waiting == null && !stop.Visited && ahead < spawnDistance && ahead > 25f)
             {
-                if (Time.time >= stop.CooldownUntil && ahead < spawnDistance && ahead > 25f)
-                    stop.WaitingPassenger = SpawnPassenger(stop);
+                stop.WaitingPassenger = SpawnPassenger(stop);
+                stop.Visited = true;
             }
-            else if (waiting != active && behind > despawnBehind && behind < town.PathLength * 0.5f)
+            else if (waiting != null && waiting != active && ahead < -despawnBehind)
             {
                 // Bus has left the stop: remove whoever is still standing there.
                 Destroy(waiting.gameObject);
                 stop.WaitingPassenger = null;
-                stop.CooldownUntil = Time.time + stopCooldown;
             }
         }
     }
@@ -171,10 +170,11 @@ public class BoardingManager : MonoBehaviour
 
     BusStop StopAtDoor()
     {
-        if (town == null) return null;
+        if (road == null) return null;
         Vector3 doorWorld = bus.transform.TransformPoint(doorLocal);
-        foreach (var stop in town.Stops)
+        foreach (var stop in road.Stops)
         {
+            if (stop == null) continue;
             var p = stop.WaitingPassenger;
             if (p == null || p.CurrentState != Passenger.State.Waiting) continue;
             Vector3 d = stop.waitPoint.position - doorWorld;
@@ -233,7 +233,6 @@ public class BoardingManager : MonoBehaviour
         ScheduleFeedback(card, letIn, correct);
         UnlockRules();
 
-        activeStop.CooldownUntil = Time.time + stopCooldown;
 
         if (letIn)
         {
@@ -435,13 +434,19 @@ public class BoardingManager : MonoBehaviour
         var white = new Color(1f, 0.95f, 0.8f);
 
         // Next stop.
-        if (town != null && town.Stops != null && town.Stops.Count > 0)
+        if (road != null)
         {
-            float busS = town.ArcLengthAt(bus.transform.position);
-            var next = town.Stops.OrderBy(s => town.DistanceAhead(busS, s.arcLength)).First();
-            float dist = town.DistanceAhead(busS, next.arcLength);
-            if (dist > town.PathLength - 15f) dist = 0f;
-            RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), $"Nächste Haltestelle: {next.stopName}  ({dist:0} m)", white);
+            float busS = road.BusArcLength;
+            BusStop next = null;
+            float dist = float.MaxValue;
+            foreach (var st in road.Stops)
+            {
+                if (st == null) continue;
+                float d = st.arcLength - busS;
+                if (d > -8f && d < dist) { dist = d; next = st; }
+            }
+            if (next != null)
+                RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), $"Nächste Haltestelle: {next.stopName}  ({Mathf.Max(0f, dist):0} m)", white);
         }
 
         string prompt = null;

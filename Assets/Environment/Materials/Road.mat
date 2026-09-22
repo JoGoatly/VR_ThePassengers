@@ -16,7 +16,7 @@ Material:
   - _FOG_ON
   - _LIGHTING_BAKED_ON
   - _LIGHTING_DYNAMIC_ON
-  - _SHADING_EVALUATION_MODE_PER_VERTEX
+  - _SHADING_EVALUATION_MODE_PER_PIXEL
   - _TEXTURE_FILTER_MODE_POINT
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -71,7 +71,7 @@ Material:
     - _ReflectionBlendMode: 0
     - _ReflectionDirectionMode: 0
     - _RenderQueueCategory: 0
-    - _ShadingEvaluationMode: 0
+    - _ShadingEvaluationMode: 1
     - _SrcBlend: 1
     - _Surface: 0
     - _TextureFilterMode: 1

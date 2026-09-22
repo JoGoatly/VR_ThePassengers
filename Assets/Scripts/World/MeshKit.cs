@@ -64,6 +64,22 @@ public static class MeshKit
         return mb.ToMesh("Blob");
     }
 
+    /// <summary>Cone (fir tree layer) with its pivot at the bottom centre, open at the bottom.</summary>
+    public static Mesh Cone(float radius, float height, int sides = 7)
+    {
+        var mb = new Builder();
+        Vector3 tip = Vector3.up * height;
+        for (int i = 0; i < sides; i++)
+        {
+            float a0 = i * Mathf.PI * 2f / sides, a1 = (i + 1) * Mathf.PI * 2f / sides;
+            var p0 = new Vector3(Mathf.Cos(a0) * radius, 0, Mathf.Sin(a0) * radius);
+            var p1 = new Vector3(Mathf.Cos(a1) * radius, 0, Mathf.Sin(a1) * radius);
+            mb.Tri(p0, tip, p1);
+            mb.Tri(p0, p1, Vector3.zero);
+        }
+        return mb.ToMesh("Cone");
+    }
+
     public static GameObject Spawn(string name, Transform parent, Mesh mesh, Material material,
                                    Vector3 position, Quaternion rotation, bool collider)
     {
@@ -117,6 +133,24 @@ public static class MeshKit
             normals.Add(n); normals.Add(n); normals.Add(n);
             uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(0.5f, 1)); uvs.Add(new Vector2(1, 0));
             tris.Add(i); tris.Add(i + 1); tris.Add(i + 2);
+        }
+
+        /// <summary>Appends a (readable) mesh with a transform, e.g. to merge many trees into one mesh.</summary>
+        public void AddMesh(Mesh mesh, Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            var m = Matrix4x4.TRS(position, rotation, scale);
+            var normalMatrix = m.inverse.transpose;
+            int offset = verts.Count;
+            var v = mesh.vertices;
+            var n = mesh.normals;
+            var uv = mesh.uv;
+            for (int i = 0; i < v.Length; i++)
+            {
+                verts.Add(m.MultiplyPoint3x4(v[i]));
+                normals.Add(normalMatrix.MultiplyVector(n[i]).normalized);
+                uvs.Add(i < uv.Length ? uv[i] : Vector2.zero);
+            }
+            foreach (int t in mesh.triangles) tris.Add(offset + t);
         }
 
         public Mesh ToMesh(string name)
