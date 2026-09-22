@@ -11,8 +11,11 @@ public static class GameUI
     /// <summary>The driver has left the bus and walks around.</summary>
     public static bool PlayerOutside;
 
-    /// <summary>Driving input is ignored (typing or not in the driver's seat).</summary>
-    public static bool AnyOpen => TerminalTyping || PlayerOutside;
+    /// <summary>The talk menu (T) is open: mouse cursor is free to pick a question.</summary>
+    public static bool DialogueOpen;
+
+    /// <summary>Driving input is ignored (typing, talking or not in the driver's seat).</summary>
+    public static bool AnyOpen => TerminalTyping || PlayerOutside || DialogueOpen;
 }
 
 /// <summary>
