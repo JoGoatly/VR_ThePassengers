@@ -20,7 +20,10 @@ public class DriverCamera : MonoBehaviour
     public float mouseSensitivity = 0.12f;
     [Tooltip("Degrees per second at full stick deflection")]
     public float stickSensitivity = 140f;
-    public float maxYaw = 165f;
+    [Tooltip("How far you can turn your head left/right (degrees)")]
+    public float maxHeadYaw = 175f;
+    [Tooltip("When looking sideways the head leans that far in that direction (m)")]
+    public float sideLean = 0.18f;
     public float minPitch = -60f;
     public float maxPitch = 50f;
     [Tooltip("Higher = snappier, 0 = no smoothing")]
@@ -117,7 +120,7 @@ public class DriverCamera : MonoBehaviour
             pitch = 0f;
         }
 
-        yaw = Mathf.Clamp(yaw, -maxYaw, maxYaw);
+        yaw = Mathf.Clamp(yaw, -maxHeadYaw, maxHeadYaw);
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
         float t = lookSmoothing > 0f ? 1f - Mathf.Exp(-lookSmoothing * Time.deltaTime) : 1f;
@@ -127,7 +130,9 @@ public class DriverCamera : MonoBehaviour
 
         if (eyeAnchor != null)
             restPosition = transform.parent != null ? transform.parent.InverseTransformPoint(eyeAnchor.position) : eyeAnchor.position;
-        transform.localPosition = restPosition + HeadMotion();
+        // Lean towards the side you look at (e.g. to the terminal on the right).
+        float lean = Mathf.Clamp(smoothYaw / 90f, -1f, 1f) * sideLean;
+        transform.localPosition = restPosition + Vector3.right * lean + HeadMotion();
     }
 
     // The head is pushed opposite to the bus' acceleration (forward when braking,
