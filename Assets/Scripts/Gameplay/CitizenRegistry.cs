@@ -47,6 +47,10 @@ public class IdCard
 
     // What the person says when asked (the driver can compare it with the register).
     public string SaidName, SaidBirth, SaidHome, SaidJob, SaidDestination;
+    /// <summary>What the person says on their own when they reach the driver (story passengers).</summary>
+    public string[] IntroLines;
+    /// <summary>Index of the scripted story passenger, or -1.</summary>
+    public int StoryIndex = -1;
 
     public string FullName => FirstName + " " + LastName;
 }
@@ -172,10 +176,10 @@ public class CitizenRegistry
     /// Creates the ID card of the next passenger. allowed = discrepancies the player
     /// already knows the rules for (from the mails).
     /// </summary>
-    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed)
+    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed, Discrepancy? forced = null)
     {
-        Discrepancy kind = Discrepancy.None;
-        if (rng.NextDouble() > 0.55 && allowed.Count > 0)
+        Discrepancy kind = forced ?? Discrepancy.None;
+        if (!forced.HasValue && rng.NextDouble() > 0.55 && allowed.Count > 0)
         {
             var options = allowed.Where(d => d != Discrepancy.None).ToList();
             if (options.Count > 0) kind = options[rng.Next(options.Count)];

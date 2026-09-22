@@ -1033,12 +1033,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   road: {fileID: 2000000003}
   figures:
-  - {fileID: 919132149155446097, guid: 9480e8ae864d7a04e9d448c875da5669, type: 3}
   - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
-  - {fileID: 919132149155446097, guid: 38e6c61bdb5fb83438c25f23521ffbde, type: 3}
-  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
-  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
-  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
 --- !u!114 &2100000006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1079,6 +1074,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 11e385015ca2427dac35f51cef1547a6, type: 3}
   - {fileID: 8300000, guid: cd5bf661eb894058b08d8c68cd58ea2c, type: 3}
   scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
+  knock: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
 --- !u!114 &2100000007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1138,12 +1134,7 @@ MonoBehaviour:
   bus: {fileID: 1500000004}
   sound: {fileID: 2100000006}
   figures:
-  - {fileID: 919132149155446097, guid: 9480e8ae864d7a04e9d448c875da5669, type: 3}
   - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
-  - {fileID: 919132149155446097, guid: 38e6c61bdb5fb83438c25f23521ffbde, type: 3}
-  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
-  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
-  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
   interval: {x: 120, y: 300}
   firstDelay: 150
   chance: 0.6
