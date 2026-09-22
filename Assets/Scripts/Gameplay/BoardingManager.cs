@@ -33,7 +33,7 @@ public class BoardingManager : MonoBehaviour
     };
 
     [Tooltip("Where a passenger stands while being checked: x = how far in from the door, y = forward(+)/back(-)")]
-    public Vector2 entryOffset = new Vector2(0.75f, -0.35f);
+    public Vector2 entryOffset = new Vector2(0.85f, 0.3f);
 
     [Header("Rules")]
     public float spawnDistance = 200f;
@@ -47,6 +47,8 @@ public class BoardingManager : MonoBehaviour
     public Phase CurrentPhase { get; private set; } = Phase.Driving;
     public IdCard PendingCard => CurrentPhase == Phase.AwaitingDecision && active != null ? active.Card : null;
     public Texture PendingPortrait => portrait;
+    /// <summary>The passenger being checked right now.</summary>
+    public Passenger PendingPassenger => PendingCard != null ? active : null;
     public int Correct { get; private set; }
     public int Wrong { get; private set; }
     public string ClockText => FormatClock(GameMinutes);
@@ -199,12 +201,13 @@ public class BoardingManager : MonoBehaviour
             "Oh. Ein neues Gesicht.",
             "Sie sehen anders aus als der letzte Busfahrer. ...Der war auf einmal nicht mehr da.",
             "Die wechseln oft auf der 13. Keiner weiß so recht, wohin.",
-            "Na, egal. Hier ist mein Ausweis, links sehen Sie ihn. [E] blendet ihn aus und ein.",
-            "Rechts am Computer: auf REGISTER klicken, meinen Namen eintippen, Enter.",
-            "Geburtsdatum, Ausweisnummer und GÜLTIG BIS müssen genau zum Register passen.",
-            "Fragen Sie mich ruhig was, mit den Tasten 1 bis 5. Die Antworten müssen stimmen.",
-            "Passt alles, drücken Sie [J] und ich steige ein.",
-            "Passt etwas nicht: [N]. Dann bleibe ich draußen.",
+            "Na, egal. Hier, mein Ausweis. (E zum Ausblenden)",
+            "Schauen Sie im Computer nach. Unter REGISTER meinen Namen eingeben.",
+            "Geburtsdatum, Ausweisnummer, gültig bis... das muss alles genau stimmen.",
+            "Sie können mich auch etwas fragen. (1-5)",
+            "Was ich sage, sollte zum Register passen. Sonst stimmt was nicht mit mir.",
+            "Wenn alles passt, lassen Sie mich rein. (J)",
+            "Wenn nicht, schicken Sie mich weg. (N) Ich nehm's Ihnen nicht übel.",
             "Und lesen Sie Ihre Mails. Die Leitstelle schreibt nicht ohne Grund.",
         }),
         (Discrepancy.None, new[]
