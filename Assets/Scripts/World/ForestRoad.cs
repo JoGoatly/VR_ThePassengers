@@ -384,8 +384,8 @@ public class ForestRoad : MonoBehaviour
             lightGo.transform.position = lampPos + Vector3.up * 4f - r * 0.4f;
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Point;
-            light.range = 11f;
-            light.intensity = 1.6f;
+            light.range = 12f;
+            light.intensity = 7f;
             light.color = lampColor;
             light.shadows = LightShadows.None;
             lightGo.AddComponent<FlickerLight>();

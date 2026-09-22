@@ -15,14 +15,16 @@ public class BusLights : MonoBehaviour
     public Vector3 headlightLeft = new Vector3(-0.85f, 0.8f, 5.35f);
     public Vector3 headlightRight = new Vector3(0.85f, 0.8f, 5.35f);
     public Color headlightColor = new Color(1f, 0.93f, 0.78f);
-    public float lowRange = 32f, lowAngle = 75f, lowIntensity = 2.6f, lowPitch = 7f;
-    public float highRange = 75f, highAngle = 42f, highIntensity = 4f, highPitch = 1.5f;
+    // HPSXRP lights fall off with 1/distance² and the colour is gamma-linearised (intensity^2.2),
+    // so a headlight needs a high intensity to still light the road 15-30 m ahead.
+    public float lowRange = 35f, lowAngle = 75f, lowIntensity = 15f, lowPitch = 6f;
+    public float highRange = 80f, highAngle = 40f, highIntensity = 34f, highPitch = 1.5f;
     public Material glowMaterial;
 
     [Header("Tail and cabin lights")]
     public Vector3 tailLight = new Vector3(0f, 0.9f, -5.6f);
     public Vector3 cabinLight = new Vector3(0f, 2.55f, 1.5f);
-    public float cabinIntensity = 0.45f;
+    public float cabinIntensity = 2f;
 
     /// <summary>Raised when the mode changes (for the switch sound).</summary>
     public event System.Action<Mode> Switched;
@@ -37,7 +39,7 @@ public class BusLights : MonoBehaviour
         glowLeft = CreateGlow(headlightLeft);
         glowRight = CreateGlow(headlightRight);
 
-        tail = CreatePoint("Tail Light", tailLight, new Color(0.9f, 0.08f, 0.05f), 5f, 0.9f);
+        tail = CreatePoint("Tail Light", tailLight, new Color(0.9f, 0.08f, 0.05f), 6f, 2.1f);
         cabin = CreatePoint("Cabin Light", cabinLight, new Color(1f, 0.82f, 0.55f), 7.5f, cabinIntensity);
         var flicker = cabin.gameObject.AddComponent<FlickerLight>();
         flicker.flickerChance = 0.05f;
