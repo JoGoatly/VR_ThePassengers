@@ -238,6 +238,15 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             }
         }
 
+#if UNITY_6000_0_OR_NEWER && !UNITY_6000_1_OR_NEWER
+        // Unity 6.0 still declares the Camera[] overload as abstract. The engine calls the
+        // List<Camera> overload below, this one only forwards to it.
+        protected override void Render(ScriptableRenderContext context, Camera[] cameras)
+        {
+            Render(context, new List<Camera>(cameras));
+        }
+#endif
+
 #if UNITY_6000_0_OR_NEWER
         protected override void Render(ScriptableRenderContext context, List<Camera> cameras)
 #else
