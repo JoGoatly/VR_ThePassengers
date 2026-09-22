@@ -130,6 +130,9 @@ public class PlayerOnFoot : MonoBehaviour
         cam.localRotation = camLocalRot;
         driverCamera.enabled = true;
         if (driver != null) driver.gameObject.SetActive(true);
+        // The flashlight hangs on the camera: switch it off / remove it inside the bus.
+        if (flashlight != null) Destroy(flashlight.gameObject);
+        flashlight = null;
         Destroy(walker);
         walker = null;
         GameUI.PlayerOutside = false;
