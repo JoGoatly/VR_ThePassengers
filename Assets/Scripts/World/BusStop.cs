@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>A bus stop created by TownBuilder. Passengers wait at waitPoint.</summary>
+/// <summary>A bus stop created by ForestRoad. Passengers wait at waitPoint.</summary>
 public class BusStop : MonoBehaviour
 {
     public string stopName;
@@ -14,6 +14,12 @@ public class BusStop : MonoBehaviour
     /// <summary>The passenger currently waiting here (null if nobody).</summary>
     public Passenger WaitingPassenger { get; set; }
 
-    /// <summary>Time.time until which no new passenger spawns here.</summary>
-    public float CooldownUntil { get; set; }
+    /// <summary>A passenger has already been placed here (one per stop).</summary>
+    public bool Visited { get; set; }
+
+    void OnDestroy()
+    {
+        if (WaitingPassenger != null && WaitingPassenger.CurrentState == Passenger.State.Waiting)
+            Destroy(WaitingPassenger.gameObject);
+    }
 }

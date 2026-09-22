@@ -15,6 +15,9 @@ public class Passenger : MonoBehaviour
     public BusStop Stop { get; set; }
     public bool IsWalking => waypoints.Count > 0;
 
+    /// <summary>Raised for every footstep (world position).</summary>
+    public static event System.Action<Vector3> StepTaken;
+
     public float walkSpeed = 1.3f;
     public float turnSpeed = 360f;
     public float stepAngle = 28f;
@@ -118,7 +121,12 @@ public class Passenger : MonoBehaviour
         }
 
         walkBlend = Mathf.MoveTowards(walkBlend, moving ? 1f : 0f, dt * 4f);
-        if (moving) walkPhase += dt * walkSpeed * 4.2f;
+        if (moving)
+        {
+            float before = walkPhase;
+            walkPhase += dt * walkSpeed * 4.2f;
+            if (Mathf.Floor(walkPhase / Mathf.PI) != Mathf.Floor(before / Mathf.PI)) StepTaken?.Invoke(transform.position);
+        }
     }
 
     void SetLocal(Vector3 local)

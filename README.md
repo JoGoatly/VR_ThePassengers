@@ -12,14 +12,13 @@ First-person PSX-style bus driving game (Unity 6, Built-in Render Pipeline).
 | Lenken | A D / ← → | linker Stick |
 | Handbremse | Leertaste | A |
 | Türen auf/zu (nur unter 5 km/h) | F | Y |
-| Ausweis ansehen | E | – |
-| Bordcomputer (Register & Mails) | Tab | – |
-| Fahrgast einsteigen lassen / abweisen | J / N | – |
+| Licht: aus → Abblendlicht → Fernlicht | L | – |
 | Umschauen | Maus | rechter Stick |
+| Bordcomputer bedienen | mit dem Fadenkreuz auf den Bildschirm zielen + Linksklick | – |
+| Suchfeld: tippen, Enter = suchen, Esc = fertig | Tastatur | – |
+| Ausweis aus-/einblenden | E | – |
+| Fahrgast einlassen / abweisen | J / N (oder Terminal → KONTROLLE) | – |
 | Blick nach vorne | V | rechter Stick drücken |
-| Maus freigeben / einfangen | Esc / Linksklick | – |
-
-Szene: `Assets/Scenes/SampleScene.unity`
 
 ## Rendering
 
@@ -37,9 +36,10 @@ Das Objekt `PSX Volume (Fog)` in der Szene nutzt das Profil `Assets/Environment/
 
 | Einstellung | Wert |
 |---|---|
-| Nebel beginnt / ist dicht bei | 12 m / 85 m (zylindrisch um die Kamera) |
-| Nebelfarbe (= Himmelfarbe) | graublau `#707A8A` |
-| Sichtweite (Geometrie wird danach ausgeblendet) | 95 m |
+| Nebel beginnt / ist dicht bei | 4 m / 42 m (zylindrisch um die Kamera) |
+| Nebelfarbe (= Himmelfarbe) | fast schwarz |
+| Sichtweite (Geometrie wird danach ausgeblendet) | 55 m |
+| Dynamisches Licht (Scheinwerfer, Laternen) | an, bis 8 Lichter pro Objekt |
 
 Weitere Overrides (Auflösung, Farbtiefe, CRT-Effekt, …) über **Add Override → HauntedPS1** im Profil.
 
@@ -53,17 +53,17 @@ der Komponente `DriverBody`.
 
 ## Spielablauf
 
-Du fährst die Nachtlinie 13 im Kreis durch die Stadt (Linksverkehr, Haltestellen links).
-An jeder Haltestelle wartet eine Person.
+Nachtschicht auf der Linie 13: eine endlose Landstraße durch den Wald (Rechtsverkehr,
+Haltestellen rechts), meist geradeaus, ab und zu eine Kurve. An jeder Haltestelle wartet eine Person.
 
-1. Halte so, dass die vordere Tür bei der Person ist, und öffne die Türen (**F**).
-2. Die Person kommt zur Tür und zeigt ihren Ausweis (**E**).
-3. Suche den Namen im **Register** des Bordcomputers (**Tab**) und vergleiche Name,
-   Geburtsdatum, Ausweisnummer, Ablaufdatum und Status. Die Regeln stehen im **Postfach**,
-   neue Regeln kommen im Laufe der Schicht dazu.
-4. **J** = einsteigen lassen, **N** = abweisen. Vorher kann der Bus nicht weiterfahren;
-   mit offenen Türen gibt es kein Gas.
+1. Halte so, dass die vordere Tür (rechts) bei der Person ist, und öffne die Türen (**F**).
+2. Die Person kommt zur Tür. Ihr Ausweis erscheint **links**, sie selbst steht in der **Mitte**,
+   der Bordcomputer ist **rechts** neben dir.
+3. Ziele auf den Bildschirm und klicke: **REGISTER** (Namen suchen), **POSTFACH** (Regeln und
+   Nachrichten der Leitstelle), **KONTROLLE** (einlassen / abweisen).
+4. Vergleiche Name, Geburtsdatum, Ausweisnummer, Gültigkeit und Status. Neue Regeln kommen per Mail.
+5. Einlassen (**J**) oder abweisen (**N**). Vorher und mit offenen Türen fährt der Bus nicht.
 
-Die Stadt wird beim Start von `Town` (`TownBuilder`) erzeugt; Route, Anzahl und Namen der
-Haltestellen lassen sich dort einstellen (die Route ist im Editor als gelbe Linie sichtbar).
-Spiellogik: `GameManager` (`BoardingManager`, `ComputerTerminal`, `IdCardView`).
+Die Straße erzeugt `Forest Road` (`ForestRoad`, `ForestWatchers`); Länge der Geraden, Kurven und
+Haltestellenabstände sind dort einstellbar. Spiellogik: `GameManager` (`BoardingManager`,
+`ComputerTerminal`, `IdCardView`, `SoundManager`). Nebel/Licht: `PSX_Volume_Profile`.

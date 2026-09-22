@@ -70,6 +70,9 @@ public class BusController : MonoBehaviour
     [Header("HUD")]
     public bool showSpeedometer = true;
 
+    /// <summary>Raised when the doors start opening (true) or closing (false).</summary>
+    public event System.Action<bool> DoorsChanged;
+
     /// <summary>Signed speed along the bus forward axis in m/s.</summary>
     public float Speed { get; private set; }
     public float SpeedKmh => Speed * 3.6f;
@@ -281,7 +284,10 @@ public class BusController : MonoBehaviour
         steerInput = Mathf.Clamp(steer, -1f, 1f);
         handbrakeInput = handbrake;
         if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
+        {
             doorsOpen = !doorsOpen;
+            DoorsChanged?.Invoke(doorsOpen);
+        }
     }
 
     void FixedUpdate()
@@ -351,6 +357,7 @@ public class BusController : MonoBehaviour
         if (steeringWheel != null && steeringColumnAxis.sqrMagnitude > 0f)
         {
             float angle = SteeringWheelTurn * (invertSteeringWheel ? 1f : -1f);
+            angle *= Handedness(steeringWheel.parent);
             steeringWheel.localRotation = Quaternion.AngleAxis(angle, steeringColumnAxis.normalized) * steeringWheelRest;
         }
 
@@ -364,12 +371,20 @@ public class BusController : MonoBehaviour
     }
 
     // Steering around the bus' up axis, then rolling around the axle, both in the wheel's parent space.
+    // -1 inside a mirrored (negatively scaled) model: local rotations appear reversed in the world.
+    static float Handedness(Transform t)
+    {
+        if (t == null) return 1f;
+        Vector3 s = t.lossyScale;
+        return s.x * s.y * s.z < 0f ? -1f : 1f;
+    }
+
     Quaternion WheelRotation(Transform wheel, float steer)
     {
         Transform parent = wheel.parent;
         Vector3 up = parent != null ? parent.InverseTransformDirection(transform.up).normalized : Vector3.up;
         Vector3 forward = parent != null ? parent.InverseTransformDirection(transform.forward).normalized : Vector3.forward;
-        Quaternion steerRot = Quaternion.AngleAxis(steer, up);
+        Quaternion steerRot = Quaternion.AngleAxis(steer * Handedness(parent), up);
         Vector3 axle = Vector3.Cross(up, steerRot * forward);
         return Quaternion.AngleAxis(wheelSpin, axle) * steerRot;
     }
@@ -380,7 +395,9 @@ public class BusController : MonoBehaviour
         var style = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold };
         style.normal.textColor = Color.black;
         string lockText = DriveLockReason != null ? "  [" + DriveLockReason.ToUpperInvariant() + "]" : "";
-        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{lockText}";
+        var lights = GetComponent<BusLights>();
+        string lightText = lights != null ? "   " + lights.ModeText : "";
+        string text = $"{Mathf.Abs(SpeedKmh):0} km/h{(Speed < -0.1f ? "  R" : "")}{lockText}{lightText}";
         GUI.Label(new Rect(22, Screen.height - 58, 600, 40), text, style);
         style.normal.textColor = Color.yellow;
         GUI.Label(new Rect(20, Screen.height - 60, 600, 40), text, style);

@@ -16,7 +16,7 @@ public class BoardingManager : MonoBehaviour
     public enum Phase { Driving, PassengerComing, AwaitingDecision, PassengerEntering }
 
     [Header("References")]
-    public TownBuilder town;
+    public ForestRoad road;
     public BusController bus;
     public GameObject[] malePassengers;
     public GameObject[] femalePassengers;
@@ -37,7 +37,6 @@ public class BoardingManager : MonoBehaviour
     public float despawnBehind = 50f;
     [Tooltip("How far the front door may be from the passenger along the road")]
     public float stopTolerance = 7f;
-    public float stopCooldown = 60f;
     public int seed = 1311;
 
     public CitizenRegistry Registry { get; private set; }
@@ -48,6 +47,11 @@ public class BoardingManager : MonoBehaviour
     public int Correct { get; private set; }
     public int Wrong { get; private set; }
     public string ClockText => FormatClock(GameMinutes);
+
+    /// <summary>Raised after a decision (true = let in).</summary>
+    public event System.Action<bool> Decided;
+    /// <summary>Raised when a passenger disappears from the bus.</summary>
+    public event System.Action<Vector3> PassengerVanished;
 
     readonly HashSet<Discrepancy> knownRules = new HashSet<Discrepancy>
     {
@@ -72,7 +76,7 @@ public class BoardingManager : MonoBehaviour
         rng = new System.Random(seed);
         Registry = new CitizenRegistry(seed);
         if (bus == null) bus = FindAnyObjectByType<BusController>();
-        if (town == null) town = FindAnyObjectByType<TownBuilder>();
+        if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
         doorLocal = FindDoorCentre();
         Mail.Received += m => ShowToast("Neue Mail: " + m.Subject);
@@ -117,9 +121,9 @@ public class BoardingManager : MonoBehaviour
     void HandleKeys()
     {
         var kb = Keyboard.current;
-        if (kb == null || GameUI.ComputerOpen) return;
+        if (kb == null || GameUI.TerminalTyping) return;
 
-        if (kb.eKey.wasPressedThisFrame && PendingCard != null) GameUI.IdCardOpen = !GameUI.IdCardOpen;
+        if (kb.eKey.wasPressedThisFrame) GameUI.IdCardHidden = !GameUI.IdCardHidden;
         if (PendingCard != null)
         {
             if (kb.jKey.wasPressedThisFrame) Decide(true);
@@ -129,26 +133,26 @@ public class BoardingManager : MonoBehaviour
 
     void UpdateSpawns()
     {
-        if (town == null || town.Stops == null) return;
-        float busS = town.ArcLengthAt(bus.transform.position);
+        if (road == null) return;
+        float busS = road.BusArcLength;
 
-        foreach (var stop in town.Stops)
+        foreach (var stop in road.Stops)
         {
-            float ahead = town.DistanceAhead(busS, stop.arcLength);
-            float behind = town.PathLength - ahead;
+            if (stop == null) continue;
+            float ahead = stop.arcLength - busS;
             var waiting = stop.WaitingPassenger;
 
-            if (waiting == null)
+            // One passenger per stop, spawned before the bus sees the stop.
+            if (waiting == null && !stop.Visited && ahead < spawnDistance && ahead > 25f)
             {
-                if (Time.time >= stop.CooldownUntil && ahead < spawnDistance && ahead > 25f)
-                    stop.WaitingPassenger = SpawnPassenger(stop);
+                stop.WaitingPassenger = SpawnPassenger(stop);
+                stop.Visited = true;
             }
-            else if (waiting != active && behind > despawnBehind && behind < town.PathLength * 0.5f)
+            else if (waiting != null && waiting != active && ahead < -despawnBehind)
             {
                 // Bus has left the stop: remove whoever is still standing there.
                 Destroy(waiting.gameObject);
                 stop.WaitingPassenger = null;
-                stop.CooldownUntil = Time.time + stopCooldown;
             }
         }
     }
@@ -171,10 +175,11 @@ public class BoardingManager : MonoBehaviour
 
     BusStop StopAtDoor()
     {
-        if (town == null) return null;
+        if (road == null) return null;
         Vector3 doorWorld = bus.transform.TransformPoint(doorLocal);
-        foreach (var stop in town.Stops)
+        foreach (var stop in road.Stops)
         {
+            if (stop == null) continue;
             var p = stop.WaitingPassenger;
             if (p == null || p.CurrentState != Passenger.State.Waiting) continue;
             Vector3 d = stop.waitPoint.position - doorWorld;
@@ -185,6 +190,9 @@ public class BoardingManager : MonoBehaviour
         }
         return null;
     }
+
+    /// <summary>+1 if the door is on the bus' right side, -1 if on the left.</summary>
+    float DoorSide => doorLocal.x >= 0f ? 1f : -1f;
 
     /// <summary>The stop the bus is standing at, for the HUD.</summary>
     public BusStop NearbyStop => StopAtDoor();
@@ -203,14 +211,15 @@ public class BoardingManager : MonoBehaviour
         // Walk to just outside the front door (bus space, the bus doesn't move now).
         active.SetSpace(bus.transform);
         Vector3 start = bus.transform.InverseTransformPoint(active.transform.position);
-        var outside = new Vector3(doorLocal.x - 0.75f, start.y, doorLocal.z);
+        float side = DoorSide;
+        var outside = new Vector3(doorLocal.x + side * 0.75f, start.y, doorLocal.z);
         active.WalkPath(new[] { outside }, bus.transform, () =>
         {
             active.CurrentState = Passenger.State.AtDoor;
             CurrentPhase = Phase.AwaitingDecision;
             RenderPortrait(active);
-            ShowToast("Fahrgast zeigt den Ausweis  [E]");
-        }, faceAtEnd: Vector3.right);
+            ShowToast("Fahrgast zeigt den Ausweis");
+        }, faceAtEnd: -side * Vector3.right);
     }
 
     // ------------------------------------------------------------------ decision
@@ -218,7 +227,6 @@ public class BoardingManager : MonoBehaviour
     public void Decide(bool letIn)
     {
         if (CurrentPhase != Phase.AwaitingDecision || active == null) return;
-        GameUI.IdCardOpen = false;
 
         var p = active;
         var card = p.Card;
@@ -227,9 +235,9 @@ public class BoardingManager : MonoBehaviour
         if (correct) Correct++; else Wrong++;
         decisions++;
         ScheduleFeedback(card, letIn, correct);
+        Decided?.Invoke(letIn);
         UnlockRules();
 
-        activeStop.CooldownUntil = Time.time + stopCooldown;
 
         if (letIn)
         {
@@ -238,8 +246,8 @@ public class BoardingManager : MonoBehaviour
             Vector3 spot = FreeSpot();
             var path = new[]
             {
-                new Vector3(doorLocal.x + 0.45f, floorHeight, doorLocal.z),
-                new Vector3(0f, floorHeight, doorLocal.z - 1.0f),
+                new Vector3(doorLocal.x - DoorSide * 0.45f, floorHeight, doorLocal.z),
+                new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f),
                 new Vector3(spot.x, floorHeight, spot.z),
             };
             p.WalkPath(path, bus.transform, () =>
@@ -285,6 +293,7 @@ public class BoardingManager : MonoBehaviour
     {
         if (p == null) return;
         riders.Remove(p);
+        PassengerVanished?.Invoke(p.transform.position);
         Destroy(p.gameObject);
         ShowToast("...");
     }
@@ -368,7 +377,7 @@ public class BoardingManager : MonoBehaviour
             "Gute Fahrt.\nLeitstelle Nachtlinie 13", ClockText);
         Schedule(20f, () => Mail.Send("Horst (Kollege)", "Tipp",
             "Hey, du fährst jetzt die 13? Kleiner Tipp: Tippfehler im Namen sind kein Zufall. " +
-            "Und wenn einer an der Friedhofstraße einsteigen will... schau lieber zweimal ins Register.\n\nHorst", ClockText));
+            "Und wenn einer am Waldfriedhof einsteigen will... schau lieber zweimal ins Register. Und halt nicht an, wenn da draußen jemand zwischen den Bäumen steht.\n\nHorst", ClockText));
     }
 
     // ------------------------------------------------------------------ portrait
@@ -426,18 +435,23 @@ public class BoardingManager : MonoBehaviour
 
     void OnGUI()
     {
-        if (GameUI.ComputerOpen) return;
         float w = RetroGUI.VirtualWidth;
         var white = new Color(1f, 0.95f, 0.8f);
 
         // Next stop.
-        if (town != null && town.Stops != null && town.Stops.Count > 0)
+        if (road != null)
         {
-            float busS = town.ArcLengthAt(bus.transform.position);
-            var next = town.Stops.OrderBy(s => town.DistanceAhead(busS, s.arcLength)).First();
-            float dist = town.DistanceAhead(busS, next.arcLength);
-            if (dist > town.PathLength - 15f) dist = 0f;
-            RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), $"Nächste Haltestelle: {next.stopName}  ({dist:0} m)", white);
+            float busS = road.BusArcLength;
+            BusStop next = null;
+            float dist = float.MaxValue;
+            foreach (var st in road.Stops)
+            {
+                if (st == null) continue;
+                float d = st.arcLength - busS;
+                if (d > -8f && d < dist) { dist = d; next = st; }
+            }
+            if (next != null)
+                RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), $"Nächste Haltestelle: {next.stopName}  ({Mathf.Max(0f, dist):0} m)", white);
         }
 
         string prompt = null;
@@ -454,7 +468,7 @@ public class BoardingManager : MonoBehaviour
                 prompt = "Fahrgast kommt zur Tür";
                 break;
             case Phase.AwaitingDecision:
-                prompt = "Ausweis [E]   Computer [Tab]   Einsteigen [J]   Abweisen [N]";
+                prompt = "Ausweis prüfen, im Register abgleichen  -  Einlassen [J]   Abweisen [N]";
                 break;
             case Phase.PassengerEntering:
                 prompt = "Fahrgast steigt ein";
@@ -463,7 +477,7 @@ public class BoardingManager : MonoBehaviour
         if (prompt != null) RetroGUI.ShadowLabel(new Rect(0, 300, w, 14), prompt, new Color(1f, 0.85f, 0.3f));
 
         if (Mail.UnreadCount > 0)
-            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), $"MAIL: {Mail.UnreadCount} ungelesen  [Tab]", new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
+            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), $"MAIL: {Mail.UnreadCount} ungelesen", new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
 
         if (toast != null && Time.time < toastUntil)
             RetroGUI.ShadowLabel(new Rect(0, 24, w, 14), toast, new Color(0.7f, 0.9f, 1f), false);
