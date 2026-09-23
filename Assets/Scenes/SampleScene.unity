@@ -916,6 +916,7 @@ GameObject:
   - component: {fileID: 2100000009}
   - component: {fileID: 2100000010}
   - component: {fileID: 2100000011}
+  - component: {fileID: 2100000012}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1157,6 +1158,19 @@ MonoBehaviour:
   skipInEditor: 0
   menuMusic: {fileID: 8300000, guid: 3e018b641edd479d89a58545aff2264a, type: 3}
   musicVolume: 0.6
+--- !u!114 &2100000012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72083d9cefca4eae9eb1d11e981e8601, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  glowMaterial: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
