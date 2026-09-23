@@ -94,6 +94,26 @@ public class PixelCanvas
         return n * PixelFont.CellWidth;
     }
 
+    /// <summary>Text drawn 'scale' times bigger (e.g. the speed on the dashboard).</summary>
+    public int BigText(int x, int y, string text, Color32 c, int scale)
+    {
+        if (string.IsNullOrEmpty(text)) return 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char ch = text[i];
+            if (ch == ' ') continue;
+            int gx = x + i * PixelFont.CellWidth * scale;
+            for (int row = 0; row < PixelFont.CellHeight; row++)
+            {
+                int bits = PixelFont.Row(ch, row);
+                if (bits == 0) continue;
+                for (int col = 0; col < PixelFont.CellWidth; col++)
+                    if ((bits & (1 << col)) != 0) Fill(gx + col * scale, y + row * scale, scale, scale, c);
+            }
+        }
+        return text.Length * PixelFont.CellWidth * scale;
+    }
+
     /// <summary>Word-wrapped text; returns the number of lines drawn (skipping 'skipLines').</summary>
     public int WrappedText(int x, int y, int maxWidth, int maxLines, string text, Color32 c, int skipLines = 0)
     {

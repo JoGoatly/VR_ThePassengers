@@ -68,7 +68,8 @@ public class BusController : MonoBehaviour
     public Transform[] doors;
 
     [Header("HUD")]
-    public bool showSpeedometer = true;
+    [Tooltip("Old on-screen speed text (the dashboard display shows it now)")]
+    public bool showSpeedometer = false;
 
     /// <summary>Raised when the doors start opening (true) or closing (false).</summary>
     public event System.Action<bool> DoorsChanged;

@@ -924,6 +924,7 @@ GameObject:
   - component: {fileID: 2100000016}
   - component: {fileID: 2100000017}
   - component: {fileID: 2100000018}
+  - component: {fileID: 2100000019}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1329,6 +1330,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   paperSound: {fileID: 8300000, guid: 7a46eb95ef92466f98fd3fa62bc473bd, type: 3}
+--- !u!114 &2100000019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4806403264bf4a2284e6f039554210dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 1500000004}
+  game: {fileID: 2100000003}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
