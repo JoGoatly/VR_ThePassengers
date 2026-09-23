@@ -15,12 +15,12 @@ public class DashDisplay : MonoBehaviour
     public Material screenMaterial;
 
     [Header("Corners in bus model coordinates (front = away from the driver)")]
-    public Vector3 panelBackLeft = new Vector3(-2.062f, 0.534f, -0.455f);
-    public Vector3 panelFrontLeft = new Vector3(-2.150f, 0.600f, -0.455f);
-    public Vector3 panelFrontRight = new Vector3(-2.150f, 0.600f, -0.265f);
-    public Vector3 panelBackRight = new Vector3(-2.062f, 0.534f, -0.265f);
+    public Vector3 panelBackLeft = new Vector3(-2.062f, 0.534f, -0.44f);
+    public Vector3 panelFrontLeft = new Vector3(-2.108f, 0.568f, -0.44f);
+    public Vector3 panelFrontRight = new Vector3(-2.108f, 0.568f, -0.28f);
+    public Vector3 panelBackRight = new Vector3(-2.062f, 0.534f, -0.28f);
 
-    const int W = 128, H = 52;
+    const int W = 128, H = 44;
     PixelCanvas canvas;
     BusLights lights;
     float redraw;
@@ -117,36 +117,33 @@ public class DashDisplay : MonoBehaviour
         canvas.Text(W - PixelCanvas.TextWidth(d) - 4, 2, d, Dim);
         canvas.Fill(3, 14, W - 6, 1, Dim);
 
-        // Speed, big.
+        // Speed, big, on the left; small status lamps on the right.
         string speed = Mathf.RoundToInt(Mathf.Abs(bus.SpeedKmh)).ToString();
         int sw = speed.Length * PixelFont.CellWidth * 2;
-        int sx = (W - sw - PixelCanvas.TextWidth(" km/h")) / 2;
-        canvas.BigText(sx, 16, speed, Text, 2);
-        canvas.Text(sx + sw + 2, 25, "km/h", Dim);
-        if (bus.Speed < -0.1f) canvas.Text(4, 25, "R", Warn);
+        int sx = Mathf.Max(14, (88 - sw - PixelCanvas.TextWidth("km/h")) / 2);
+        canvas.BigText(sx, 17, speed, Text, 2);
+        canvas.Text(sx + sw + 3, 27, "km/h", Dim);
+        if (bus.Speed < -0.1f) canvas.Text(3, 27, "R", Warn);
 
-        // Stop request lamp.
+        int lx = W - 34;
         if (game != null && game.StopRequested)
         {
-            canvas.Fill(W / 2 - 16, H - 13, 32, 11, new Color32(90, 60, 10, 255));
-            canvas.Text(W / 2 - 12, H - 12, "HALT", new Color32(255, 190, 60, 255));
+            canvas.Fill(lx, 16, 31, 11, new Color32(90, 60, 10, 255));
+            canvas.Text(lx + 3, 16, "HALT", new Color32(255, 190, 60, 255));
         }
-
-        // Lights and the reason the bus can't drive.
-        string light = lights == null ? "" : lights.mode switch
+        else if (lights != null)
         {
-            BusLights.Mode.HighBeam => Loc.T("FERN", "HIGH"),
-            BusLights.Mode.LowBeam => Loc.T("ABBL", "LOW"),
-            _ => Loc.T("AUS", "OFF"),
-        };
-        if (lights != null) canvas.Text(4, H - 12, light, lights.mode == BusLights.Mode.HighBeam ? Beam : Dim);
-        string reason = bus.DriveLockReason;
-        if (!string.IsNullOrEmpty(reason) && Mathf.Repeat(Time.time, 1f) < 0.7f)
-        {
-            string r = reason.ToUpperInvariant();
-            int max = (W - 40) / PixelFont.CellWidth;
-            if (r.Length > max) r = r.Substring(0, max);
-            canvas.Text(W - PixelCanvas.TextWidth(r) - 4, H - 12, r, Warn);
+            string light = lights.mode switch
+            {
+                BusLights.Mode.HighBeam => Loc.T("FERN", "HIGH"),
+                BusLights.Mode.LowBeam => Loc.T("ABBL", "LOW"),
+                _ => Loc.T("AUS", "OFF"),
+            };
+            canvas.Text(lx + 3, 16, light, lights.mode == BusLights.Mode.HighBeam ? Beam : Dim);
         }
+        // Why the bus can't drive: a blinking door lamp.
+        if (!string.IsNullOrEmpty(bus.DriveLockReason) && Mathf.Repeat(Time.time, 1f) < 0.7f)
+            canvas.Text(lx + 3, 30, Loc.T("TÜR", "DOOR"), Warn);
+    }
     }
 }
