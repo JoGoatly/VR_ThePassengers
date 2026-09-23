@@ -118,7 +118,7 @@ public class BusLights : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb != null && kb.lKey.wasPressedThisFrame && !GameUI.AnyOpen)
+        if (kb != null && GameKeys.Pressed(GameAction.Lights) && !GameUI.AnyOpen)
         {
             mode = (Mode)(((int)mode + 1) % 3);
             Apply();

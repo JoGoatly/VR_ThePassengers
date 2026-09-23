@@ -152,7 +152,7 @@ public class GpsDisplay : MonoBehaviour
         if (next != null && waiting && Mathf.Abs(nextDist) <= stopWindow)
         {
             bool stopped = Mathf.Abs(bus.Speed) < 0.3f;
-            msg = stopped ? (bus.doorsOpen ? Loc.T("TÜREN OFFEN", "DOORS OPEN") : Loc.T("TÜREN ÖFFNEN [F]", "OPEN DOORS [F]")) : Loc.T("HIER HALTEN", "STOP HERE");
+            msg = stopped ? (bus.doorsOpen ? Loc.T("TÜREN OFFEN", "DOORS OPEN") : Loc.T("TÜREN ÖFFNEN ", "OPEN DOORS ") + GameKeys.Tag(GameAction.Doors)) : Loc.T("HIER HALTEN", "STOP HERE");
             col = stopped || Mathf.Repeat(blink, 0.6f) < 0.3f ? Green : Bg;
         }
         else if (next != null && waiting && nextDist < -stopWindow)

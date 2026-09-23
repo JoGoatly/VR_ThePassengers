@@ -55,7 +55,7 @@ public class PlayerOnFoot : MonoBehaviour
     {
         var kb = Keyboard.current;
         if (kb == null || bus == null) return;
-        bool ePressed = kb.eKey.wasPressedThisFrame && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
+        bool ePressed = GameKeys.Pressed(GameAction.Interact) && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
 
         if (!GameUI.PlayerOutside)
         {
@@ -66,7 +66,7 @@ public class PlayerOnFoot : MonoBehaviour
 
         Walk(kb);
         if (ePressed && NearDoor) Enter();
-        else if (kb.lKey.wasPressedThisFrame && flashlight != null) flashlight.enabled = !flashlight.enabled;
+        else if (GameKeys.Pressed(GameAction.Lights) && flashlight != null && !GameUI.MenuOpen) flashlight.enabled = !flashlight.enabled;
     }
 
     bool NearDoor
@@ -155,10 +155,10 @@ public class PlayerOnFoot : MonoBehaviour
         }
 
         Vector2 input = Vector2.zero;
-        if (kb.wKey.isPressed) input.y += 1f;
-        if (kb.sKey.isPressed) input.y -= 1f;
-        if (kb.dKey.isPressed) input.x += 1f;
-        if (kb.aKey.isPressed) input.x -= 1f;
+        if (GameKeys.Held(GameAction.Forward)) input.y += 1f;
+        if (GameKeys.Held(GameAction.Backward)) input.y -= 1f;
+        if (GameKeys.Held(GameAction.SteerRight)) input.x += 1f;
+        if (GameKeys.Held(GameAction.SteerLeft)) input.x -= 1f;
         input = Vector2.ClampMagnitude(input, 1f);
         float speed = kb.leftShiftKey.isPressed ? runSpeed : walkSpeed;
 
@@ -185,12 +185,12 @@ public class PlayerOnFoot : MonoBehaviour
         float w = RetroGUI.VirtualWidth;
         if (GameUI.PlayerOutside)
         {
-            string text = NearDoor ? Loc.T("Einsteigen [E]", "Get in [E]") : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe [L]", "Back to the bus door   -   Flashlight [L]");
+            string text = NearDoor ? Loc.T("Einsteigen ", "Get in ") + GameKeys.Tag(GameAction.Interact) : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe ", "Back to the bus door   -   Flashlight ") + GameKeys.Tag(GameAction.Lights);
             RetroGUI.ShadowLabel(new Rect(0, 318, w, 14), text, new Color(1f, 0.85f, 0.3f));
         }
         else if (Mathf.Abs(bus.Speed) < 0.3f && game != null && game.CurrentPhase == BoardingManager.Phase.Driving && !GameUI.TerminalTyping)
         {
-            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), Loc.T("Aussteigen [E]", "Get out [E]"), new Color(0.8f, 0.8f, 0.8f), false);
+            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), Loc.T("Aussteigen ", "Get out ") + GameKeys.Tag(GameAction.Interact), new Color(0.8f, 0.8f, 0.8f), false);
         }
     }
 }

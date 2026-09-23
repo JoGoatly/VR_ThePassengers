@@ -98,7 +98,7 @@ public class SoundManager : MonoBehaviour
         var s = go.AddComponent<AudioSource>();
         s.clip = clip;
         s.pitch = pitch;
-        s.volume = uiVolume * 2.4f;
+        s.volume = uiVolume * 2.4f * GameSettings.Effects;
         s.spatialBlend = 0f;
         s.Play();
         Destroy(go, clip.length / pitch + 0.1f);
@@ -134,7 +134,7 @@ public class SoundManager : MonoBehaviour
         go.transform.position = position;
         var s = go.AddComponent<AudioSource>();
         s.clip = clip;
-        s.volume = volume;
+        s.volume = volume * GameSettings.Effects;
         s.spatialBlend = spatial;
         s.minDistance = 2f;
         s.maxDistance = 60f;
@@ -152,17 +152,22 @@ public class SoundManager : MonoBehaviour
 
     void Update()
     {
+        float fx = GameSettings.Effects;
+        if (ui != null) ui.volume = uiVolume * fx;
+        if (ambience != null) ambience.volume = ambienceVolume * fx;
+        if (droneSource != null) droneSource.volume = droneVolume * fx;
+
         if (bus != null && engine != null)
         {
             float speed01 = Mathf.Clamp01(Mathf.Abs(bus.Speed) / (bus.maxSpeedKmh / 3.6f));
             // Electric motor: pitch rises with speed, silent when standing still.
             float moving = Mathf.Clamp01(speed01 * 6f);
             engine.pitch = Mathf.Lerp(engine.pitch, 0.6f + speed01 * 1.1f, Time.deltaTime * 4f);
-            float targetVolume = engineVolume * moving * (0.65f + 0.35f * bus.ThrottleInput);
+            float targetVolume = GameSettings.Effects * engineVolume * moving * (0.65f + 0.35f * bus.ThrottleInput);
             engine.volume = Mathf.Lerp(engine.volume, targetVolume, Time.deltaTime * 4f);
             if (road != null)
             {
-                road.volume = Mathf.Lerp(road.volume, roadVolume * speed01, Time.deltaTime * 3f);
+                road.volume = Mathf.Lerp(road.volume, GameSettings.Effects * roadVolume * speed01, Time.deltaTime * 3f);
                 road.pitch = 0.8f + speed01 * 0.4f;
             }
 
