@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 
 /// <summary>Everything the player can press, rebindable in the menu.</summary>
 public enum GameAction
