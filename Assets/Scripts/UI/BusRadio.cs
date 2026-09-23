@@ -100,7 +100,7 @@ public class BusRadio : MonoBehaviour
         var mouse = Mouse.current;
         bool click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.AnyOpen && !GameUI.PhoneOpen;
         if (click) HandleClick();
-        if (GameKeys.Pressed(GameAction.Radio) && !GameUI.MenuOpen && !GameUI.TerminalTyping)
+        if (GameKeys.Pressed(GameAction.Radio) && !GameUI.MenuOpen && !GameUI.TerminalTyping && !GameUI.PlayerOutside)
             Tune(current + 1 >= (stations?.Length ?? 0) ? -1 : current + 1);
 
         source.volume = volume * GameSettings.Music;
