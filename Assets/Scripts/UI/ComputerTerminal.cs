@@ -485,16 +485,16 @@ public class ComputerTerminal : MonoBehaviour
         var card = game.PendingCard;
         if (card == null)
         {
-            canvas.WrappedText(8, top + 8, W - 16, 6, Loc.T("Kein Fahrgast an der Tür.\n\nAn der Haltestelle anhalten und die Türen öffnen (F).", "No passenger at the door.\n\nStop at the bus stop and open the doors (F)."), Dim);
+            canvas.WrappedText(8, top + 8, W - 16, 6, Loc.T("Kein Fahrgast an der Tür.\n\nAn der Haltestelle anhalten und die Türen öffnen ", "No passenger at the door.\n\nStop at the bus stop and open the doors ") + "(" + GameKeys.Name(GameAction.Doors) + ").", Dim);
             return;
         }
         canvas.Text(8, top + 8, Loc.T("FAHRGAST AN DER TÜR:", "PASSENGER AT THE DOOR:"), Dim);
         canvas.Text(8, top + 22, card.FullName.ToUpperInvariant(), White);
         canvas.WrappedText(8, top + 42, W - 16, 4,
-            Loc.T("Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status. Ansprechen mit T und die Antworten prüfen.", "Compare the ID (left) with the REGISTER: name, date of birth, ID number, validity, status. Talk with T and check the answers."), Text);
+            Loc.T("Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status. Ansprechen mit " + GameKeys.Name(GameAction.Talk) + " und die Antworten prüfen.", "Compare the ID (left) with the REGISTER: name, date of birth, ID number, validity, status. Talk with " + GameKeys.Name(GameAction.Talk) + " and check the answers."), Text);
 
         int by = bottom - 50;
-        if (Button(12, by, 140, 34, Loc.T("EINLASSEN  [J]", "LET IN  [J]"), Green, White)) { game.Decide(true); app = App.None; }
-        if (Button(W - 152, by, 140, 34, Loc.T("ABWEISEN  [N]", "TURN AWAY  [N]"), Red, White)) { game.Decide(false); app = App.None; }
+        if (Button(12, by, 140, 34, Loc.T("EINLASSEN  ", "LET IN  ") + GameKeys.Tag(GameAction.LetIn), Green, White)) { game.Decide(true); app = App.None; }
+        if (Button(W - 152, by, 140, 34, Loc.T("ABWEISEN  ", "TURN AWAY  ") + GameKeys.Tag(GameAction.TurnAway), Red, White)) { game.Decide(false); app = App.None; }
     }
 }

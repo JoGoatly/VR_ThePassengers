@@ -101,18 +101,18 @@ public class DialogueView : MonoBehaviour
 
         if (MenuOpen)
         {
-            if (kb.tKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame) MenuOpen = false;
+            if (GameKeys.Pressed(GameAction.Talk) || kb.escapeKey.wasPressedThisFrame) MenuOpen = false;
             return;
         }
 
-        if (kb.fKey.wasPressedThisFrame && line != null)
+        if (GameKeys.Pressed(GameAction.Continue) && line != null)
         {
             // F: next line of the story passenger, or close the box.
             question = null;
             if (lineIsIntro && intro.Count > 0) Say(card, intro.Dequeue(), true);
             else { line = null; lineIsIntro = false; }
         }
-        else if (kb.tKey.wasPressedThisFrame && !(lineIsIntro && intro.Count > 0))
+        else if (GameKeys.Pressed(GameAction.Talk) && !(lineIsIntro && intro.Count > 0))
         {
             line = null;
             lineIsIntro = false;
@@ -179,13 +179,13 @@ public class DialogueView : MonoBehaviour
                         new Color(0.12f, 0.12f, 0.12f, 0.9f), new Color(0.9f, 0.9f, 0.9f)))
                     Ask(card, i);
             }
-            RetroGUI.Label(new Rect(menu.x, menu.yMax - 11, menu.width - 6, 10), Loc.T("schließen [T]", "close [T]"), hint, false, true, TextAnchor.UpperRight);
+            RetroGUI.Label(new Rect(menu.x, menu.yMax - 11, menu.width - 6, 10), Loc.T("schließen ", "close ") + GameKeys.Tag(GameAction.Talk), hint, false, true, TextAnchor.UpperRight);
             return;
         }
 
         if (line == null && pendingAnswer == null)
         {
-            RetroGUI.ShadowLabel(new Rect(0, 284, RetroGUI.VirtualWidth, 14), Loc.T("Ansprechen [T]", "Talk [T]"), new Color(0.7f, 0.85f, 1f), false);
+            RetroGUI.ShadowLabel(new Rect(0, 284, RetroGUI.VirtualWidth, 14), Loc.T("Ansprechen ", "Talk ") + GameKeys.Tag(GameAction.Talk), new Color(0.7f, 0.85f, 1f), false);
             return;
         }
 
@@ -202,7 +202,7 @@ public class DialogueView : MonoBehaviour
         string text = pendingAnswer != null ? "..." : line;
         RetroGUI.Wrapped(new Rect(box.x + 8, y + 10, box.width - 16, box.yMax - y - 12), text ?? "", Color.white);
         if (pendingAnswer == null)
-            RetroGUI.Label(new Rect(box.x, box.yMax - 11, box.width - 6, 10), lineIsIntro && intro.Count > 0 ? Loc.T("weiter [F]", "next [F]") : Loc.T("schließen [F]", "close [F]"),
+            RetroGUI.Label(new Rect(box.x, box.yMax - 11, box.width - 6, 10), lineIsIntro && intro.Count > 0 ? Loc.T("weiter ", "next ") + GameKeys.Tag(GameAction.Continue) : Loc.T("schließen ", "close ") + GameKeys.Tag(GameAction.Continue),
                 hint, false, true, TextAnchor.UpperRight);
     }
 }

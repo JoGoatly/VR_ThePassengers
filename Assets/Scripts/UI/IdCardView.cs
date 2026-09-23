@@ -27,7 +27,7 @@ public class IdCardView : MonoBehaviour
 
         if (GameUI.IdCardHidden)
         {
-            RetroGUI.ShadowLabel(new Rect(10, 150, 200, 12), Loc.T("Ausweis einblenden [E]", "Show ID card [E]"), Color.white, false, TextAnchor.UpperLeft);
+            RetroGUI.ShadowLabel(new Rect(10, 150, 200, 12), Loc.T("Ausweis einblenden ", "Show ID card ") + GameKeys.Tag(GameAction.Interact), Color.white, false, TextAnchor.UpperLeft);
             return;
         }
 
@@ -55,7 +55,7 @@ public class IdCardView : MonoBehaviour
         RetroGUI.Label(new Rect(r.x + 62, r.yMax - 19, 100, 12), card.IdNumber, Ink, true);
         RetroGUI.Label(new Rect(r.xMax - 30, r.yMax - 19, 22, 12), card.Gender == Gender.Male ? "M" : Loc.T("W", "F"), Ink, true, false, TextAnchor.UpperRight);
 
-        RetroGUI.ShadowLabel(new Rect(r.x, r.yMax + 4, r.width, 12), Loc.T("[E] ausblenden", "[E] hide"), new Color(0.75f, 0.75f, 0.75f), false, TextAnchor.UpperLeft);
+        RetroGUI.ShadowLabel(new Rect(r.x, r.yMax + 4, r.width, 12), GameKeys.Tag(GameAction.Interact) + Loc.T(" ausblenden", " hide"), new Color(0.75f, 0.75f, 0.75f), false, TextAnchor.UpperLeft);
     }
 
     static void Row(float x, ref float y, string label, string value)

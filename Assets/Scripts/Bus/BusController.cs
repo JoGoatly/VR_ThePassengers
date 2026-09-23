@@ -246,12 +246,12 @@ public class BusController : MonoBehaviour
 
         if (kb != null)
         {
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttle = 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brake = 1f;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steer -= 1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steer += 1f;
-            handbrake |= kb.spaceKey.isPressed;
-            toggleDoors |= kb.fKey.wasPressedThisFrame;
+            if (GameKeys.Held(GameAction.Forward) || kb.upArrowKey.isPressed) throttle = 1f;
+            if (GameKeys.Held(GameAction.Backward) || kb.downArrowKey.isPressed) brake = 1f;
+            if (GameKeys.Held(GameAction.SteerLeft) || kb.leftArrowKey.isPressed) steer -= 1f;
+            if (GameKeys.Held(GameAction.SteerRight) || kb.rightArrowKey.isPressed) steer += 1f;
+            handbrake |= GameKeys.Held(GameAction.Handbrake);
+            toggleDoors |= GameKeys.Pressed(GameAction.Doors);
         }
 
         if (gp != null)
@@ -285,6 +285,17 @@ public class BusController : MonoBehaviour
         handbrakeInput = handbrake;
         if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
             SetDoors(!doorsOpen);
+    }
+
+    /// <summary>Put the bus somewhere else, standing still (e.g. back on the road).</summary>
+    public void ResetTo(Vector3 position, Quaternion rotation)
+    {
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.position = position;
+        rb.rotation = rotation;
+        transform.SetPositionAndRotation(position, rotation);
+        Speed = 0f;
     }
 
     /// <summary>Open or close the doors (with sound event).</summary>

@@ -853,6 +853,7 @@ GameObject:
   - component: {fileID: 2000000002}
   - component: {fileID: 2000000003}
   - component: {fileID: 2000000004}
+  - component: {fileID: 2000000005}
   m_Layer: 0
   m_Name: Forest Road
   m_TagString: Untagged
@@ -916,6 +917,9 @@ GameObject:
   - component: {fileID: 2100000009}
   - component: {fileID: 2100000010}
   - component: {fileID: 2100000011}
+  - component: {fileID: 2100000012}
+  - component: {fileID: 2100000013}
+  - component: {fileID: 2100000014}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1155,6 +1159,87 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   skipInEditor: 0
+  menuMusic: {fileID: 8300000, guid: 3e018b641edd479d89a58545aff2264a, type: 3}
+  musicVolume: 0.6
+--- !u!114 &2100000012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72083d9cefca4eae9eb1d11e981e8601, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  glowMaterial: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
+--- !u!114 &2000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32945f7c6bd14c18b04741d61185bc76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  bus: {fileID: 1500000004}
+  carPrefabs: []
+  modelYaw: 0
+  modelScale: 1
+  bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
+  driveSound: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
+--- !u!114 &2100000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f8c8836061540d0b510827790389f9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  bus: {fileID: 1500000004}
+  onFoot: {fileID: 2100000008}
+  sound: {fileID: 2100000006}
+--- !u!114 &2100000014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 756d8e3bd8da46c285ab10f74ca12b02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 1500000004}
+  stations:
+  - name: Nachtexpress - Jazz & Lofi
+    frequency: '88.4'
+    clip: {fileID: 8300000, guid: f227c4e9635e46cabbe31ae5fba9fc63, type: 3}
+  - name: Radio Schwarzwald - Die Hits der 90er
+    frequency: '101.3'
+    clip: {fileID: 8300000, guid: 54afc168812f4e8bb4c3b26d9a6c199a, type: 3}
+  - name: Klassik am Abend
+    frequency: '96.0'
+    clip: {fileID: 8300000, guid: eaa76927bfd042399743afd69c97aa22, type: 3}
+  - name: '???'
+    frequency: '66.6'
+    clip: {fileID: 8300000, guid: 30801f9b07424d07b42ec0bbab52d257, type: 3}
+  tuningStatic: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
+  caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+  volume: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

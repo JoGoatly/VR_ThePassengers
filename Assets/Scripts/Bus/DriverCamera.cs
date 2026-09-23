@@ -136,7 +136,7 @@ public class DriverCamera : MonoBehaviour
             yaw += stick.x * stickSensitivity * lookScale * Time.deltaTime;
             pitch += stick.y * stickSensitivity * lookScale * Time.deltaTime;
         }
-        if ((kb != null && !GameUI.TerminalTyping && kb.vKey.wasPressedThisFrame) || (gp != null && gp.rightStickButton.wasPressedThisFrame))
+        if ((kb != null && !GameUI.TerminalTyping && GameKeys.Pressed(GameAction.CenterView)) || (gp != null && gp.rightStickButton.wasPressedThisFrame))
         {
             yaw = 0f;
             pitch = 0f;

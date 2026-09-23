@@ -148,11 +148,11 @@ public class BoardingManager : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null || GameUI.TerminalTyping || GameUI.DialogueOpen) return;
 
-        if (kb.eKey.wasPressedThisFrame && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
+        if (GameKeys.Pressed(GameAction.Interact) && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
         if (PendingCard != null)
         {
-            if (kb.jKey.wasPressedThisFrame) Decide(true);
-            else if (kb.nKey.wasPressedThisFrame) Decide(false);
+            if (GameKeys.Pressed(GameAction.LetIn)) Decide(true);
+            else if (GameKeys.Pressed(GameAction.TurnAway)) Decide(false);
         }
     }
 
@@ -217,17 +217,17 @@ public class BoardingManager : MonoBehaviour
                   "You look different from the last driver. ...He was just gone one day."),
             Loc.T("Die wechseln oft auf der 13. Keiner weiß so recht, wohin.",
                   "They change a lot on the 13. Nobody really knows where they go."),
-            Loc.T("Na, egal. Hier, mein Ausweis. (E zum Ausblenden)", "Anyway. Here's my ID. (E to hide it)"),
+            Loc.T($"Na, egal. Hier, mein Ausweis. ({GameKeys.Name(GameAction.Interact)} zum Ausblenden)", $"Anyway. Here's my ID. ({GameKeys.Name(GameAction.Interact)} to hide it)"),
             Loc.T("Schauen Sie im Computer nach. Unter REGISTER meinen Namen eingeben.",
                   "Check it on the computer. Type my name under REGISTER."),
             Loc.T("Geburtsdatum, Ausweisnummer, gültig bis... das muss alles genau stimmen.",
                   "Date of birth, ID number, valid until... it all has to match exactly."),
-            Loc.T("Sie können mich auch etwas fragen. (T)", "You can ask me something, too. (T)"),
+            Loc.T($"Sie können mich auch etwas fragen. ({GameKeys.Name(GameAction.Talk)})", $"You can ask me something, too. ({GameKeys.Name(GameAction.Talk)})"),
             Loc.T("Was ich sage, sollte zum Register passen. Sonst stimmt was nicht mit mir.",
                   "What I say should match the register. If not, something is wrong with me."),
-            Loc.T("Wenn alles passt, lassen Sie mich rein. (J)", "If everything is fine, let me in. (J)"),
-            Loc.T("Wenn nicht, schicken Sie mich weg. (N) Ich nehm's Ihnen nicht übel.",
-                  "If not, send me away. (N) I won't hold it against you."),
+            Loc.T($"Wenn alles passt, lassen Sie mich rein. ({GameKeys.Name(GameAction.LetIn)})", $"If everything is fine, let me in. ({GameKeys.Name(GameAction.LetIn)})"),
+            Loc.T($"Wenn nicht, schicken Sie mich weg. ({GameKeys.Name(GameAction.TurnAway)}) Ich nehm's Ihnen nicht übel.",
+                  $"If not, send me away. ({GameKeys.Name(GameAction.TurnAway)}) I won't hold it against you."),
             Loc.T("Und lesen Sie Ihre Mails. Die Leitstelle schreibt nicht ohne Grund.",
                   "And read your mails. Dispatch doesn't write without a reason."),
         }),
@@ -427,12 +427,12 @@ public class BoardingManager : MonoBehaviour
                 Loc.T("Es wurden Fahrgäste gemeldet, deren Papiere einwandfrei sind, die aber einfache Fragen über ihr " +
                 "eigenes Leben falsch beantworten: Geburtsdatum, Wohnort, Beruf.\n\n" +
                 "Das sind nicht die Personen, für die sie sich ausgeben.\n\n" +
-                "Sprechen Sie jeden Fahrgast an (T) und vergleichen Sie die Antworten mit dem Register. " +
+                "Sprechen Sie jeden Fahrgast an (" + GameKeys.Name(GameAction.Talk) + ") und vergleichen Sie die Antworten mit dem Register. " +
                 "Stimmt eine Antwort nicht: NICHT einsteigen lassen.\n\nLeitstelle Nachtlinie 13",
                 "Passengers have been reported whose papers are flawless, but who get simple questions about their " +
                 "own life wrong: date of birth, home, job.\n\n" +
                 "They are not the people they claim to be.\n\n" +
-                "Talk to every passenger (T) and compare the answers with the register. " +
+                "Talk to every passenger (" + GameKeys.Name(GameAction.Talk) + ") and compare the answers with the register. " +
                 "If an answer is wrong: do NOT let them on.\n\nDispatch, Night Line 13"), ClockText));
         }
         if (decisions == 5 && knownRules.Add(Discrepancy.Deceased))
@@ -638,15 +638,15 @@ public class BoardingManager : MonoBehaviour
         {
             case Phase.Driving:
                 if (stopHere != null)
-                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? Loc.T("Anhalten", "Stop the bus") : bus.doorsOpen ? Loc.T("Türen öffnen sich...", "Doors opening...") : Loc.T("Türen öffnen  [F]", "Open doors  [F]");
+                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? Loc.T("Anhalten", "Stop the bus") : bus.doorsOpen ? Loc.T("Türen öffnen sich...", "Doors opening...") : Loc.T("Türen öffnen  ", "Open doors  ") + GameKeys.Tag(GameAction.Doors);
                 else if (!bus.DoorsFullyClosed)
-                    prompt = Loc.T("Türen schließen  [F]", "Close doors  [F]");
+                    prompt = Loc.T("Türen schließen  ", "Close doors  ") + GameKeys.Tag(GameAction.Doors);
                 break;
             case Phase.PassengerComing:
                 prompt = Loc.T("Fahrgast kommt zur Tür", "Passenger coming to the door");
                 break;
             case Phase.AwaitingDecision:
-                prompt = Loc.T("Ausweis prüfen, Ansprechen [T]  -  Einlassen [J]   Abweisen [N]", "Check the ID, talk [T]  -  Let in [J]   Turn away [N]");
+                prompt = Loc.T("Ausweis prüfen, Ansprechen ", "Check the ID, talk ") + GameKeys.Tag(GameAction.Talk) + "  -  " + Loc.T("Einlassen ", "Let in ") + GameKeys.Tag(GameAction.LetIn) + "   " + Loc.T("Abweisen ", "Turn away ") + GameKeys.Tag(GameAction.TurnAway);
                 break;
             case Phase.PassengerEntering:
                 prompt = Loc.T("Fahrgast steigt ein", "Passenger getting on");

@@ -24,13 +24,21 @@ public class WindowScare : MonoBehaviour
     [Tooltip("Seconds between knocks while it is at the window")]
     public Vector2 knockInterval = new Vector2(3f, 6f);
 
-    // Bus-local spots just outside the windows, figure faces into the bus.
-    static readonly (Vector3 pos, float yaw)[] Spots =
+    [Header("Spots outside the windows (bus space), the figure faces into the bus")]
+    [Tooltip("Driver window on the left")]
+    public Vector3 driverWindow = new Vector3(-1.7f, 0.2f, 4.6f);
+    [Tooltip("Windows at the back right")]
+    public Vector3[] backRightWindows = { new Vector3(1.7f, 0.2f, -2.6f), new Vector3(1.7f, 0.2f, -3.8f) };
+
+    (Vector3 pos, float yaw)[] Spots
     {
-        (new Vector3(-1.7f, 0.2f, 4.0f), 90f),    // driver window (left)
-        (new Vector3(1.7f, 0.2f, -2.6f), -90f),   // back right
-        (new Vector3(1.7f, 0.2f, -3.8f), -90f),
-    };
+        get
+        {
+            var list = new System.Collections.Generic.List<(Vector3, float)> { (driverWindow, 90f) };
+            foreach (var p in backRightWindows) list.Add((p, -90f));
+            return list.ToArray();
+        }
+    }
 
     GameObject current;
     float nextAt, despawnAt, nextKnockAt, lookedFor, blackoutUntil = -1f;
