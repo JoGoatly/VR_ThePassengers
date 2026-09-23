@@ -108,11 +108,21 @@ public class ForestRoad : MonoBehaviour
     public DepotSite Depot { get; private set; }
     bool depotRequested;
 
-    /// <summary>Build the depot on the next suitable straight ahead (a few hundred metres away).</summary>
-    public void RequestDepot()
+    /// <summary>
+    /// Build the depot on the next suitable straight ahead. Bus stops after lastStopAt are
+    /// removed and no new ones are built until the depot stands (end of the route).
+    /// </summary>
+    public void RequestDepot(float lastStopAt = float.MaxValue)
     {
         if (depotRequested || Depot != null) return;
         depotRequested = true;
+        for (int i = stops.Count - 1; i >= 0; i--)
+        {
+            var st = stops[i];
+            if (st == null || st.arcLength <= lastStopAt) continue;
+            Destroy(st.gameObject);
+            stops.RemoveAt(i);
+        }
         // Keep the road straight for a while so the yard fits.
         segmentTurnRate = 0f;
         segmentLeft = Mathf.Max(segmentLeft, DepotLength + 120f);
@@ -356,7 +366,7 @@ public class ForestRoad : MonoBehaviour
         for (int i = a; i < b; i++)
         {
             if (distances[i] < nextStopAt) continue;
-            if (NearDepot(distances[i], 25f)) continue;
+            if (depotRequested || NearDepot(distances[i], 25f)) continue;
             if (onCurve[i] || (i + 6 < onCurve.Count && onCurve[i + 6]) || (i >= 6 && onCurve[i - 6])) { nextStopAt += sampleSpacing; continue; }
             BuildBusStop(chunk.transform, i);
             nextStopAt = distances[i] + Range(stopSpacing);

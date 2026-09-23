@@ -239,6 +239,35 @@ public class BoardingManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The night's last passenger was served: whoever still rides gets off at the next stop
+    /// (or at the depot if there is none yet), nobody else is waiting anywhere.
+    /// Returns up to where stops are still needed (road distance).
+    /// </summary>
+    public float FinishRoute()
+    {
+        float busS = road != null ? road.BusArcLength : 0f;
+        riders.RemoveAll(r => r == null);
+        BusStop exit = null;
+        if (road != null && riders.Any(r => r.CurrentState == Passenger.State.Riding))
+            foreach (var st in road.Stops)
+                if (st != null && st.index >= 0 && st.arcLength > busS + 30f && (exit == null || st.arcLength < exit.arcLength))
+                    exit = st;
+        if (exit != null)
+            foreach (var r in riders)
+                if (r.Card != null && (r.Card.DestinationIndex < 0 || r.Card.DestinationIndex > exit.index))
+                    r.Card.DestinationIndex = exit.index;
+
+        if (road != null)
+            foreach (var st in road.Stops)
+                if (st != null && st.arcLength > busS + 25f && st.WaitingPassenger != null && st.WaitingPassenger != active)
+                {
+                    Destroy(st.WaitingPassenger.gameObject);
+                    st.WaitingPassenger = null;
+                }
+        return exit != null ? exit.arcLength : busS + 30f;
+    }
+
     Passenger SpawnPassenger(BusStop stop)
     {
         int story = NextStoryIndex();
@@ -267,8 +296,10 @@ public class BoardingManager : MonoBehaviour
         if (prefab == null) prefab = pool[rng.Next(pool.Length)];
         prefabOf[card] = prefab;
 
-        // Where they get off: one to four stops further. The answer names that stop.
-        card.DestinationIndex = stop.index + Random.Range(1, 5);
+        // Where they get off: one or two stops further, but never after the stop that follows
+        // the last passenger of the night. The answer names that stop.
+        int stillToCome = Mathf.Max(1, DayManager.QuotaFor(Progress.Day) - decisions);
+        card.DestinationIndex = stop.index + Mathf.Min(Random.Range(1, 3), stillToCome);
         string toStop = Loc.T("Zur Haltestelle ", "To the stop ");
         if (card.SaidDestination != null && card.SaidDestination.StartsWith(toStop))
             card.SaidDestination = toStop + road.StopNameAt(card.DestinationIndex) + ".";
@@ -300,7 +331,7 @@ public class BoardingManager : MonoBehaviour
             if (d > -10f && d < best) { best = d; next = st; }
         }
         StopRequested = next != null && riders.Any(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
-                                                          r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index);
+                                                          (next.index < 0 || (r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index)));
 
         // Drove past someone's stop: they complain and get off at the next one.
         foreach (var st in road.Stops)
@@ -319,8 +350,9 @@ public class BoardingManager : MonoBehaviour
         if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen || Time.time < nextExitAt) return;
         var here = StopNearBus();
         if (here == null) return;
+        // At the depot (index -1) everyone gets off.
         var rider = riders.FirstOrDefault(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
-                                               r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index);
+                                               (here.index < 0 || (r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index)));
         if (rider == null) return;
         nextExitAt = Time.time + 1.4f;
         StartExit(rider, here);
