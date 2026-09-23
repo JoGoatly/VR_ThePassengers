@@ -45,6 +45,10 @@ public class ComputerTerminal : MonoBehaviour
     List<Citizen> results = new List<Citizen>();
     Citizen selected;
     int resultScroll;
+    // Search history of tonight (newest first): what was searched, when, and how many hits.
+    readonly List<(string time, string query, int hits)> history = new List<(string, string, int)>();
+    bool showHistory;
+    int historyScroll;
 
     // Mail.
     Mail openMail;
@@ -412,12 +416,18 @@ public class ComputerTerminal : MonoBehaviour
         }
         if (Hit(fx, top + 1, fw, 13)) typing = true;
         if (Button(fx + fw + 4, top + 1, 56, 13, Loc.T("SUCHEN", "SEARCH"), Green, White)) { typing = false; RunSearch(); }
+        if (Button(W - 50, top + 1, 48, 13, Loc.T("VERLAUF", "HISTORY"), showHistory ? Hi : Panel, showHistory ? White : Text))
+            showHistory = !showHistory;
 
         // Results.
         int ly = top + 18, lh = bottom - ly - 2, lw = 124;
         canvas.Frame(2, ly, lw, lh, Line);
         int rowH = 12, rows = (lh - 4) / rowH;
-        if (!searched)
+        if (showHistory)
+        {
+            DrawHistory(2, ly, lw, lh, rowH, rows);
+        }
+        else if (!searched)
             canvas.WrappedText(6, ly + 4, lw - 8, 6, Loc.T("Suchfeld anklicken, Namen tippen, ENTER.", "Click the search field, type a name, ENTER."), Dim);
         else if (results.Count == 0)
             canvas.WrappedText(6, ly + 4, lw - 8, 4, Loc.T("KEIN EINTRAG GEFUNDEN", "NO ENTRY FOUND"), Alert);
@@ -465,6 +475,39 @@ public class ComputerTerminal : MonoBehaviour
             canvas.WrappedText(rx + 4, y, rw - 8, 6, selected.Note, sc);
     }
 
+    void DrawHistory(int x, int ly, int lw, int lh, int rowH, int rows)
+    {
+        canvas.Fill(x + 1, ly + 1, lw - 2, rowH, Hi);
+        canvas.Text(x + 3, ly + 2, Loc.T("VERLAUF HEUTE", "TONIGHT'S SEARCHES"), White);
+        if (history.Count == 0)
+        {
+            canvas.WrappedText(x + 4, ly + 16, lw - 8, 5, Loc.T("Noch nichts gesucht.", "Nothing searched yet."), Dim);
+            return;
+        }
+        int visible = rows - 1;
+        historyScroll = Mathf.Clamp(historyScroll, 0, Mathf.Max(0, history.Count - visible));
+        for (int i = 0; i < visible && i + historyScroll < history.Count; i++)
+        {
+            var h = history[i + historyScroll];
+            int ry = ly + 2 + (i + 1) * rowH;
+            if (Inside(x + 1, ry, lw - 12, rowH)) canvas.Fill(x + 1, ry, lw - 12, rowH, Panel);
+            canvas.Text(x + 3, ry + 1, h.time, Dim);
+            canvas.Text(x + 3 + 6 * PixelFont.CellWidth, ry + 1, h.query, h.hits > 0 ? Text : Alert, 12);
+            // Click: search it again.
+            if (Hit(x + 1, ry, lw - 12, rowH))
+            {
+                query = h.query;
+                showHistory = false;
+                RunSearch(false);
+            }
+        }
+        if (history.Count > visible)
+        {
+            if (Button(x + lw - 11, ly + 1 + rowH, 10, 11, "^", Panel, Text)) historyScroll--;
+            if (Button(x + lw - 11, ly + lh - 12, 10, 11, "v", Panel, Text)) historyScroll++;
+        }
+    }
+
     static string StatusText(string status) => !Loc.English ? status :
         status == "AKTIV" ? "ACTIVE" : status == "GESUCHT" ? "WANTED" : status == "VERSTORBEN" ? "DECEASED" : status;
 
@@ -477,10 +520,18 @@ public class ComputerTerminal : MonoBehaviour
         y += 13;
     }
 
-    void RunSearch()
+    void RunSearch(bool remember = true)
     {
         if (game == null || game.Registry == null) return;
         results = game.Registry.Search(query).ToList();
+        string q = query.Trim();
+        if (remember && q.Length > 0)
+        {
+            history.RemoveAll(h => string.Equals(h.query, q, System.StringComparison.OrdinalIgnoreCase));
+            history.Insert(0, (game.ClockText, q, results.Count));
+            if (history.Count > 40) history.RemoveAt(history.Count - 1);
+            historyScroll = 0;
+        }
         searched = true;
         resultScroll = 0;
         selected = results.Count == 1 ? results[0] : null;

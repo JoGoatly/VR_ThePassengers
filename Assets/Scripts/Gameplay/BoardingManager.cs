@@ -64,6 +64,9 @@ public class BoardingManager : MonoBehaviour
         Discrepancy.WrongExpiry,
     };
     readonly List<Passenger> riders = new List<Passenger>();
+    // Who got on tonight (and with which model), for passengers who come a second time.
+    readonly List<(IdCard card, GameObject prefab)> boardedTonight = new List<(IdCard, GameObject)>();
+    readonly Dictionary<IdCard, GameObject> prefabOf = new Dictionary<IdCard, GameObject>();
     readonly List<(float time, System.Action action)> scheduled = new List<(float, System.Action)>();
     Passenger active;
     BusStop activeStop;
@@ -195,7 +198,19 @@ public class BoardingManager : MonoBehaviour
     Passenger SpawnPassenger(BusStop stop)
     {
         int story = NextStoryIndex();
-        var card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null, 0.3 + 0.05 * Progress.Day);
+        IdCard card;
+        GameObject prefab = null;
+        if (story < 0 && boardedTonight.Count >= 2 && Random.value < 0.1f + 0.02f * Progress.Day)
+        {
+            // Someone who is already sitting in the bus stands at the stop again - same face, same papers.
+            var original = boardedTonight[Random.Range(0, boardedTonight.Count)];
+            card = Registry.CreateDuplicate(original.card);
+            prefab = original.prefab;
+        }
+        else
+        {
+            card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null, 0.3 + 0.05 * Progress.Day);
+        }
         if (story >= 0)
         {
             card.StoryIndex = story;
@@ -205,7 +220,8 @@ public class BoardingManager : MonoBehaviour
         if (pool == null || pool.Length == 0) pool = malePassengers != null && malePassengers.Length > 0 ? malePassengers : femalePassengers;
         if (pool == null || pool.Length == 0) return null;
 
-        var prefab = pool[rng.Next(pool.Length)];
+        if (prefab == null) prefab = pool[rng.Next(pool.Length)];
+        prefabOf[card] = prefab;
         var go = Instantiate(prefab, stop.waitPoint.position, stop.waitPoint.rotation);
         go.name = "Passenger " + card.FullName;
         var p = go.AddComponent<Passenger>();
@@ -351,6 +367,8 @@ public class BoardingManager : MonoBehaviour
         Decided?.Invoke(letIn);
         Judged?.Invoke(correct, card);
 
+        if (letIn && card.Truth != Discrepancy.Duplicate && prefabOf.TryGetValue(card, out var model))
+            boardedTonight.Add((card, model));
 
         if (letIn)
         {
@@ -511,6 +529,13 @@ public class BoardingManager : MonoBehaviour
                     body = Loc.T($"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.",
                                  $"The ID of {card.FullName} was forged: the expiry date did not match the register.");
                     break;
+                case Discrepancy.Duplicate:
+                    subject = Loc.T("Zwei Fahrgäste, ein Name", "Two passengers, one name");
+                    body = Loc.T($"{card.FullName} ist heute Nacht zweimal in Ihren Bus gestiegen. Beide sitzen noch drin.\n\n" +
+                                 "Jede Person fährt nur EINMAL pro Nacht. Merken Sie sich, wen Sie einsteigen lassen - der Suchverlauf im Register hilft.",
+                                 $"{card.FullName} got on your bus twice tonight. Both of them are still sitting in it.\n\n" +
+                                 "Every person rides only ONCE per night. Remember who you let on - the search history in the register helps.");
+                    break;
                 case Discrepancy.NotRegistered:
                     body = Loc.T($"Eine Person namens \"{card.FullName}\" existiert in keinem Register der Stadt. " +
                            "Fahrgäste berichten, sie habe während der Fahrt die ganze Zeit Sie angestarrt.",
@@ -543,7 +568,8 @@ public class BoardingManager : MonoBehaviour
             "Einsteigen darf nur, wer:\n" +
             " - im Register mit genau diesem Namen eingetragen ist,\n" +
             " - das gleiche Geburtsdatum, die gleiche Ausweisnummer und das gleiche Ablaufdatum hat wie im Register,\n" +
-            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + today + ").\n\n" +
+            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + today + "),\n" +
+            " - heute Nacht noch NICHT mit Ihnen gefahren ist. Niemand steigt zweimal ein. (Suchverlauf im Register!)\n\n" +
             "Alle anderen weisen Sie ab. Fahren Sie erst weiter, wenn der Fahrgast versorgt ist.\n\n" +
             "Gute Fahrt.\nLeitstelle Nachtlinie 13",
             "Welcome to the transport company.\n\n" +
@@ -551,7 +577,8 @@ public class BoardingManager : MonoBehaviour
             "Only those may board who:\n" +
             " - are listed in the register with exactly this name,\n" +
             " - have the same date of birth, ID number and expiry date as in the register,\n" +
-            " - have a valid ID (expiry date after " + today + ").\n\n" +
+            " - have a valid ID (expiry date after " + today + "),\n" +
+            " - have NOT ridden with you tonight yet. Nobody gets on twice. (Search history in the register!)\n\n" +
             "Turn everyone else away. Only drive on once the passenger has been dealt with.\n\n" +
             "Have a good trip.\nDispatch, Night Line 13"), ClockText);
         Schedule(20f, () => Mail.Send(Loc.T("Horst (Kollege)", "Horst (colleague)"), Loc.T("Tipp", "Tip"), Loc.T(
@@ -571,6 +598,8 @@ public class BoardingManager : MonoBehaviour
         if (day >= 2) { rulesDe += "\n - Status GESUCHT: abweisen"; rulesEn += "\n - status WANTED: turn away"; }
         if (day >= 3) { rulesDe += "\n - falsche Antworten auf Fragen (Doppelgänger): abweisen"; rulesEn += "\n - wrong answers to questions (doppelganger): turn away"; }
         if (day >= 4) { rulesDe += "\n - Status VERSTORBEN: abweisen"; rulesEn += "\n - status DECEASED: turn away"; }
+        rulesDe += "\n - wer heute Nacht schon eingestiegen ist, steigt nicht noch einmal ein (Suchverlauf!)";
+        rulesEn += "\n - whoever already got on tonight does not get on again (search history!)";
         Mail.Send(Dispatch, Loc.T($"Nacht {day} - Dienstanweisung", $"Night {day} - Instructions"), Loc.T(
             $"Heute Nacht: {DayManager.QuotaFor(day)} Fahrgäste. Danach zum Depot.\n\nEinsteigen darf nur, wer:\n" + rulesDe +
             "\n\nRichtige Entscheidungen werden vergütet, Fehler werden vom Lohn abgezogen.\n\nLeitstelle Nachtlinie 13",

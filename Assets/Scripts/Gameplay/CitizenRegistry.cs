@@ -14,6 +14,7 @@ public enum Discrepancy
     Deceased,         // register status VERSTORBEN
     WrongExpiry,      // expiry date on the card differs from the register (forged)
     Doppelganger,     // papers perfect, but the person gets facts about themselves wrong when asked
+    Duplicate,        // this person already got on the bus tonight - there can't be two of them
 }
 
 public enum Gender { Male, Female }
@@ -123,6 +124,7 @@ public class CitizenRegistry
     };
 
     public readonly List<Citizen> Citizens = new List<Citizen>();
+    readonly HashSet<string> usedNames = new HashSet<string>();   // nobody shows up twice by chance
     readonly Random rng;
 
     public CitizenRegistry(int seed, int size = 90)
@@ -190,14 +192,17 @@ public class CitizenRegistry
             if (options.Count > 0) kind = options[rng.Next(options.Count)];
         }
 
+        var fresh = Citizens.Where(c => !usedNames.Contains(c.FullName)).ToList();
+        if (fresh.Count < 10) fresh = Citizens;   // (a very long night)
         Citizen source = kind switch
         {
-            Discrepancy.Wanted => Citizens.Where(c => c.Status == "GESUCHT").OrderBy(_ => rng.Next()).FirstOrDefault(),
-            Discrepancy.Deceased => Citizens.Where(c => c.Status == "VERSTORBEN").OrderBy(_ => rng.Next()).FirstOrDefault(),
-            Discrepancy.Expired => Citizens.Where(c => c.Status == "AKTIV" && c.IdExpiry < Today).OrderBy(_ => rng.Next()).FirstOrDefault(),
-            _ => Citizens.Where(c => c.Status == "AKTIV" && c.IdExpiry >= Today).OrderBy(_ => rng.Next()).First(),
+            Discrepancy.Wanted => fresh.Where(c => c.Status == "GESUCHT").OrderBy(_ => rng.Next()).FirstOrDefault(),
+            Discrepancy.Deceased => fresh.Where(c => c.Status == "VERSTORBEN").OrderBy(_ => rng.Next()).FirstOrDefault(),
+            Discrepancy.Expired => fresh.Where(c => c.Status == "AKTIV" && c.IdExpiry < Today).OrderBy(_ => rng.Next()).FirstOrDefault(),
+            _ => fresh.Where(c => c.Status == "AKTIV" && c.IdExpiry >= Today).OrderBy(_ => rng.Next()).FirstOrDefault(),
         };
-        if (source == null) { kind = Discrepancy.None; source = Citizens.First(c => c.Status == "AKTIV" && c.IdExpiry >= Today); }
+        if (source == null) { kind = Discrepancy.None; source = fresh.FirstOrDefault(c => c.Status == "AKTIV" && c.IdExpiry >= Today) ?? Citizens[0]; }
+        usedNames.Add(source.FullName);
 
         var card = new IdCard
         {
@@ -233,6 +238,30 @@ public class CitizenRegistry
         }
         WriteAnswers(card, source);
         return card;
+    }
+
+    /// <summary>
+    /// The same person again: identical papers and answers as someone who already got on
+    /// tonight. Only the driver's memory (and the search history) can tell.
+    /// </summary>
+    public IdCard CreateDuplicate(IdCard original)
+    {
+        return new IdCard
+        {
+            FirstName = original.FirstName,
+            LastName = original.LastName,
+            Gender = original.Gender,
+            BirthDate = original.BirthDate,
+            IdNumber = original.IdNumber,
+            District = original.District,
+            ExpiryDate = original.ExpiryDate,
+            Truth = Discrepancy.Duplicate,
+            SaidName = original.SaidName,
+            SaidBirth = original.SaidBirth,
+            SaidHome = original.SaidHome,
+            SaidJob = original.SaidJob,
+            SaidDestination = rng.NextDouble() < 0.5 ? original.SaidDestination : Loc.T("Zurück. Ich habe etwas vergessen.", "Back. I forgot something."),
+        };
     }
 
     // ------------------------------------------------------------------ talking
