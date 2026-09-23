@@ -56,6 +56,17 @@ public class IdCardView : MonoBehaviour
         RetroGUI.Label(new Rect(r.xMax - 30, r.yMax - 19, 22, 12), card.Gender == Gender.Male ? "M" : Loc.T("W", "F"), Ink, true, false, TextAnchor.UpperRight);
 
         RetroGUI.ShadowLabel(new Rect(r.x, r.yMax + 4, r.width, 12), GameKeys.Tag(GameAction.Interact) + Loc.T(" ausblenden", " hide"), new Color(0.75f, 0.75f, 0.75f), false, TextAnchor.UpperLeft);
+
+        // ID scanner upgrade: a little device under the card that beeps at forged numbers and dates.
+        if (Progress.Owns("scanner"))
+        {
+            bool forged = card.Truth == Discrepancy.WrongIdNumber || card.Truth == Discrepancy.WrongExpiry;
+            var sr = new Rect(r.x, r.yMax + 18, r.width, 14);
+            RetroGUI.Frame(sr, new Color(0.05f, 0.07f, 0.05f), new Color(0.3f, 0.35f, 0.3f));
+            RetroGUI.Label(new Rect(sr.x + 5, sr.y + 2, sr.width - 10, 11),
+                forged ? Loc.T("PRÜFGERÄT: FÄLSCHUNG ERKANNT", "SCANNER: FORGERY DETECTED") : Loc.T("PRÜFGERÄT: KEINE FÄLSCHUNG", "SCANNER: NO FORGERY"),
+                forged ? new Color(1f, 0.35f, 0.3f) : new Color(0.5f, 1f, 0.6f), true, true);
+        }
     }
 
     static void Row(float x, ref float y, string label, string value)

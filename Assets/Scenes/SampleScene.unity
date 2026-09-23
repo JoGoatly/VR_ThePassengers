@@ -920,6 +920,7 @@ GameObject:
   - component: {fileID: 2100000012}
   - component: {fileID: 2100000013}
   - component: {fileID: 2100000014}
+  - component: {fileID: 2100000015}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1240,6 +1241,23 @@ MonoBehaviour:
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   volume: 0.5
+--- !u!114 &2100000015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fc8cef837b343729cb0aeb2b7d555d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  bus: {fileID: 1500000004}
+  road: {fileID: 2000000003}
+  radio: {fileID: 2100000014}
+  menu: {fileID: 2100000011}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

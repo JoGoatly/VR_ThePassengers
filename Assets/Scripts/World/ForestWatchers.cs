@@ -36,7 +36,7 @@ public class ForestWatchers : MonoBehaviour
         {
             if (busS < nextCheckAt) return;
             nextCheckAt = busS + checkEvery;
-            if (Random.value > chance) return;
+            if (Random.value > chance * (0.5f + 2.5f * DayManager.Dread)) return;   // more of them every night
             if (!road.TrySample(busS + Random.Range(18f, 28f), out Vector3 p, out Vector3 t)) return;
 
             float side = Random.value < 0.5f ? -1f : 1f;

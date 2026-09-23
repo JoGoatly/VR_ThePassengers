@@ -155,6 +155,14 @@ public class BusRadio : MonoBehaviour
         }
     }
 
+    /// <summary>The radio switches itself on, to the last station (66.6).</summary>
+    public void Hijack()
+    {
+        if (stations == null || stations.Length == 0) return;
+        volume = Mathf.Max(volume, 0.6f);
+        Tune(stations.Length - 1);
+    }
+
     void Tune(int station)
     {
         current = station;

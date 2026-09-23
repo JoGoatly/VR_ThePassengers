@@ -108,7 +108,9 @@ public class BusLights : MonoBehaviour
 
     void LateUpdate()
     {
-        float targetFog = mode == Mode.HighBeam ? fogHigh : mode == Mode.LowBeam ? fogLow : fogOff;
+        // Xenon upgrade sees further; the fog gets thicker every night.
+        float high = Progress.Owns("highbeam2") ? fogHigh + 10f : fogHigh;
+        float targetFog = (mode == Mode.HighBeam ? high : mode == Mode.LowBeam ? fogLow : fogOff) * (1f - 0.25f * DayManager.Dread);
         float targetDraw = mode == Mode.HighBeam ? drawHigh : mode == Mode.LowBeam ? drawLow : drawOff;
         float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
         if (fog != null) fog.distanceMax.value = Mathf.Lerp(fog.distanceMax.value, targetFog, k);
@@ -142,9 +144,10 @@ public class BusLights : MonoBehaviour
         foreach (var l in new[] { farLeft, farRight })
         {
             l.enabled = high;
-            l.range = farRange;
+            bool xenon = Progress.Owns("highbeam2");
+            l.range = xenon ? farRange * 1.45f : farRange;
             l.spotAngle = farAngle;
-            l.intensity = farIntensity;
+            l.intensity = xenon ? farIntensity * 1.3f : farIntensity;
             l.transform.localRotation = Quaternion.Euler(farPitch, 0f, 0f);
         }
         if (glowLeft) glowLeft.SetActive(on);

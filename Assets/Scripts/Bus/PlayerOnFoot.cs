@@ -113,9 +113,10 @@ public class PlayerOnFoot : MonoBehaviour
         flashlight.transform.SetParent(cam, false);
         flashlight.transform.localPosition = new Vector3(0.2f, -0.2f, 0.1f);
         flashlight.type = LightType.Spot;
-        flashlight.spotAngle = 45f;
-        flashlight.range = 20f;
-        flashlight.intensity = 9f;
+        bool strong = Progress.Owns("flashlight2");
+        flashlight.spotAngle = strong ? 55f : 45f;
+        flashlight.range = strong ? 34f : 20f;
+        flashlight.intensity = strong ? 16f : 9f;
         flashlight.color = new Color(1f, 0.95f, 0.85f);
         flashlight.shadows = LightShadows.None;
         flashlight.enabled = false;

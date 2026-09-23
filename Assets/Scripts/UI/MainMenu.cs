@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 [DefaultExecutionOrder(-500)]
 public class MainMenu : MonoBehaviour
 {
-    enum Page { Language, Menu, Settings, Keys, Intro, Playing, Paused }
+    enum Page { Language, Menu, Settings, Keys, Intro, Playing, Paused, DayTitle, ShiftEnd, Ending }
 
     [Tooltip("Skip everything and start driving right away (for testing)")]
     public bool skipInEditor;
@@ -19,6 +19,9 @@ public class MainMenu : MonoBehaviour
     [Range(0f, 1f)] public float musicVolume = 0.6f;
 
     static bool languageChosen;
+    static bool showDayTitleOnLoad;   // set when the next night starts after a shift
+    int lastWage;
+    bool goodEnding;
 
     Page screen = Page.Language;
     Page settingsReturn = Page.Menu;
@@ -56,7 +59,8 @@ public class MainMenu : MonoBehaviour
             screen = Page.Playing;
             return;
         }
-        Show(languageChosen ? Page.Menu : Page.Language);
+        Show(showDayTitleOnLoad ? Page.DayTitle : languageChosen ? Page.Menu : Page.Language);
+        showDayTitleOnLoad = false;
         SetPaused(true);
     }
 
@@ -126,8 +130,8 @@ public class MainMenu : MonoBehaviour
             return;
         }
 
-        // The intro can also be skipped with a key.
-        if (screen == Page.Intro && Time.unscaledTime - screenSince > 1f &&
+        // The intro and the night title can also be skipped with a key.
+        if ((screen == Page.Intro || screen == Page.DayTitle) && Time.unscaledTime - screenSince > 1f &&
             (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
             StartGame();
     }
@@ -149,6 +153,31 @@ public class MainMenu : MonoBehaviour
         Show(Page.Playing);
         SetPaused(false);
         AudioListener.pause = false;
+    }
+
+    /// <summary>The shift is over: show what was earned, then the next night.</summary>
+    public void ShowShiftEnd(int wage)
+    {
+        lastWage = wage;
+        settingsReturn = Page.Menu;
+        Show(Page.ShiftEnd);
+        SetPaused(true);
+        AudioListener.pause = true;
+    }
+
+    public void ShowEnding(bool good)
+    {
+        goodEnding = good;
+        settingsReturn = Page.Menu;
+        Show(Page.Ending);
+        SetPaused(true);
+        AudioListener.pause = true;
+    }
+
+    void NextNight()
+    {
+        showDayTitleOnLoad = true;
+        BackToMainMenu();
     }
 
     void BackToMainMenu()
@@ -181,6 +210,9 @@ public class MainMenu : MonoBehaviour
             case Page.Keys: DrawKeys(w); break;
             case Page.Intro: DrawIntro(w); break;
             case Page.Paused: DrawPause(w); break;
+            case Page.DayTitle: DrawDayTitle(w); break;
+            case Page.ShiftEnd: DrawShiftEnd(w); break;
+            case Page.Ending: DrawEnding(w); break;
         }
     }
 
@@ -240,8 +272,13 @@ public class MainMenu : MonoBehaviour
         Label(new Rect(0, 60, w, 30), "THE PASSENGERS", title, TitleCol, TextAnchor.MiddleCenter);
         Label(new Rect(0, 92, w, 14), Loc.T("Nachtlinie 13", "Night Line 13"), text, new Color(0.6f, 0.2f, 0.15f), TextAnchor.MiddleCenter);
 
-        float bx = w / 2 - 80, y = 130;
-        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("SCHICHT BEGINNEN", "START SHIFT"))) Show(Page.Intro);
+        float bx = w / 2 - 80, y = 124;
+        if (Progress.HasSave && Progress.Data.day > 1)
+        {
+            if (MenuButton(new Rect(bx, y, 160, 22), Loc.T($"WEITER (NACHT {Progress.Day})", $"CONTINUE (NIGHT {Progress.Day})"))) Show(Page.DayTitle);
+            y += 30;
+        }
+        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("NEUES SPIEL", "NEW GAME"))) { Progress.NewGame(); Show(Page.Intro); }
         if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("EINSTELLUNGEN", "SETTINGS"))) { settingsReturn = Page.Menu; Show(Page.Settings); }
         if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("SPRACHE", "LANGUAGE"))) Show(Page.Language);
         if (MenuButton(new Rect(bx, y + 90, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();
@@ -316,6 +353,62 @@ public class MainMenu : MonoBehaviour
         float bx = w / 2 - 165;
         if (MenuButton(new Rect(bx, y + 18, 160, 20), Loc.T("STANDARD", "DEFAULTS"))) { rebinding = null; GameKeys.ResetAll(); }
         if (MenuButton(new Rect(bx + 170, y + 18, 160, 20), Loc.T("ZURÜCK", "BACK"))) { rebinding = null; Show(Page.Settings); }
+    }
+
+    // "NIGHT 3" title card before a night.
+    void DrawDayTitle(float w)
+    {
+        float t = Time.unscaledTime - screenSince;
+        float a = Mathf.Clamp01(t / 1.2f);
+        Label(new Rect(0, 110, w, 40), Loc.T($"NACHT {Progress.Day}", $"NIGHT {Progress.Day}"), big, new Color(0.75f, 0.1f, 0.08f, a), TextAnchor.MiddleCenter);
+        Label(new Rect(w / 2 - 200, 160, 400, 60), Story.DayIntro(Progress.Day), text, new Color(0.75f, 0.72f, 0.65f, a), TextAnchor.UpperCenter, true);
+        Label(new Rect(0, 230, w, 14), Loc.T($"{DayManager.QuotaFor(Progress.Day)} Fahrgäste  -  Konto: {Progress.Money} €",
+            $"{DayManager.QuotaFor(Progress.Day)} passengers  -  account: {Progress.Money} €"), small, Grey, TextAnchor.MiddleCenter);
+        if (t > 1.5f)
+        {
+            bool blink = Mathf.FloorToInt(Time.unscaledTime * 2f) % 2 == 0;
+            Label(new Rect(0, 300, w, 14), Loc.T("Klicken zum Starten", "Click to start"), text, blink ? new Color(0.8f, 0.8f, 0.8f) : Grey, TextAnchor.MiddleCenter);
+            if (Event.current.type == EventType.MouseDown) { StartGame(); Event.current.Use(); }
+        }
+    }
+
+    void DrawShiftEnd(float w)
+    {
+        var page = new Rect(w / 2 - 150, 40, 300, 250);
+        RetroGUI.Fill(page, Paper);
+        float x = page.x + 16, y = page.y + 12, cw = page.width - 32;
+        int night = Progress.Day - 1;
+        Label(new Rect(x, y, cw, 24), Loc.T($"NACHT {night} BEENDET", $"NIGHT {night} COMPLETE"), title, Ink, TextAnchor.MiddleCenter);
+        RetroGUI.Fill(new Rect(x, y + 28, cw, 1), Ink);
+        y += 38;
+        void Row(string label, string value)
+        {
+            Label(new Rect(x, y, cw, 14), label, text, Ink, TextAnchor.MiddleLeft);
+            Label(new Rect(x, y, cw, 14), value, text, Ink, TextAnchor.MiddleRight);
+            y += 17;
+        }
+        Row(Loc.T("Richtige Entscheidungen", "Correct decisions"), $"{Progress.ShiftCorrect}   +{Progress.ShiftEarned} €");
+        Row(Loc.T("Fehler", "Mistakes"), $"{Progress.ShiftWrong}   -{Progress.ShiftFines} €");
+        Row(Loc.T("Grundlohn", "Base wage"), $"+{lastWage} €");
+        if (Progress.ShiftFound > 0) Row(Loc.T("Gefunden", "Found"), $"+{Progress.ShiftFound} €");
+        RetroGUI.Fill(new Rect(x, y + 2, cw, 1), Ink);
+        y += 8;
+        Row(Loc.T("Kontostand", "Balance"), $"{Progress.Money} €");
+        Row(Loc.T("Vermisste Fahrer gefunden", "Missing drivers found"), $"{Progress.Data.drivers.Count} / {Story.Drivers.Length}");
+
+        float bx = w / 2 - 80;
+        if (MenuButton(new Rect(bx, page.yMax + 12, 160, 22), Loc.T("NÄCHSTE NACHT", "NEXT NIGHT"))) NextNight();
+        if (MenuButton(new Rect(bx, page.yMax + 40, 160, 22), Loc.T("HAUPTMENÜ", "MAIN MENU"))) BackToMainMenu();
+    }
+
+    void DrawEnding(float w)
+    {
+        float t = Time.unscaledTime - screenSince;
+        float a = Mathf.Clamp01(t / 2f);
+        Label(new Rect(0, 40, w, 30), goodEnding ? Loc.T("ENDE", "THE END") : Loc.T("ENDE?", "THE END?"), big,
+            new Color(goodEnding ? 0.8f : 0.75f, goodEnding ? 0.75f : 0.1f, goodEnding ? 0.6f : 0.08f, a), TextAnchor.MiddleCenter);
+        Label(new Rect(w / 2 - 210, 85, 420, 200), Story.Ending(goodEnding), text, new Color(0.8f, 0.78f, 0.72f, a), TextAnchor.UpperLeft, true);
+        if (t > 3f && MenuButton(new Rect(w / 2 - 80, 300, 160, 22), Loc.T("HAUPTMENÜ", "MAIN MENU"))) BackToMainMenu();
     }
 
     bool MenuButton(Rect r, string caption)

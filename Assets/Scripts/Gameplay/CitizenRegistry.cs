@@ -181,10 +181,10 @@ public class CitizenRegistry
     /// Creates the ID card of the next passenger. allowed = discrepancies the player
     /// already knows the rules for (from the mails).
     /// </summary>
-    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed, Discrepancy? forced = null)
+    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed, Discrepancy? forced = null, double anomalyChance = 0.45)
     {
         Discrepancy kind = forced ?? Discrepancy.None;
-        if (!forced.HasValue && rng.NextDouble() > 0.55 && allowed.Count > 0)
+        if (!forced.HasValue && rng.NextDouble() < anomalyChance && allowed.Count > 0)
         {
             var options = allowed.Where(d => d != Discrepancy.None).ToList();
             if (options.Count > 0) kind = options[rng.Next(options.Count)];
