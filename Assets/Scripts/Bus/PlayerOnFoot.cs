@@ -101,7 +101,7 @@ public class PlayerOnFoot : MonoBehaviour
         Cursor.visible = false;
 
         Vector3 pos = bus.transform.TransformPoint(DoorOutsideLocal);
-        pos.y = 0.05f;
+        pos.y = GroundBelow(pos) + 0.05f;
         walker = new GameObject("Player (on foot)");
         walker.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(bus.transform.right * Mathf.Sign(DoorOutsideLocal.x)));
         controller = walker.AddComponent<CharacterController>();
@@ -164,6 +164,16 @@ public class PlayerOnFoot : MonoBehaviour
         verticalSpeed = 0f;
     }
 
+    // Height of the road / forest floor below a point (hills!).
+    static float GroundBelow(Vector3 p)
+    {
+        var hits = Physics.RaycastAll(p + Vector3.up * 4f, Vector3.down, 14f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MinValue;
+        foreach (var h in hits)
+            if (h.collider is MeshCollider && h.point.y > best) best = h.point.y;
+        return best > float.MinValue ? best : p.y;
+    }
+
     /// <summary>Walking speed right now (m/s), for the arm swing.</summary>
     public float MoveSpeed { get; private set; }
 
@@ -180,7 +190,7 @@ public class PlayerOnFoot : MonoBehaviour
         Vector3 door = bus.transform.TransformPoint(DoorOutsideLocal);
         Vector3 outward = bus.transform.right * Mathf.Sign(DoorOutsideLocal.x);
         Vector3 pos = door + outward * 2.5f;
-        pos.y = 0.05f;
+        pos.y = GroundBelow(pos) + 0.05f;
         controller.enabled = false;
         walker.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward));
         controller.enabled = true;
