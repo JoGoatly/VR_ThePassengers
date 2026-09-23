@@ -16,8 +16,8 @@ public class DashDisplay : MonoBehaviour
 
     [Header("Corners in bus model coordinates (front = away from the driver)")]
     public Vector3 panelBackLeft = new Vector3(-2.062f, 0.534f, -0.455f);
-    public Vector3 panelFrontLeft = new Vector3(-2.150f, 0.506f, -0.455f);
-    public Vector3 panelFrontRight = new Vector3(-2.150f, 0.506f, -0.265f);
+    public Vector3 panelFrontLeft = new Vector3(-2.150f, 0.600f, -0.455f);
+    public Vector3 panelFrontRight = new Vector3(-2.150f, 0.600f, -0.265f);
     public Vector3 panelBackRight = new Vector3(-2.062f, 0.534f, -0.265f);
 
     const int W = 128, H = 52;

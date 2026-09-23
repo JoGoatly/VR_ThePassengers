@@ -1296,7 +1296,7 @@ MonoBehaviour:
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   volume: 0.5
-  radioPosition: {x: 0.16, y: 1.36, z: 4.9}
+  radioPosition: {x: 0, y: 1.36, z: 4.9}
 --- !u!114 &2100000015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1399,8 +1399,8 @@ MonoBehaviour:
   game: {fileID: 2100000003}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   panelBackLeft: {x: -2.062, y: 0.534, z: -0.455}
-  panelFrontLeft: {x: -2.15, y: 0.506, z: -0.455}
-  panelFrontRight: {x: -2.15, y: 0.506, z: -0.265}
+  panelFrontLeft: {x: -2.15, y: 0.6, z: -0.455}
+  panelFrontRight: {x: -2.15, y: 0.6, z: -0.265}
   panelBackRight: {x: -2.062, y: 0.534, z: -0.265}
 --- !u!114 &2100000020
 MonoBehaviour:
