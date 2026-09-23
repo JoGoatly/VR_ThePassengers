@@ -130,6 +130,20 @@ public class GpsDisplay : MonoBehaviour
             canvas.Text(x - 2, y - 5, "H", Bg);
         }
 
+        // Dirt tracks to houses: a brown line and a small house.
+        foreach (var sp in road.SidePaths)
+        {
+            if (sp.chunk == null) continue;
+            Vector2 a0 = ToScreen(sp.start), a1 = ToScreen(sp.house);
+            if (a1.y < 10 || a1.y > H || a0.y < 10 || a0.y > H) continue;
+            Thick(a0, a1, 1, new Color32(120, 90, 50, 255));
+            int hx = Mathf.RoundToInt(a1.x), hy = Mathf.RoundToInt(a1.y);
+            if (hx < 3 || hx > W - 4) continue;
+            canvas.Fill(hx - 3, hy - 2, 7, 5, new Color32(170, 120, 60, 255));
+            canvas.Fill(hx - 2, hy - 4, 5, 2, new Color32(170, 120, 60, 255));
+            canvas.Fill(hx - 1, hy - 5, 3, 1, new Color32(170, 120, 60, 255));
+        }
+
         // The bus.
         int bx = Mathf.RoundToInt(origin.x), by = Mathf.RoundToInt(origin.y);
         for (int i = 0; i < 7; i++) canvas.Fill(bx - i / 2, by - 4 + i, i + 1, 1, Text);
