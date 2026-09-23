@@ -180,10 +180,10 @@ public class SideAreas : MonoBehaviour
         float ambushChance = 0.25f + 0.07f * Progress.Day;
         if (Random.value < ambushChance)
         {
-            float side = Random.value < 0.5f ? -1f : 1f;
+            float lurkSide = Random.value < 0.5f ? -1f : 1f;
             Vector3 lurk = Random.value < 0.5f
-                ? house.TransformPoint(new Vector3(side * (W / 2 + 1.2f), 0.1f, D / 2 - 1.5f))
-                : Vector3.Lerp(path.start, path.house, Random.Range(0.35f, 0.6f)) + across * side * 4.5f;
+                ? house.TransformPoint(new Vector3(lurkSide * (W / 2 + 1.2f), 0.1f, D / 2 - 1.5f))
+                : Vector3.Lerp(path.start, path.house, Random.Range(0.35f, 0.6f)) + across * lurkSide * 4.5f;
             SpawnDweller(lurk, house);
         }
     }
