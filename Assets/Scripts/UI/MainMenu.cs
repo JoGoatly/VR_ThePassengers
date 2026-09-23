@@ -158,7 +158,7 @@ public class MainMenu : MonoBehaviour
         GameUI.MenuOpen = false;
         GameUI.DialogueOpen = false;
         GameUI.TerminalTyping = false;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     // ------------------------------------------------------------------ drawing
