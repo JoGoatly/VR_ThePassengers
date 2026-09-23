@@ -22,6 +22,8 @@ public class FirstPersonArms : MonoBehaviour
     [Tooltip("Arm swing while walking (degrees at running speed)")]
     public float walkSwing = 24f;
     public bool holdSteeringWheel = true;
+    [Tooltip("Where the right hand holds the flashlight / bat / pistol (camera space, wrist position)")]
+    public Vector3 holdPosition = new Vector3(0.19f, -0.21f, 0.33f);
 
     public PlayerOnFoot onFoot;
     public PlayerCombat combat;
@@ -39,7 +41,10 @@ public class FirstPersonArms : MonoBehaviour
     Animation anim;
     string current;
     float oneShotUntil, walkPhase;
-    bool punchLeft, driving;
+    bool punchLeft, driving, rightOneShot;
+    Vector3 gripLocalPos;
+    Quaternion gripLocalRot;
+    float reachShift;
     Transform flashlightModel;
     Light heldLight;
     Vector3 basePosition;
@@ -70,8 +75,9 @@ public class FirstPersonArms : MonoBehaviour
         if (driving) DriveWheel();
         else
         {
-            if (Time.time >= oneShotUntil) Loop(IdleState());
+            if (Time.time >= oneShotUntil) { Loop(IdleState()); rightOneShot = false; }
             Walk(cam.transform);
+            HoldRightHand(cam.transform);
             UpdateFlashlight(cam.transform);
         }
     }
@@ -143,7 +149,13 @@ public class FirstPersonArms : MonoBehaviour
             RightGrip = new GameObject("Right Grip").transform;
             RightGrip.SetParent(handR, false);
             RightGrip.SetPositionAndRotation(handR.position + cam.forward * 0.04f, cam.rotation);
+            // The rig's bones are scaled (FBX units): keep held things at their real size.
+            Vector3 ls = handR.lossyScale;
+            RightGrip.localScale = new Vector3(1f / Mathf.Max(1e-4f, Mathf.Abs(ls.x)), 1f / Mathf.Max(1e-4f, Mathf.Abs(ls.y)), 1f / Mathf.Max(1e-4f, Mathf.Abs(ls.z)));
+            gripLocalPos = RightGrip.localPosition;
+            gripLocalRot = RightGrip.localRotation;
         }
+        reachShift = 0f;
         current = null;
     }
 
@@ -188,6 +200,28 @@ public class FirstPersonArms : MonoBehaviour
         instance.localPosition = basePosition - Vector3.up * Mathf.Abs(Mathf.Cos(walkPhase)) * 0.012f * amount;
     }
 
+    // Holding something: the right hand is brought to a fixed place in front of us (IK),
+    // the lamp / weapon in it points where we look. Right-hand animations (swing, grab)
+    // take over while they play.
+    void HoldRightHand(Transform cam)
+    {
+        if (RightGrip == null) return;
+        bool holding = (combat != null && combat.CurrentWeapon != 0) || heldLight != null ||
+                       (onFoot != null && onFoot.Flashlight != null && onFoot.Flashlight.enabled);
+        if (!holding || rightOneShot || upperR == null || foreR == null || handR == null)
+        {
+            RightGrip.localPosition = gripLocalPos;
+            RightGrip.localRotation = gripLocalRot;
+            return;
+        }
+        float amount = Mathf.Clamp01((onFoot != null ? onFoot.MoveSpeed : 0f) / 4f);
+        Vector3 sway = new Vector3(Mathf.Sin(walkPhase) * 0.012f, -Mathf.Abs(Mathf.Cos(walkPhase)) * 0.01f, 0f) * amount;
+        Vector3 wrist = cam.TransformPoint(holdPosition + sway);
+        Vector3 pole = upperR.position - cam.up * 0.5f + cam.right * 0.35f;
+        DriverBody.SolveTwoBone(upperR, foreR, handR, hingeR, wrist, pole);
+        RightGrip.SetPositionAndRotation(handR.position + cam.forward * 0.05f + cam.up * 0.01f, cam.rotation);
+    }
+
     // ---------------------------------------------------------------- driving
 
     void DriveWheel()
@@ -196,8 +230,26 @@ public class FirstPersonArms : MonoBehaviour
         if (driver == null || !driver.HasGrips) return;
         var up = driver.transform.parent != null ? driver.transform.parent.up : Vector3.up;
         var right = driver.transform.parent != null ? driver.transform.parent.right : Vector3.right;
+
+        // The rig's arms are short: move them towards the wheel until both hands reach the rim.
+        instance.localPosition = basePosition;
+        float need = Mathf.Max(Excess(upperL, foreL, handL, driver.LeftGrip), Excess(upperR, foreR, handR, driver.RightGrip));
+        reachShift = Mathf.MoveTowards(reachShift, Mathf.Clamp(need, 0f, 0.45f), Time.deltaTime * 0.5f);
+        if (reachShift > 0f && upperL != null && upperR != null)
+        {
+            Vector3 dir = ((driver.LeftGrip + driver.RightGrip) - (upperL.position + upperR.position)).normalized;
+            instance.position += dir * reachShift;
+        }
         Solve(upperL, foreL, handL, hingeL, driver.LeftGrip, -right, up);
         Solve(upperR, foreR, handR, hingeR, driver.RightGrip, right, up);
+    }
+
+    // How much further the hand would have to reach (0 when the grip is in reach).
+    static float Excess(Transform upper, Transform fore, Transform hand, Vector3 grip)
+    {
+        if (upper == null || fore == null || hand == null) return 0f;
+        float reach = Vector3.Distance(upper.position, fore.position) + Vector3.Distance(fore.position, hand.position);
+        return Vector3.Distance(upper.position, grip) + 0.02f - reach * 0.93f;
     }
 
     void Solve(Transform upper, Transform fore, Transform hand, Vector3 hinge, Vector3 grip, Vector3 outward, Vector3 up)
@@ -245,46 +297,62 @@ public class FirstPersonArms : MonoBehaviour
         bool left = heldLight != null || punchLeft;
         punchLeft = !punchLeft;
         Once(Clip(left ? "jab.L" : "jab.R"), 1.3f);
+        rightOneShot = !left;
     }
 
-    public void Swing() { if (!driving) Once(Random.value < 0.5f ? Clip("knife_hit_01") : Clip("knife_hit_02"), 1.1f); }
-    public void Grab() { if (!driving) Once(Clip("grab.R") ?? Clip("grab.L"), 1.4f); }
-    public void Push() { if (!driving) Once(Clip("push.R") ?? Clip("push.L"), 1.3f); }
+    public void Swing()
+    {
+        if (driving) return;
+        Once(Random.value < 0.5f ? Clip("knife_hit_01") : Clip("knife_hit_02"), 1.1f);
+        rightOneShot = true;
+    }
+
+    // Grab / push with the free hand (the left one while the right holds something).
+    public void Grab() { if (!driving) OnceWithFreeHand("grab"); }
+    public void Push() { if (!driving) OnceWithFreeHand("push"); }
+
+    void OnceWithFreeHand(string action)
+    {
+        bool rightBusy = heldLight != null || (combat != null && combat.CurrentWeapon != 0);
+        string clip = rightBusy ? Clip(action + ".L") ?? Clip(action + ".R") : Clip(action + ".R") ?? Clip(action + ".L");
+        Once(clip, 1.4f);
+        rightOneShot = clip != null && clip.EndsWith(".R");
+    }
 
     // ---------------------------------------------------------------- flashlight in the hand
 
-    // The lamp sits in the right hand and moves with it, but always shines where we look.
+    // The lamp sits in the right hand (in the grip, which points where we look).
     void UpdateFlashlight(Transform cam)
     {
         var light = onFoot.Flashlight;
-        bool hold = light != null && light.enabled && (combat == null || combat.CurrentWeapon == 0) && handR != null;
+        bool hold = light != null && light.enabled && (combat == null || combat.CurrentWeapon == 0) && RightGrip != null;
         if (hold && heldLight == null)
         {
             if (flashlightModel == null)
             {
                 flashlightModel = new GameObject("Flashlight Model").transform;
-                var body = MeshKit.Spawn("Body", flashlightModel, MeshKit.Prism(0.022f, 0.17f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
+                flashlightModel.SetParent(RightGrip, false);
+                flashlightModel.localPosition = Vector3.zero;
+                flashlightModel.localRotation = Quaternion.identity;
+                var body = MeshKit.Spawn("Body", flashlightModel, MeshKit.Prism(0.018f, 0.16f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
                 body.transform.localPosition = new Vector3(0f, 0f, -0.06f);
                 body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // prism along +Z
+                var head = MeshKit.Spawn("Head", flashlightModel, MeshKit.Prism(0.026f, 0.04f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
+                head.transform.localPosition = new Vector3(0f, 0f, 0.09f);
+                head.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
             heldLight = light;
             heldLight.transform.SetParent(flashlightModel, false);
-            heldLight.transform.localPosition = new Vector3(0f, 0f, 0.13f);
+            heldLight.transform.localPosition = new Vector3(0f, 0f, 0.14f);
             heldLight.transform.localRotation = Quaternion.identity;
         }
         else if (!hold && heldLight != null)
         {
             ReturnLightToCamera();
         }
-        if (flashlightModel != null)
-        {
-            flashlightModel.gameObject.SetActive(heldLight != null);
-            if (heldLight != null)
-            {
-                flashlightModel.position = handR.position + cam.rotation * new Vector3(-0.01f, 0.03f, 0.05f);
-                flashlightModel.rotation = cam.rotation;
-            }
-        }
+        if (flashlightModel != null) flashlightModel.gameObject.SetActive(heldLight != null);
+        // The light always shines where we look, even while the hand moves.
+        if (heldLight != null) heldLight.transform.rotation = cam.rotation;
     }
 
     void ReturnLightToCamera()
