@@ -90,7 +90,7 @@ public class BoardingManager : MonoBehaviour
 
     static string Dispatch => Loc.T("Leitstelle", "Dispatch");
 
-    float GameMinutes => 23 * 60 + 40 + Time.timeSinceLevelLoad / 8f;
+    public float GameMinutes => 23 * 60 + 40 + Time.timeSinceLevelLoad / 8f;
 
     void Start()
     {

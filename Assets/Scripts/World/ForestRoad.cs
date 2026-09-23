@@ -92,6 +92,41 @@ public class ForestRoad : MonoBehaviour
         public Transform chunk;
     }
 
+    /// <summary>The bus depot at the end of the shift: a big yard on the right side of the road.</summary>
+    public class DepotSite
+    {
+        public Vector3 origin;       // road edge, middle of the yard
+        public Quaternion rotation;  // +Z away from the road, +X against the driving direction
+        public float arcLength;      // where the bus stops (depot bus stop)
+        public Transform chunk;
+    }
+
+    /// <summary>Size of the depot yard: along the road and away from it.</summary>
+    public const float DepotLength = 60f, DepotDepth = 50f;
+
+    public event System.Action<DepotSite> DepotBuilt;
+    public DepotSite Depot { get; private set; }
+    bool depotRequested;
+
+    /// <summary>Build the depot on the next suitable straight ahead (a few hundred metres away).</summary>
+    public void RequestDepot()
+    {
+        if (depotRequested || Depot != null) return;
+        depotRequested = true;
+        // Keep the road straight for a while so the yard fits.
+        segmentTurnRate = 0f;
+        segmentLeft = Mathf.Max(segmentLeft, DepotLength + 120f);
+    }
+
+    /// <summary>Forget the current depot (driven past it): the next request builds a new one.</summary>
+    public void ForgetDepot()
+    {
+        Depot = null;
+        depotRequested = false;
+    }
+
+    bool NearDepot(float s, float margin) => Depot != null && Mathf.Abs(s - Depot.arcLength) < DepotLength * 0.5f + margin;
+
     public event System.Action<SidePath> SidePathBuilt;
     public event System.Action<BusStop> StopBuilt;
     public IReadOnlyList<SidePath> SidePaths => sidePaths;
@@ -312,6 +347,7 @@ public class ForestRoad : MonoBehaviour
         Strip(shoulderMb, a, b, HalfRoad, HalfRoad + shoulderWidth, 0.015f, 2f, 2f, 0f);
         MeshKit.Spawn("Shoulder", chunk.transform, shoulderMb.ToMesh("Shoulder"), shoulder, Vector3.zero, Quaternion.identity, false);
 
+        DepotSite depot = depotRequested && Depot == null ? PlanDepot(chunk.transform, a) : null;
         SidePath path = PlanSidePath(chunk.transform, a, b);
         BuildForest(chunk.transform, a, b);
         BuildGuidePosts(chunk.transform, a, b);
@@ -320,6 +356,7 @@ public class ForestRoad : MonoBehaviour
         for (int i = a; i < b; i++)
         {
             if (distances[i] < nextStopAt) continue;
+            if (NearDepot(distances[i], 25f)) continue;
             if (onCurve[i] || (i + 6 < onCurve.Count && onCurve[i + 6]) || (i >= 6 && onCurve[i - 6])) { nextStopAt += sampleSpacing; continue; }
             BuildBusStop(chunk.transform, i);
             nextStopAt = distances[i] + Range(stopSpacing);
@@ -328,6 +365,44 @@ public class ForestRoad : MonoBehaviour
         chunks.Enqueue((chunk, distances[b]));
         builtUpTo = to;
         if (path != null) SidePathBuilt?.Invoke(path);
+        if (depot != null)
+        {
+            // The depot's own bus stop, before the gate.
+            int k = Mathf.Clamp(a + Mathf.RoundToInt(10f / sampleSpacing), a, points.Count - 1);
+            var stop = BuildBusStop(chunk.transform, k, Loc.T("Betriebshof", "Depot"));
+            stop.Visited = true;
+            depot.arcLength = stop.arcLength;
+            DepotBuilt?.Invoke(depot);
+        }
+    }
+
+    // The yard starts at this chunk and reaches into the next ones: only on a long straight,
+    // away from bus stops and side paths.
+    DepotSite PlanDepot(Transform chunk, int a)
+    {
+        float s0 = distances[a];
+        if (distances[distances.Count - 1] < s0 + DepotLength + 10f) return null;
+        for (int k = a; k < points.Count; k++)
+        {
+            if (distances[k] > s0 + DepotLength + 10f) break;
+            if (onCurve[k]) return null;
+        }
+        foreach (var st in stops)
+            if (st != null && st.arcLength > s0 - 25f) return null;
+        foreach (var sp in sidePaths)
+            if (sp.chunk != null && sp.arcLength > s0 - 30f) return null;
+        if (Mathf.Abs(nextStopAt - s0) < 20f) nextStopAt = s0 + DepotLength + 30f;
+
+        Vector3 t = tangents[a], r = Right(t);
+        Depot = new DepotSite
+        {
+            origin = points[a] + t * (DepotLength * 0.5f) + r * EdgeOffset,
+            rotation = Quaternion.LookRotation(r),
+            arcLength = s0 + DepotLength * 0.5f,
+            chunk = chunk,
+        };
+        depotRequested = false;
+        return Depot;
     }
 
     void Strip(MeshKit.Builder mb, int a, int b, float offsetA, float offsetB, float y, float uTile, float vTile, float uOffset)
@@ -584,6 +659,7 @@ public class ForestRoad : MonoBehaviour
     {
         int i = (a + b) / 2;
         if (distances[i] < nextSidePathAt) return null;
+        if (depotRequested || NearDepot(distances[i], 60f)) return null;
         for (int k = a; k <= b; k++) if (onCurve[k]) return null;
         foreach (var st in stops)
             if (st != null && Mathf.Abs(st.arcLength - distances[i]) < 60f) return null;
@@ -608,6 +684,12 @@ public class ForestRoad : MonoBehaviour
     /// <summary>Is this point on a dirt track or in a house clearing (no trees there)?</summary>
     public bool InClearing(Vector3 pos, float margin = 0f)
     {
+        if (Depot != null && Depot.chunk != null)
+        {
+            Vector3 local = Quaternion.Inverse(Depot.rotation) * (pos - Depot.origin);
+            if (Mathf.Abs(local.x) < DepotLength * 0.5f + 3f + margin && local.z > -EdgeOffset - margin && local.z < DepotDepth + 3f + margin)
+                return true;
+        }
         foreach (var sp in sidePaths)
         {
             if (sp.chunk == null) continue;
@@ -655,12 +737,13 @@ public class ForestRoad : MonoBehaviour
             MeshKit.Spawn("Guide Posts", parent, posts.ToMesh("Guide Posts"), guidePost, Vector3.zero, Quaternion.identity, false);
     }
 
-    void BuildBusStop(Transform parent, int i)
+    BusStop BuildBusStop(Transform parent, int i, string specialName = null)
     {
         Vector3 p = points[i], t = tangents[i], r = Right(t);
         Quaternion along = Quaternion.LookRotation(t);
-        int stopIndex = stopsBuilt++;
-        string stopName = StopNameAt(stopIndex);
+        // Special stops (the depot) are not part of the numbered route.
+        int stopIndex = specialName != null ? -1 : stopsBuilt++;
+        string stopName = specialName ?? StopNameAt(stopIndex);
 
         var root = new GameObject("BusStop " + stopName).transform;
         root.SetParent(parent, false);
@@ -713,6 +796,7 @@ public class ForestRoad : MonoBehaviour
         stop.roadDirection = t;
         stops.Add(stop);
         StopBuilt?.Invoke(stop);
+        return stop;
     }
 
     // ---------------------------------------------------------------- ground

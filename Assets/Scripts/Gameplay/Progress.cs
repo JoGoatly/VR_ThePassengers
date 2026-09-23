@@ -13,6 +13,7 @@ public class SaveData
     public int medkits = 0;
     public List<int> notes = new List<int>();     // story notes found
     public List<int> drivers = new List<int>();   // missing drivers found
+    public List<string> secrets = new List<string>(); // easter eggs found in the depot
 }
 
 /// <summary>Something that can be bought on the board computer.</summary>
@@ -99,6 +100,18 @@ public static class Progress
         Changed?.Invoke();
         return true;
     }
+
+    /// <summary>An easter egg was discovered (true the first time).</summary>
+    public static bool FoundSecret(string id)
+    {
+        Data.secrets ??= new List<string>();
+        if (Data.secrets.Contains(id)) return false;
+        Data.secrets.Add(id);
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static int SecretsFound => Data.secrets?.Count ?? 0;
 
     public static bool FoundDriver(int id)
     {

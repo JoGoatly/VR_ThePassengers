@@ -27,12 +27,23 @@ public class DayManager : MonoBehaviour
     /// <summary>0 on the first night, 1 on the last.</summary>
     public static float Dread => (Progress.Day - 1) / (float)(Progress.LastDay - 1);
 
-    BusStop depot;
-    bool quotaDone, ended;
+    bool quotaDone, ended, arrivedAtDepot;
     float titleAt = -1f;
     float nextHijackAt;
 
     public int Quota => QuotaFor(Progress.Day);
+
+    /// <summary>The bus stands at the depot: the shift can be ended at the office PC.</summary>
+    public bool AtDepot => arrivedAtDepot && !ended;
+
+    /// <summary>Clocking out at the depot office PC ends the night.</summary>
+    public void ClockOut()
+    {
+        if (ended) return;
+        var onFoot = FindAnyObjectByType<PlayerOnFoot>();
+        if (onFoot != null) onFoot.ForceEnter();
+        EndShift(false);
+    }
 
     void Start()
     {
@@ -81,31 +92,10 @@ public class DayManager : MonoBehaviour
         {
             quotaDone = true;
             game.ServingDone = true;
+            road.RequestDepot();
             game.Mail.Send(Loc.T("Leitstelle", "Dispatch"), Loc.T("Schichtende", "End of shift"), Loc.T(
-                "Das waren die Fahrgäste für heute Nacht. Fahren Sie zum Depot und halten Sie dort an (Türen öffnen).\n\nLeitstelle",
-                "Those were tonight's passengers. Drive to the depot and stop there (open the doors).\n\nDispatch"), game.ClockText);
-        }
-
-        if (quotaDone && depot == null) depot = PickDepot(busS);
-        if (depot == null) return;
-
-        // Stopped at the depot with open doors: the night is over.
-        if (Mathf.Abs(bus.Speed) < 0.3f && bus.DoorsFullyOpen && Mathf.Abs(busS - depot.arcLength) < 12f)
-        {
-            EndShift(false);
-            return;
-        }
-
-        // Drove past the depot.
-        if (busS > depot.arcLength + 60f)
-        {
-            if (Progress.Day == Progress.LastDay && Progress.Data.drivers.Count >= Story.Drivers.Length)
-            {
-                EndShift(true);   // the way out Jens Keller wrote about
-                return;
-            }
-            depot = null;
-            game.ShowToast(Loc.T("Das Depot liegt weiter vorne...", "The depot is further ahead..."));
+                "Das waren die Fahrgäste für heute Nacht. Fahren Sie zum Betriebshof, stellen Sie den Bus ab und stempeln Sie sich im Büro am PC aus.\n\nLeitstelle",
+                "Those were tonight's passengers. Drive to the depot, park the bus and clock out at the PC in the office.\n\nDispatch"), game.ClockText);
         }
 
         // From night 4 the radio sometimes tunes itself to 66.6.
@@ -114,19 +104,32 @@ public class DayManager : MonoBehaviour
             nextHijackAt = Time.time + Random.Range(240f, 420f) / (0.6f + Dread);
             radio.Hijack();
         }
-    }
 
-    // The next stop far enough ahead becomes the depot.
-    BusStop PickDepot(float busS)
-    {
-        foreach (var stop in road.Stops)
+        var depot = road.Depot;
+        if (!quotaDone || depot == null) return;
+
+        // Stopped at the depot: time to get out and clock out in the office.
+        if (!arrivedAtDepot && Mathf.Abs(bus.Speed) < 0.3f && Mathf.Abs(busS - depot.arcLength) < 25f)
         {
-            if (stop == null || stop.arcLength < busS + 40f || stop.WaitingPassenger != null) continue;
-            stop.Visited = true;
-            stop.stopName = Loc.T("Depot", "Depot");
-            return stop;
+            arrivedAtDepot = true;
+            game.ShowToast(Loc.T("Betriebshof erreicht. Aussteigen und im Büro am PC ausstempeln.",
+                                 "Depot reached. Get out and clock out at the office PC."));
         }
-        return null;
+
+        // Drove past the depot.
+        if (busS > depot.arcLength + 70f)
+        {
+            if (Progress.Day == Progress.LastDay && Progress.Data.drivers.Count >= Story.Drivers.Length)
+            {
+                EndShift(true);   // the way out Jens Keller wrote about
+                return;
+            }
+            arrivedAtDepot = false;
+            road.ForgetDepot();
+            road.RequestDepot();
+            game.ShowToast(Loc.T("Der Betriebshof liegt hinter Ihnen... die Leitstelle schickt Sie zum nächsten.",
+                                 "The depot is behind you... dispatch sends you to the next one."));
+        }
     }
 
     void EndShift(bool escaped)
