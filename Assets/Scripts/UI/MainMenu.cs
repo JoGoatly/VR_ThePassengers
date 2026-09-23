@@ -1,56 +1,134 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Start of the game: language choice (flags) -> main menu -> intro newspaper with the
-/// job ad -> the night shift begins. The game is paused (timeScale 0) until then.
+/// Start of the game: language choice (flags) -> main menu (settings: volume and key
+/// bindings) -> intro newspaper with the job ad -> the night shift begins.
+/// During the game Esc opens the pause menu. The game is paused (timeScale 0) while a menu is open.
 /// </summary>
 [DefaultExecutionOrder(-500)]
 public class MainMenu : MonoBehaviour
 {
-    enum Page { Language, Menu, Intro, Playing }
+    enum Page { Language, Menu, Settings, Keys, Intro, Playing, Paused }
 
     [Tooltip("Skip everything and start driving right away (for testing)")]
     public bool skipInEditor;
+    public AudioClip menuMusic;
+    [Range(0f, 1f)] public float musicVolume = 0.6f;
+
+    static bool languageChosen;
 
     Page screen = Page.Language;
+    Page settingsReturn = Page.Menu;
     float screenSince;
     GUIStyle big, title, text, small, button;
     float stylesForScale = -1f;
+    AudioSource music;
+    float musicLevel;          // 0..1 fade
+    GameAction? rebinding;
 
     static readonly Color Bg = new Color(0.02f, 0.02f, 0.03f);
     static readonly Color Paper = new Color(0.86f, 0.83f, 0.74f);
     static readonly Color Ink = new Color(0.12f, 0.11f, 0.1f);
     static readonly Color Faded = new Color(0.35f, 0.33f, 0.3f);
     static readonly Color Stamp = new Color(0.72f, 0.08f, 0.06f, 0.85f);
+    static readonly Color TitleCol = new Color(0.85f, 0.8f, 0.7f);
+    static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f);
+
+    bool InMenu => screen != Page.Playing;
 
     void Awake()
     {
+        GameSettings.Apply();
+        music = gameObject.AddComponent<AudioSource>();
+        music.clip = menuMusic;
+        music.loop = true;
+        music.spatialBlend = 0f;
+        music.ignoreListenerPause = true;
+        music.playOnAwake = false;
+        music.volume = 0f;
+        if (menuMusic != null) music.Play();
+
         if (skipInEditor && Application.isEditor)
         {
             screen = Page.Playing;
             return;
         }
-        GameUI.MenuOpen = true;
-        Time.timeScale = 0f;
+        Show(languageChosen ? Page.Menu : Page.Language);
+        SetPaused(true);
     }
 
     void OnDestroy()
     {
         GameUI.MenuOpen = false;
         Time.timeScale = 1f;
+        AudioListener.pause = false;
+    }
+
+    static void SetPaused(bool paused)
+    {
+        GameUI.MenuOpen = paused;
+        Time.timeScale = paused ? 0f : 1f;
+        Cursor.lockState = paused ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = paused;
     }
 
     void Update()
     {
-        if (screen == Page.Playing) return;
+        // Menu music: full in the start menu, quieter in the pause menu, off while driving.
+        float target = screen == Page.Playing ? 0f : settingsReturn == Page.Paused && screen != Page.Menu && screen != Page.Language && screen != Page.Intro ? 0.45f : 1f;
+        musicLevel = Mathf.MoveTowards(musicLevel, target, Time.unscaledDeltaTime * (target > musicLevel ? 0.5f : 0.8f));
+        if (music != null) music.volume = musicLevel * musicVolume * GameSettings.Music;
+
+        var kb = Keyboard.current;
+        if (kb == null) return;
+
+        if (screen == Page.Playing)
+        {
+            // Esc: pause (not while typing on the computer or choosing a question).
+            if (kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping && !GameUI.DialogueOpen)
+            {
+                settingsReturn = Page.Paused;
+                Show(Page.Paused);
+                SetPaused(true);
+                AudioListener.pause = true;
+            }
+            return;
+        }
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        if (rebinding.HasValue)
+        {
+            if (kb.escapeKey.wasPressedThisFrame) { rebinding = null; return; }
+            foreach (var key in kb.allKeys)
+            {
+                if (key == null || !key.wasPressedThisFrame) continue;
+                GameKeys.Set(rebinding.Value, key.keyCode);
+                rebinding = null;
+                break;
+            }
+            return;
+        }
+
+        if (kb.escapeKey.wasPressedThisFrame)
+        {
+            switch (screen)
+            {
+                case Page.Paused: Resume(); break;
+                case Page.Settings: Show(settingsReturn); break;
+                case Page.Keys: Show(Page.Settings); break;
+                case Page.Intro: if (Time.unscaledTime - screenSince > 1f) StartGame(); break;
+            }
+            return;
+        }
+
         // The intro can also be skipped with a key.
-        var kb = Keyboard.current;
-        if (screen == Page.Intro && kb != null && Time.unscaledTime - screenSince > 1f &&
-            (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame))
+        if (screen == Page.Intro && Time.unscaledTime - screenSince > 1f &&
+            (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
             StartGame();
     }
 
@@ -63,10 +141,24 @@ public class MainMenu : MonoBehaviour
     void StartGame()
     {
         Show(Page.Playing);
-        GameUI.MenuOpen = false;
+        SetPaused(false);
+    }
+
+    void Resume()
+    {
+        Show(Page.Playing);
+        SetPaused(false);
+        AudioListener.pause = false;
+    }
+
+    void BackToMainMenu()
+    {
         Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        AudioListener.pause = false;
+        GameUI.MenuOpen = false;
+        GameUI.DialogueOpen = false;
+        GameUI.TerminalTyping = false;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     // ------------------------------------------------------------------ drawing
@@ -77,25 +169,30 @@ public class MainMenu : MonoBehaviour
         GUI.depth = -500;
         BuildStyles();
         float w = RetroGUI.VirtualWidth;
-        RetroGUI.Fill(new Rect(0, 0, w, RetroGUI.VirtualHeight), Bg);
+        // The pause menu shows the (frozen) game dimmed behind it.
+        bool overGame = settingsReturn == Page.Paused && (screen == Page.Paused || screen == Page.Settings || screen == Page.Keys);
+        RetroGUI.Fill(new Rect(0, 0, w, RetroGUI.VirtualHeight), overGame ? new Color(0f, 0f, 0f, 0.78f) : Bg);
 
         switch (screen)
         {
             case Page.Language: DrawLanguage(w); break;
             case Page.Menu: DrawMenu(w); break;
+            case Page.Settings: DrawSettings(w); break;
+            case Page.Keys: DrawKeys(w); break;
             case Page.Intro: DrawIntro(w); break;
+            case Page.Paused: DrawPause(w); break;
         }
     }
 
     void DrawLanguage(float w)
     {
-        Label(new Rect(0, 70, w, 30), "THE PASSENGERS", title, new Color(0.85f, 0.8f, 0.7f), TextAnchor.MiddleCenter);
-        Label(new Rect(0, 110, w, 14), "Sprache wählen  /  Choose language", text, new Color(0.6f, 0.6f, 0.6f), TextAnchor.MiddleCenter);
+        Label(new Rect(0, 70, w, 30), "THE PASSENGERS", title, TitleCol, TextAnchor.MiddleCenter);
+        Label(new Rect(0, 110, w, 14), "Sprache wählen  /  Choose language", text, Grey, TextAnchor.MiddleCenter);
 
         var de = new Rect(w / 2 - 150, 145, 120, 72);
         var en = new Rect(w / 2 + 30, 145, 120, 72);
-        if (FlagButton(de, false, "DEUTSCH")) { Loc.English = false; Show(Page.Menu); }
-        if (FlagButton(en, true, "ENGLISH")) { Loc.English = true; Show(Page.Menu); }
+        if (FlagButton(de, false, "DEUTSCH")) { Loc.English = false; languageChosen = true; Show(Page.Menu); }
+        if (FlagButton(en, true, "ENGLISH")) { Loc.English = true; languageChosen = true; Show(Page.Menu); }
     }
 
     bool FlagButton(Rect r, bool usa, string caption)
@@ -140,18 +237,85 @@ public class MainMenu : MonoBehaviour
 
     void DrawMenu(float w)
     {
-        Label(new Rect(0, 60, w, 30), "THE PASSENGERS", title, new Color(0.85f, 0.8f, 0.7f), TextAnchor.MiddleCenter);
+        Label(new Rect(0, 60, w, 30), "THE PASSENGERS", title, TitleCol, TextAnchor.MiddleCenter);
         Label(new Rect(0, 92, w, 14), Loc.T("Nachtlinie 13", "Night Line 13"), text, new Color(0.6f, 0.2f, 0.15f), TextAnchor.MiddleCenter);
 
-        float bx = w / 2 - 80, y = 140;
+        float bx = w / 2 - 80, y = 130;
         if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("SCHICHT BEGINNEN", "START SHIFT"))) Show(Page.Intro);
-        if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("SPRACHE", "LANGUAGE"))) Show(Page.Language);
-        if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();
+        if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("EINSTELLUNGEN", "SETTINGS"))) { settingsReturn = Page.Menu; Show(Page.Settings); }
+        if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("SPRACHE", "LANGUAGE"))) Show(Page.Language);
+        if (MenuButton(new Rect(bx, y + 90, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();
+    }
 
-        Label(new Rect(0, 300, w, 40), Loc.T(
-            "WASD fahren  -  F Türen  -  L Licht  -  Maus umsehen, Mausrad Zoom  -  E Ausweis / Aussteigen  -  T Ansprechen  -  J / N Entscheiden",
-            "WASD drive  -  F doors  -  L lights  -  Mouse look, wheel zoom  -  E ID card / get out  -  T talk  -  J / N decide"),
-            small, new Color(0.45f, 0.45f, 0.45f), TextAnchor.UpperCenter);
+    void DrawPause(float w)
+    {
+        Label(new Rect(0, 70, w, 30), Loc.T("PAUSE", "PAUSED"), title, TitleCol, TextAnchor.MiddleCenter);
+        float bx = w / 2 - 80, y = 120;
+        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("WEITER", "RESUME"))) Resume();
+        if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("EINSTELLUNGEN", "SETTINGS"))) { settingsReturn = Page.Paused; Show(Page.Settings); }
+        if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("HAUPTMENÜ", "MAIN MENU"))) BackToMainMenu();
+        if (MenuButton(new Rect(bx, y + 90, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();
+    }
+
+    void DrawSettings(float w)
+    {
+        Label(new Rect(0, 50, w, 30), Loc.T("EINSTELLUNGEN", "SETTINGS"), title, TitleCol, TextAnchor.MiddleCenter);
+        float x = w / 2 - 140, y = 100;
+        GameSettings.Master = Slider(new Rect(x, y, 280, 20), Loc.T("Gesamtlautstärke", "Master volume"), GameSettings.Master);
+        GameSettings.Music = Slider(new Rect(x, y + 30, 280, 20), Loc.T("Musik & Radio", "Music & radio"), GameSettings.Music);
+        GameSettings.Effects = Slider(new Rect(x, y + 60, 280, 20), Loc.T("Effekte", "Effects"), GameSettings.Effects);
+
+        float bx = w / 2 - 80;
+        if (MenuButton(new Rect(bx, y + 105, 160, 22), Loc.T("TASTENBELEGUNG", "KEY BINDINGS"))) Show(Page.Keys);
+        if (MenuButton(new Rect(bx, y + 135, 160, 22), Loc.T("ZURÜCK", "BACK"))) { PlayerPrefs.Save(); Show(settingsReturn); }
+    }
+
+    float Slider(Rect r, string caption, float value)
+    {
+        Label(new Rect(r.x, r.y, 120, r.height), caption, text, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
+        var bar = new Rect(r.x + 130, r.y + r.height / 2 - 3, r.width - 170, 6);
+        RetroGUI.Fill(bar, new Color(0.15f, 0.15f, 0.15f));
+        RetroGUI.Fill(new Rect(bar.x, bar.y, bar.width * value, bar.height), new Color(0.7f, 0.25f, 0.18f));
+        RetroGUI.Fill(new Rect(bar.x + bar.width * value - 2, bar.y - 4, 4, bar.height + 8), new Color(0.9f, 0.85f, 0.75f));
+        Label(new Rect(bar.xMax + 6, r.y, 40, r.height), Mathf.RoundToInt(value * 100) + "%", text, Grey, TextAnchor.MiddleLeft);
+
+        // Click or drag on the bar.
+        var e = Event.current;
+        var hit = RetroGUI.R(bar.x - 4, r.y, bar.width + 8, r.height);
+        if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && hit.Contains(e.mousePosition))
+        {
+            var screenBar = RetroGUI.R(bar.x, bar.y, bar.width, bar.height);
+            value = Mathf.Clamp01((e.mousePosition.x - screenBar.x) / screenBar.width);
+            e.Use();
+        }
+        return value;
+    }
+
+    void DrawKeys(float w)
+    {
+        Label(new Rect(0, 24, w, 24), Loc.T("TASTENBELEGUNG", "KEY BINDINGS"), title, TitleCol, TextAnchor.MiddleCenter);
+        float x = w / 2 - 150, y = 56;
+        var actions = GameKeys.All.ToList();
+        foreach (var a in actions)
+        {
+            // Doors and "next dialogue line" may share a key on purpose.
+            bool clash = actions.Any(o => o != a && GameKeys.Get(o) == GameKeys.Get(a) &&
+                !((a == GameAction.Doors && o == GameAction.Continue) || (a == GameAction.Continue && o == GameAction.Doors)));
+            Label(new Rect(x, y, 190, 14), GameKeys.Label(a), text, new Color(0.8f, 0.8f, 0.8f), TextAnchor.MiddleLeft);
+            string caption = rebinding == a ? Loc.T("Taste drücken...", "Press a key...") : GameKeys.Name(a);
+            var r = new Rect(x + 200, y, 100, 13);
+            bool hover = RetroGUI.R(r.x, r.y, r.width, r.height).Contains(Event.current.mousePosition);
+            RetroGUI.Frame(r, rebinding == a ? new Color(0.35f, 0.1f, 0.06f) : hover ? new Color(0.2f, 0.2f, 0.2f) : new Color(0.1f, 0.1f, 0.1f),
+                clash ? new Color(0.9f, 0.2f, 0.15f) : new Color(0.35f, 0.35f, 0.35f));
+            Label(r, caption, small, clash ? new Color(1f, 0.5f, 0.4f) : Color.white, TextAnchor.MiddleCenter);
+            if (!rebinding.HasValue && GUI.Button(RetroGUI.R(r.x, r.y, r.width, r.height), GUIContent.none, GUIStyle.none)) rebinding = a;
+            y += 15;
+        }
+        Label(new Rect(0, y + 2, w, 12), Loc.T("Klicken und neue Taste drücken  -  Esc bricht ab", "Click and press a new key  -  Esc cancels"),
+            small, Grey, TextAnchor.MiddleCenter);
+        float bx = w / 2 - 165;
+        if (MenuButton(new Rect(bx, y + 18, 160, 20), Loc.T("STANDARD", "DEFAULTS"))) { rebinding = null; GameKeys.ResetAll(); }
+        if (MenuButton(new Rect(bx + 170, y + 18, 160, 20), Loc.T("ZURÜCK", "BACK"))) { rebinding = null; Show(Page.Settings); }
     }
 
     bool MenuButton(Rect r, string caption)

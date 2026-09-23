@@ -54,7 +54,7 @@ public class PlayerOnFoot : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb == null || bus == null) return;
+        if (kb == null || bus == null || GameUI.MenuOpen) return;
         bool ePressed = GameKeys.Pressed(GameAction.Interact) && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
 
         if (!GameUI.PlayerOutside)

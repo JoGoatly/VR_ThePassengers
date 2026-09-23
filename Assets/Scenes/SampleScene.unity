@@ -1155,6 +1155,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   skipInEditor: 0
+  menuMusic: {fileID: 8300000, guid: 3e018b641edd479d89a58545aff2264a, type: 3}
+  musicVolume: 0.6
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
