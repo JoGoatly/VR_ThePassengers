@@ -173,6 +173,7 @@ public class SoundManager : MonoBehaviour
             float moving = Mathf.Clamp01(speed01 * 6f);
             engine.pitch = Mathf.Lerp(engine.pitch, 0.6f + speed01 * 1.1f, Time.deltaTime * 4f);
             float targetVolume = GameSettings.Effects * engineVolume * moving * (0.65f + 0.35f * bus.ThrottleInput);
+            if (bus.engineDead) targetVolume = 0f;
             engine.volume = Mathf.Lerp(engine.volume, targetVolume, Time.deltaTime * 4f);
             if (road != null)
             {

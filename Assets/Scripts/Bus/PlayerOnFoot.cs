@@ -54,15 +54,11 @@ public class PlayerOnFoot : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb == null || bus == null || GameUI.MenuOpen || GameUI.NoteOpen || GameUI.PcOpen) return;
+        if (kb == null || bus == null || GameUI.MenuOpen || GameUI.NoteOpen || GameUI.PcOpen || GameUI.MinigameOpen) return;
         bool ePressed = GameKeys.Pressed(GameAction.Interact) && !GameUI.JustClosed && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
 
-        if (!GameUI.PlayerOutside)
-        {
-            bool canLeave = Mathf.Abs(bus.Speed) < 0.3f && (game == null || game.CurrentPhase == BoardingManager.Phase.Driving);
-            if (ePressed && canLeave) Leave();
-            return;
-        }
+        // In the bus, BusWalker handles E (stand up, get out through the door).
+        if (!GameUI.PlayerOutside) return;
 
         Walk(kb);
         var usable = Interactable.Nearest(walker.transform.position, walker.transform.forward);
@@ -86,6 +82,9 @@ public class PlayerOnFoot : MonoBehaviour
             return d.magnitude < enterDistance;
         }
     }
+
+    /// <summary>Out of the bus through the front door (from the driver's seat / the aisle).</summary>
+    public void GetOut() => Leave();
 
     void Leave()
     {
@@ -243,9 +242,10 @@ public class PlayerOnFoot : MonoBehaviour
                 NearDoor ? Loc.T("Einsteigen ", "Get in ") + GameKeys.Tag(GameAction.Interact) : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe ", "Back to the bus door   -   Flashlight ") + GameKeys.Tag(GameAction.Lights);
             RetroGUI.ShadowLabel(new Rect(0, 318, w, 14), text, new Color(1f, 0.85f, 0.3f));
         }
-        else if (Mathf.Abs(bus.Speed) < 0.3f && game != null && game.CurrentPhase == BoardingManager.Phase.Driving && !GameUI.TerminalTyping)
+        else if (!GameUI.InBus && !GameUI.MinigameOpen && Mathf.Abs(bus.Speed) < 0.3f && game != null && game.CurrentPhase == BoardingManager.Phase.Driving && !GameUI.TerminalTyping)
         {
-            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), Loc.T("Aussteigen ", "Get out ") + GameKeys.Tag(GameAction.Interact), new Color(0.8f, 0.8f, 0.8f), false);
+            string seat = NightEvents.Instance != null ? NightEvents.Instance.SeatPrompt : null;
+            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), (seat ?? Loc.T("Aufstehen", "Stand up")) + " " + GameKeys.Tag(GameAction.Interact), new Color(0.8f, 0.8f, 0.8f), false);
         }
     }
 }

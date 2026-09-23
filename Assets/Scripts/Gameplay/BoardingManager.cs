@@ -239,6 +239,35 @@ public class BoardingManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The night's last passenger was served: whoever still rides gets off at the next stop
+    /// (or at the depot if there is none yet), nobody else is waiting anywhere.
+    /// Returns up to where stops are still needed (road distance).
+    /// </summary>
+    public float FinishRoute()
+    {
+        float busS = road != null ? road.BusArcLength : 0f;
+        riders.RemoveAll(r => r == null);
+        BusStop exit = null;
+        if (road != null && riders.Any(r => r.CurrentState == Passenger.State.Riding))
+            foreach (var st in road.Stops)
+                if (st != null && st.index >= 0 && st.arcLength > busS + 30f && (exit == null || st.arcLength < exit.arcLength))
+                    exit = st;
+        if (exit != null)
+            foreach (var r in riders)
+                if (r.Card != null && (r.Card.DestinationIndex < 0 || r.Card.DestinationIndex > exit.index))
+                    r.Card.DestinationIndex = exit.index;
+
+        if (road != null)
+            foreach (var st in road.Stops)
+                if (st != null && st.arcLength > busS + 25f && st.WaitingPassenger != null && st.WaitingPassenger != active)
+                {
+                    Destroy(st.WaitingPassenger.gameObject);
+                    st.WaitingPassenger = null;
+                }
+        return exit != null ? exit.arcLength : busS + 30f;
+    }
+
     Passenger SpawnPassenger(BusStop stop)
     {
         int story = NextStoryIndex();
@@ -267,8 +296,10 @@ public class BoardingManager : MonoBehaviour
         if (prefab == null) prefab = pool[rng.Next(pool.Length)];
         prefabOf[card] = prefab;
 
-        // Where they get off: one to four stops further. The answer names that stop.
-        card.DestinationIndex = stop.index + Random.Range(1, 5);
+        // Where they get off: one or two stops further, but never after the stop that follows
+        // the last passenger of the night. The answer names that stop.
+        int stillToCome = Mathf.Max(1, DayManager.QuotaFor(Progress.Day) - decisions);
+        card.DestinationIndex = stop.index + Mathf.Min(Random.Range(1, 3), stillToCome);
         string toStop = Loc.T("Zur Haltestelle ", "To the stop ");
         if (card.SaidDestination != null && card.SaidDestination.StartsWith(toStop))
             card.SaidDestination = toStop + road.StopNameAt(card.DestinationIndex) + ".";
@@ -300,7 +331,7 @@ public class BoardingManager : MonoBehaviour
             if (d > -10f && d < best) { best = d; next = st; }
         }
         StopRequested = next != null && riders.Any(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
-                                                          r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index);
+                                                          (next.index < 0 || (r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index)));
 
         // Drove past someone's stop: they complain and get off at the next one.
         foreach (var st in road.Stops)
@@ -319,8 +350,9 @@ public class BoardingManager : MonoBehaviour
         if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen || Time.time < nextExitAt) return;
         var here = StopNearBus();
         if (here == null) return;
+        // At the depot (index -1) everyone gets off.
         var rider = riders.FirstOrDefault(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
-                                               r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index);
+                                               (here.index < 0 || (r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index)));
         if (rider == null) return;
         nextExitAt = Time.time + 1.4f;
         StartExit(rider, here);
@@ -345,6 +377,12 @@ public class BoardingManager : MonoBehaviour
         riders.Remove(p);
         leaving.Add(p);
         p.CurrentState = Passenger.State.Leaving;
+        if (p.Sitting && seatOf.TryGetValue(p, out int seat))
+        {
+            var inside = BusInterior.Of(bus.transform);
+            if (inside != null && inside.Valid) p.StandUp(inside.AisleNextTo(seat));
+        }
+        seatOf.Remove(p);
         float side = DoorSide;
         var path = new[]
         {
@@ -513,21 +551,46 @@ public class BoardingManager : MonoBehaviour
         {
             CurrentPhase = Phase.PassengerEntering;
             p.CurrentState = Passenger.State.Boarding;
-            Vector3 spot = FreeSpot();
-            var path = new[]
-            {
-                new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f),
-                new Vector3(spot.x, floorHeight, spot.z),
-            };
-            p.WalkPath(path, bus.transform, () =>
+            var inside = BusInterior.Of(bus.transform);
+            int seat = inside != null && inside.Valid ? FreeSeat(inside) : -1;
+            var stopHere = activeStop;
+            System.Action boarded = () =>
             {
                 p.CurrentState = Passenger.State.Riding;
-                activeStop.WaitingPassenger = null;
+                if (stopHere != null) stopHere.WaitingPassenger = null;
                 riders.Add(p);
-                active = null;
-                CurrentPhase = Phase.Driving;
+                if (active == p) active = null;
+                if (CurrentPhase == Phase.PassengerEntering) CurrentPhase = Phase.Driving;
                 if (card.Truth == Discrepancy.Deceased) Schedule(Random.Range(25f, 45f), () => Vanish(p));
-            }, faceAtEnd: spot.x < 0 ? Vector3.right : Vector3.left);
+            };
+            if (seat >= 0)
+            {
+                // Through the aisle to a free seat and sit down. The bus may go on as soon
+                // as they are past the door.
+                seatOf[p] = seat;
+                p.WalkPath(new[] { new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f) }, bus.transform, () =>
+                {
+                    if (stopHere != null) stopHere.WaitingPassenger = null;
+                    if (active == p) active = null;
+                    if (CurrentPhase == Phase.PassengerEntering) CurrentPhase = Phase.Driving;
+                    var toSeat = new[] { inside.ClampWalk(new Vector3(0f, 0f, doorLocal.z - 1.4f)), inside.AisleNextTo(seat) };
+                    p.WalkPath(toSeat, bus.transform, () =>
+                    {
+                        p.SitDown(inside.Seat(seat), inside.Forward, bus.transform);
+                        boarded();
+                    });
+                });
+            }
+            else
+            {
+                Vector3 spot = FreeSpot();
+                var path = new[]
+                {
+                    new Vector3(DoorSide * 0.25f, floorHeight, doorLocal.z - 1.2f),
+                    new Vector3(spot.x, floorHeight, spot.z),
+                };
+                p.WalkPath(path, bus.transform, () => boarded(), faceAtEnd: spot.x < 0 ? Vector3.right : Vector3.left);
+            }
         }
         else
         {
@@ -550,6 +613,26 @@ public class BoardingManager : MonoBehaviour
         }
     }
 
+    readonly Dictionary<Passenger, int> seatOf = new Dictionary<Passenger, int>();
+
+    /// <summary>Everyone riding in the bus right now.</summary>
+    public IReadOnlyList<Passenger> Riders => riders;
+
+    // A random free seat (seats of people who left are free again).
+    int FreeSeat(BusInterior inside)
+    {
+        var taken = new HashSet<int>();
+        foreach (var kv in seatOf)
+            if (kv.Key != null && (riders.Contains(kv.Key) || kv.Key.CurrentState == Passenger.State.Boarding)) taken.Add(kv.Value);
+        var free = new List<int>();
+        for (int i = 0; i < inside.SeatCount; i++) if (!taken.Contains(i)) free.Add(i);
+        if (free.Count == 0) return -1;
+        // Most people sit down in the front half.
+        free.Sort((a, b) => a.CompareTo(b));
+        int pick = Random.value < 0.7f ? free[Random.Range(0, Mathf.Min(free.Count, 8))] : free[Random.Range(0, free.Count)];
+        return pick;
+    }
+
     Vector3 FreeSpot()
     {
         if (riders.Count >= standingSpots.Length)
@@ -566,6 +649,15 @@ public class BoardingManager : MonoBehaviour
             if (!taken) return spot;
         }
         return standingSpots[0];
+    }
+
+    /// <summary>A rider is gone (did not survive an event).</summary>
+    public void RemoveRider(Passenger p)
+    {
+        if (p == null) return;
+        riders.Remove(p);
+        seatOf.Remove(p);
+        Destroy(p.gameObject);
     }
 
     void Vanish(Passenger p)

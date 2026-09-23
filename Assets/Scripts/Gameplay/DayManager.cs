@@ -92,7 +92,8 @@ public class DayManager : MonoBehaviour
         {
             quotaDone = true;
             game.ServingDone = true;
-            road.RequestDepot();
+            // The last riders get off at the next stop, then comes the depot.
+            road.RequestDepot(game.FinishRoute());
             game.Mail.Send(Loc.T("Leitstelle", "Dispatch"), Loc.T("Schichtende", "End of shift"), Loc.T(
                 "Das waren die Fahrgäste für heute Nacht. Fahren Sie zum Betriebshof, stellen Sie den Bus ab und stempeln Sie sich im Büro am PC aus.\n\nLeitstelle",
                 "Those were tonight's passengers. Drive to the depot, park the bus and clock out at the PC in the office.\n\nDispatch"), game.ClockText);

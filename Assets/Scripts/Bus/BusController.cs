@@ -61,6 +61,11 @@ public class BusController : MonoBehaviour
     /// <summary>Set by the game: doors can't be opened or closed.</summary>
     [System.NonSerialized] public bool doorsLocked;
 
+    // Breakdowns (NightEvents): no engine power, a speed limit, pulling to one side.
+    [System.NonSerialized] public bool engineDead;
+    [System.NonSerialized] public float speedLimitKmh = float.MaxValue;
+    [System.NonSerialized] public float steerPull;
+
     [Header("Parts (found by name if empty)")]
     public Transform[] frontWheels;
     public Transform[] rearWheels;
@@ -310,7 +315,7 @@ public class BusController : MonoBehaviour
     void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
-        float maxSpeed = maxSpeedKmh / 3.6f;
+        float maxSpeed = Mathf.Max(1f, Mathf.Min(maxSpeedKmh, speedLimitKmh)) / 3.6f;
         float maxReverse = maxReverseSpeedKmh / 3.6f;
 
         // Use the real velocity so collisions slow the bus down.
@@ -326,7 +331,7 @@ public class BusController : MonoBehaviour
             if (throttleInput > 0.01f)
             {
                 if (speed < -0.3f) accel += brakeDeceleration * throttleInput;
-                else if (speed < maxSpeed) accel += acceleration * throttleInput;
+                else if (speed < maxSpeed && !engineDead) accel += acceleration * throttleInput;
             }
             if (brakeInput > 0.01f)
             {
@@ -339,12 +344,14 @@ public class BusController : MonoBehaviour
             accel = -Mathf.Sign(speed) * Mathf.Min(rollingDeceleration, Mathf.Abs(speed) / dt);
         }
 
-        speed = Mathf.Clamp(speed + accel * dt, -maxReverse, maxSpeed);
+        // Over the limit (e.g. a flat tyre): slow down to it.
+        if (speed > maxSpeed + 0.2f) accel = Mathf.Min(accel, -2.5f);
+        speed = Mathf.Clamp(speed + accel * dt, -maxReverse, Mathf.Max(maxSpeed, speed));
         Speed = speed;
 
         // Fixed steering lock; at high speed the wheel just turns more slowly.
         float speedFactor = Mathf.Clamp01(Mathf.Abs(speed) / maxSpeed);
-        float targetSteer = steerInput * maxSteerAngle;
+        float targetSteer = Mathf.Clamp(steerInput + steerPull * Mathf.Clamp01(Mathf.Abs(speed) / 3f), -1f, 1f) * maxSteerAngle;
         float rate = Mathf.Abs(targetSteer) < Mathf.Abs(steerAngle)
             ? steerReturnSpeed
             : Mathf.Lerp(steerSpeed, steerSpeedAtTopSpeed, speedFactor);
