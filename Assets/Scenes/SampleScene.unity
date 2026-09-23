@@ -918,6 +918,7 @@ GameObject:
   - component: {fileID: 2100000010}
   - component: {fileID: 2100000011}
   - component: {fileID: 2100000012}
+  - component: {fileID: 2100000013}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1192,6 +1193,22 @@ MonoBehaviour:
   bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
   driveSound: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
+--- !u!114 &2100000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f8c8836061540d0b510827790389f9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  bus: {fileID: 1500000004}
+  onFoot: {fileID: 2100000008}
+  sound: {fileID: 2100000006}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

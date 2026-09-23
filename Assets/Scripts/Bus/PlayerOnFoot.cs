@@ -138,6 +138,25 @@ public class PlayerOnFoot : MonoBehaviour
         GameUI.PlayerOutside = false;
     }
 
+    /// <summary>The walking player, or null while in the bus.</summary>
+    public Transform Walker => walker != null ? walker.transform : null;
+
+    /// <summary>Put the walking player next to the bus door, looking at the bus.</summary>
+    public void ReturnToBus()
+    {
+        if (walker == null) return;
+        Vector3 door = bus.transform.TransformPoint(DoorOutsideLocal);
+        Vector3 outward = bus.transform.right * Mathf.Sign(DoorOutsideLocal.x);
+        Vector3 pos = door + outward * 2.5f;
+        pos.y = 0.05f;
+        controller.enabled = false;
+        walker.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward));
+        controller.enabled = true;
+        pitch = 0f;
+        cam.localRotation = Quaternion.identity;
+        verticalSpeed = 0f;
+    }
+
     void Walk(Keyboard kb)
     {
         var mouse = Mouse.current;

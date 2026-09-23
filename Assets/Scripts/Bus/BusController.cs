@@ -287,6 +287,17 @@ public class BusController : MonoBehaviour
             SetDoors(!doorsOpen);
     }
 
+    /// <summary>Put the bus somewhere else, standing still (e.g. back on the road).</summary>
+    public void ResetTo(Vector3 position, Quaternion rotation)
+    {
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.position = position;
+        rb.rotation = rotation;
+        transform.SetPositionAndRotation(position, rotation);
+        Speed = 0f;
+    }
+
     /// <summary>Open or close the doors (with sound event).</summary>
     public void SetDoors(bool open)
     {
