@@ -66,7 +66,7 @@ public class DriverCamera : MonoBehaviour
         restRotation = transform.localRotation;
         cam = GetComponent<Camera>();
         if (cam != null) normalFov = cam.fieldOfView;
-        LockCursor(true);
+        if (!GameUI.MenuOpen) LockCursor(true);
     }
 
     void OnDisable() => LockCursor(false);
@@ -88,6 +88,7 @@ public class DriverCamera : MonoBehaviour
 
     void LateUpdate()
     {
+        if (GameUI.MenuOpen) return;
         var kb = Keyboard.current;
         var mouse = Mouse.current;
         var gp = Gamepad.current;

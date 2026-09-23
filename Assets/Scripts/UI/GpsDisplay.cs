@@ -142,7 +142,7 @@ public class GpsDisplay : MonoBehaviour
             canvas.Text(3, 1, next.stopName, Text, 17);
             canvas.Text(W - PixelCanvas.TextWidth(dist) - 3, 1, dist, Yellow);
         }
-        else canvas.Text(3, 1, "LINIE 13", Dim);
+        else canvas.Text(3, 1, Loc.T("LINIE 13", "LINE 13"), Dim);
 
         // Bottom: stopping guide or speed.
         canvas.Fill(0, H - 13, W, 13, Bar);
@@ -152,17 +152,17 @@ public class GpsDisplay : MonoBehaviour
         if (next != null && waiting && Mathf.Abs(nextDist) <= stopWindow)
         {
             bool stopped = Mathf.Abs(bus.Speed) < 0.3f;
-            msg = stopped ? (bus.doorsOpen ? "TÜREN OFFEN" : "TÜREN ÖFFNEN [F]") : "HIER HALTEN";
+            msg = stopped ? (bus.doorsOpen ? Loc.T("TÜREN OFFEN", "DOORS OPEN") : Loc.T("TÜREN ÖFFNEN [F]", "OPEN DOORS [F]")) : Loc.T("HIER HALTEN", "STOP HERE");
             col = stopped || Mathf.Repeat(blink, 0.6f) < 0.3f ? Green : Bg;
         }
         else if (next != null && waiting && nextDist < -stopWindow)
         {
-            msg = "ZU WEIT";
+            msg = Loc.T("ZU WEIT", "TOO FAR");
             col = Red;
         }
         else if (next != null && waiting && nextDist < 80f)
         {
-            msg = $"HALT IN {nextDist:0} m";
+            msg = Loc.T($"HALT IN {nextDist:0} m", $"STOP IN {nextDist:0} m");
             col = Yellow;
         }
         else

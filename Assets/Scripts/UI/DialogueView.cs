@@ -20,13 +20,13 @@ public class DialogueView : MonoBehaviour
     /// <summary>Raised when the passenger answers (for a voice sound).</summary>
     public event System.Action<IdCard> Spoke;
 
-    static readonly string[] Questions =
+    static string[] Questions => new[]
     {
-        "Wie heißen Sie?",
-        "Wann sind Sie geboren?",
-        "Wo wohnen Sie?",
-        "Was arbeiten Sie?",
-        "Wohin fahren Sie?",
+        Loc.T("Wie heißen Sie?", "What is your name?"),
+        Loc.T("Wann sind Sie geboren?", "When were you born?"),
+        Loc.T("Wo wohnen Sie?", "Where do you live?"),
+        Loc.T("Was arbeiten Sie?", "What do you do for a living?"),
+        Loc.T("Wohin fahren Sie?", "Where are you going?"),
     };
 
     IdCard lastCard;
@@ -172,20 +172,20 @@ public class DialogueView : MonoBehaviour
             // Talk menu: click a question.
             var menu = new Rect(232, 196, 340, 84);
             RetroGUI.Frame(menu, fill, border);
-            RetroGUI.Label(new Rect(menu.x + 8, menu.y + 4, menu.width - 16, 12), card.FirstName + " ansprechen:", new Color(1f, 0.85f, 0.55f), true, true);
+            RetroGUI.Label(new Rect(menu.x + 8, menu.y + 4, menu.width - 16, 12), Loc.T(card.FirstName + " ansprechen:", "Talk to " + card.FirstName + ":"), new Color(1f, 0.85f, 0.55f), true, true);
             for (int i = 0; i < Questions.Length; i++)
             {
                 if (RetroGUI.Button(new Rect(menu.x + 8, menu.y + 17 + i * 12.5f, menu.width - 16, 11.5f), Questions[i],
                         new Color(0.12f, 0.12f, 0.12f, 0.9f), new Color(0.9f, 0.9f, 0.9f)))
                     Ask(card, i);
             }
-            RetroGUI.Label(new Rect(menu.x, menu.yMax - 11, menu.width - 6, 10), "schließen [T]", hint, false, true, TextAnchor.UpperRight);
+            RetroGUI.Label(new Rect(menu.x, menu.yMax - 11, menu.width - 6, 10), Loc.T("schließen [T]", "close [T]"), hint, false, true, TextAnchor.UpperRight);
             return;
         }
 
         if (line == null && pendingAnswer == null)
         {
-            RetroGUI.ShadowLabel(new Rect(0, 284, RetroGUI.VirtualWidth, 14), "Ansprechen [T]", new Color(0.7f, 0.85f, 1f), false);
+            RetroGUI.ShadowLabel(new Rect(0, 284, RetroGUI.VirtualWidth, 14), Loc.T("Ansprechen [T]", "Talk [T]"), new Color(0.7f, 0.85f, 1f), false);
             return;
         }
 
@@ -195,14 +195,14 @@ public class DialogueView : MonoBehaviour
         float y = box.y + 4;
         if (question != null)
         {
-            RetroGUI.Label(new Rect(box.x + 8, y, box.width - 16, 12), "Du: " + question, new Color(0.7f, 0.7f, 0.7f), false, true);
+            RetroGUI.Label(new Rect(box.x + 8, y, box.width - 16, 12), Loc.T("Du: ", "You: ") + question, new Color(0.7f, 0.7f, 0.7f), false, true);
             y += 11;
         }
         RetroGUI.Label(new Rect(box.x + 8, y, box.width - 16, 12), card.FirstName + ":", new Color(1f, 0.85f, 0.55f), true, true);
         string text = pendingAnswer != null ? "..." : line;
         RetroGUI.Wrapped(new Rect(box.x + 8, y + 10, box.width - 16, box.yMax - y - 12), text ?? "", Color.white);
         if (pendingAnswer == null)
-            RetroGUI.Label(new Rect(box.x, box.yMax - 11, box.width - 6, 10), lineIsIntro && intro.Count > 0 ? "weiter [F]" : "schließen [F]",
+            RetroGUI.Label(new Rect(box.x, box.yMax - 11, box.width - 6, 10), lineIsIntro && intro.Count > 0 ? Loc.T("weiter [F]", "next [F]") : Loc.T("schließen [F]", "close [F]"),
                 hint, false, true, TextAnchor.UpperRight);
     }
 }
