@@ -1196,12 +1196,60 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   road: {fileID: 2000000003}
   bus: {fileID: 1500000004}
-  carPrefabs: []
+  cars:
+  - model: {fileID: 919132149155446097, guid: 7f05f79921ee6c14f88c9f60bbfe8e1c, type: 3}
+    paints:
+    - {fileID: 2800000, guid: a91b83e7ad467b64f8f5060a379b92bc, type: 3}
+    - {fileID: 2800000, guid: 22476ce54f8874f4380f7358cb8a7b54, type: 3}
+    - {fileID: 2800000, guid: 4c90eb9367055f345b626fb2c7fbb08f, type: 3}
+    - {fileID: 2800000, guid: ad7a835837e45ad4cb4e03c6e9a32e55, type: 3}
+  - model: {fileID: 919132149155446097, guid: 3983309c87bf29945b872e0d5220a7e4, type: 3}
+    paints:
+    - {fileID: 2800000, guid: 3c2ec53dd4d159848bd311795245ab5a, type: 3}
+    - {fileID: 2800000, guid: de3d7e0ffd58d8e4890ccd2eb859ce71, type: 3}
+    - {fileID: 2800000, guid: f41ec8c6a5a559843a74547c7812a17c, type: 3}
+  - model: {fileID: 919132149155446097, guid: dfe79ec57c881c6468077550ad9ba713, type: 3}
+    paints:
+    - {fileID: 2800000, guid: e6de3d45d3609104688dcec6b28140e3, type: 3}
+    - {fileID: 2800000, guid: bb6afceb9743e5844b79efffa10348db, type: 3}
+    - {fileID: 2800000, guid: 50533b40c91e6914a91631db7971f3c6, type: 3}
+  - model: {fileID: 919132149155446097, guid: 569bcb9df2b257546b11dd0a8160070e, type: 3}
+    paints:
+    - {fileID: 2800000, guid: 9fdf58334f999fa4aa69d28d2f5240be, type: 3}
+    - {fileID: 2800000, guid: 0f21fc8cdcb232843b61ad60303e7698, type: 3}
+    - {fileID: 2800000, guid: b503fca212218da4887be55bdaf050d3, type: 3}
+    - {fileID: 2800000, guid: 3d2be704febf0a04d96a9828538ed9f7, type: 3}
+  - model: {fileID: 919132149155446097, guid: 949c9a3491ceb654abe0a49b1b7a0a58, type: 3}
+    paints:
+    - {fileID: 2800000, guid: 0b74739a13cc9aa4197a7dde10f93692, type: 3}
+    - {fileID: 2800000, guid: de7090b95575164479ffaa4b68f09650, type: 3}
+    - {fileID: 2800000, guid: 2957c784a1c212949beb751f3ddebeb4, type: 3}
+  - model: {fileID: 919132149155446097, guid: 0ed55375ee587074498704babe1d9261, type: 3}
+    paints:
+    - {fileID: 2800000, guid: 3bc7d938ffeb0a24e8712da82184d88a, type: 3}
+  - model: {fileID: 919132149155446097, guid: f59584d2de7dd294da53f3d38aed6d81, type: 3}
+    paints:
+    - {fileID: 2800000, guid: f113a0fdd27e79a4f91bd47cbb450b50, type: 3}
+  - model: {fileID: 919132149155446097, guid: c7a3b34e8c0452d4c82eb82a110daa66, type: 3}
+    paints:
+    - {fileID: 2800000, guid: 08f862c8d4e50a046b70620e4a9b67f5, type: 3}
+    - {fileID: 2800000, guid: 4a1b0afa759a115439e1ecdb3267c6d8, type: 3}
+    - {fileID: 2800000, guid: 272bc7e579fb75c43a27c577441bcaf5, type: 3}
+    - {fileID: 2800000, guid: 05c1c8cfbed12cd449fe94062f920a96, type: 3}
+    - {fileID: 2800000, guid: 1cdce6804a323bf4ca74159395311adc, type: 3}
+    - {fileID: 2800000, guid: 21aea2c03f5ad034680f83ada11f6e8d, type: 3}
+  - model: {fileID: 919132149155446097, guid: d40fc5a7e3e14024f979a1759da48c50, type: 3}
+    paints:
+    - {fileID: 2800000, guid: ddabc96fab3eefa40bdb2b54e4d75ad1, type: 3}
+    - {fileID: 2800000, guid: ee76ca0ea3926414bb5e2018672a2a99, type: 3}
+    - {fileID: 2800000, guid: b541aea08b0627347beee8737233a54c, type: 3}
+    - {fileID: 2800000, guid: 44d421a9d67b8b54db04d216d349bfd3, type: 3}
+  carMaterial: {fileID: 2100000, guid: 0fdead51806b41fb832a53fca203533c, type: 2}
   modelYaw: 0
-  modelScale: 1
+  modelScale: 0.7
   bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
-  driveSound: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
+  driveSound: {fileID: 8300000, guid: 9edcd4bcd08acf0459b5ca43e2f8604a, type: 3}
 --- !u!114 &2100000013
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1367,7 +1415,11 @@ MonoBehaviour:
   bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
   siren: {fileID: 8300000, guid: 21658bed6a2f49f6bc9ac013baeb47be, type: 3}
-  carDoor: {fileID: 8300000, guid: 085e70a01d0e461991830d5db6d0e80c, type: 3}
+  carDoor: {fileID: 8300000, guid: 77e6961de63601d4f957b5e485ef79d4, type: 3}
+  policeModel: {fileID: 919132149155446097, guid: ebe06388769c5cf448506335f41a1e0a, type: 3}
+  policeTexture: {fileID: 2800000, guid: 4eba9b9bfe5154e4bbad39843343d990, type: 3}
+  carMaterial: {fileID: 2100000, guid: 0fdead51806b41fb832a53fca203533c, type: 2}
+  modelScale: 0.7
   arrestBonus: 60
   falseAlarmFine: 30
   approachSpeed: 18

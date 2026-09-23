@@ -72,7 +72,7 @@ public class Phone : MonoBehaviour
     void Beep()
     {
         if (sound != null && smsSound != null && Camera.main != null)
-            sound.PlayWorld(smsSound, Camera.main.transform.position, 0.8f, 0f);
+            sound.PlayWorld(smsSound, Camera.main.transform.position, 0.22f, 0f);
     }
 
     List<Message> Chat(string id)
@@ -90,7 +90,7 @@ public class Phone : MonoBehaviour
             scheduled.RemoveAt(i);
             a?.Invoke();
         }
-        if (ring != null) ring.volume = 0.5f * GameSettings.Effects;
+        if (ring != null) ring.volume = 0.18f * GameSettings.Effects;
 
         var kb = Keyboard.current;
         if (kb == null || GameUI.MenuOpen || GameUI.TerminalTyping || GameUI.NoteOpen) return;

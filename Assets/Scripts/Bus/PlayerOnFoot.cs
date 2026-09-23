@@ -116,9 +116,10 @@ public class PlayerOnFoot : MonoBehaviour
         flashlight.transform.localPosition = new Vector3(0.2f, -0.2f, 0.1f);
         flashlight.type = LightType.Spot;
         bool strong = Progress.Owns("flashlight2");
-        flashlight.spotAngle = strong ? 55f : 45f;
-        flashlight.range = strong ? 34f : 20f;
-        flashlight.intensity = strong ? 16f : 9f;
+        // Soft beam: wide and gentle, so it lights things up instead of blinding.
+        flashlight.spotAngle = strong ? 68f : 60f;
+        flashlight.range = strong ? 30f : 20f;
+        flashlight.intensity = strong ? 5f : 3.2f;
         flashlight.color = new Color(1f, 0.95f, 0.85f);
         flashlight.shadows = LightShadows.None;
         flashlight.enabled = false;
