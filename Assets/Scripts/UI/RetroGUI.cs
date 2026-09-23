@@ -14,11 +14,17 @@ public static class GameUI
     /// <summary>The talk menu (T) is open: mouse cursor is free to pick a question.</summary>
     public static bool DialogueOpen;
 
+    /// <summary>The phone is open (mouse cursor free for it; driving still works).</summary>
+    public static bool PhoneOpen;
+
+    /// <summary>A found note is being read.</summary>
+    public static bool NoteOpen;
+
     /// <summary>Start menu / intro is shown, the game is paused.</summary>
     public static bool MenuOpen;
 
     /// <summary>Driving input is ignored (menu, typing, talking or not in the driver's seat).</summary>
-    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen;
+    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen;
 }
 
 /// <summary>
@@ -95,7 +101,7 @@ public static class RetroGUI
     {
         Build();
         var st = small ? labelSmall : bold ? labelBold : label;
-        st.normal.textColor = color;
+        st.normal.textColor = st.hover.textColor = color;
         st.alignment = anchor;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, st);
     }
@@ -103,7 +109,7 @@ public static class RetroGUI
     public static void Header(Rect v, string text, Color color, TextAnchor anchor = TextAnchor.UpperLeft)
     {
         Build();
-        header.normal.textColor = color;
+        header.normal.textColor = header.hover.textColor = color;
         header.alignment = anchor;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, header);
     }
@@ -111,7 +117,7 @@ public static class RetroGUI
     public static void Wrapped(Rect v, string text, Color color)
     {
         Build();
-        wrap.normal.textColor = color;
+        wrap.normal.textColor = wrap.hover.textColor = color;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, wrap);
     }
 

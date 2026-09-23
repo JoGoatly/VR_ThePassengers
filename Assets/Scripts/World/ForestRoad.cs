@@ -60,6 +60,34 @@ public class ForestRoad : MonoBehaviour
 
     public IReadOnlyList<BusStop> Stops => stops;
 
+    [Header("Side paths into the forest (to houses)")]
+    [Tooltip("Metres between dirt tracks leading off the road")]
+    public Vector2 sidePathSpacing = new Vector2(650f, 1100f);
+    public float firstSidePath = 420f;
+    [Tooltip("How far into the forest the house stands (from the road edge)")]
+    public float sidePathLength = 30f;
+
+    /// <summary>A dirt track leading off the right side of the road to a house.</summary>
+    public class SidePath
+    {
+        public Vector3 start;       // at the road edge
+        public Vector3 direction;   // away from the road
+        public Vector3 house;       // centre of the house clearing
+        public float arcLength;
+        public Transform chunk;
+    }
+
+    public event System.Action<SidePath> SidePathBuilt;
+    public event System.Action<BusStop> StopBuilt;
+    public IReadOnlyList<SidePath> SidePaths => sidePaths;
+
+    readonly List<SidePath> sidePaths = new List<SidePath>();
+    int stopsBuilt;
+
+    /// <summary>Name of the n-th stop of the route (the names repeat in a fixed order).</summary>
+    public string StopNameAt(int index) => stopNames.Length > 0 ? stopNames[index % stopNames.Length] : "Haltestelle";
+    float nextSidePathAt;
+
     // Samples of the centre line (world space).
     readonly List<Vector3> points = new List<Vector3>();
     readonly List<Vector3> tangents = new List<Vector3>();
@@ -94,6 +122,7 @@ public class ForestRoad : MonoBehaviour
         segmentLeft = 260f;
         segmentTurnRate = 0f;
         nextStopAt = 60f + firstStopDistance;
+        nextSidePathAt = 60f + firstSidePath;
 
         trunkMesh = MeshKit.Prism(0.22f, 3f, 5, 1f);
         coneMesh = MeshKit.Cone(1f, 1f, 7);
@@ -246,6 +275,7 @@ public class ForestRoad : MonoBehaviour
         Strip(shoulderMb, a, b, HalfRoad, HalfRoad + shoulderWidth, 0.015f, 2f, 2f, 0f);
         MeshKit.Spawn("Shoulder", chunk.transform, shoulderMb.ToMesh("Shoulder"), shoulder, Vector3.zero, Quaternion.identity, false);
 
+        SidePath path = PlanSidePath(chunk.transform, a, b);
         BuildForest(chunk.transform, a, b);
         BuildGuidePosts(chunk.transform, a, b);
 
@@ -260,6 +290,7 @@ public class ForestRoad : MonoBehaviour
 
         chunks.Enqueue((chunk, distances[b]));
         builtUpTo = to;
+        if (path != null) SidePathBuilt?.Invoke(path);
     }
 
     void Strip(MeshKit.Builder mb, int a, int b, float offsetA, float offsetB, float y, float uTile, float vTile, float uOffset)
@@ -291,7 +322,7 @@ public class ForestRoad : MonoBehaviour
                 float t = (float)rng.NextDouble();
                 float offset = edge + 2.5f + t * t * forestDepth;
                 Vector3 pos = points[i] + tangents[i] * along + Right(tangents[i]) * offset * side;
-                if (TooCloseToRoad(pos, i, edge + 2f)) continue;
+                if (TooCloseToRoad(pos, i, edge + 2f) || InClearing(pos)) continue;
 
                 float h = Range(7f, 15f);
                 float w = h * Range(0.22f, 0.3f);
@@ -318,6 +349,50 @@ public class ForestRoad : MonoBehaviour
         }
         MeshKit.Spawn("Trunks", parent, trunks.ToMesh("Trunks"), bark, Vector3.zero, Quaternion.identity, false);
         MeshKit.Spawn("Crowns", parent, crowns.ToMesh("Crowns"), needles, Vector3.zero, Quaternion.identity, false);
+    }
+
+    // A dirt track on a straight piece of road, away from bus stops.
+    SidePath PlanSidePath(Transform chunk, int a, int b)
+    {
+        int i = (a + b) / 2;
+        if (distances[i] < nextSidePathAt) return null;
+        for (int k = a; k <= b; k++) if (onCurve[k]) return null;
+        foreach (var st in stops)
+            if (st != null && Mathf.Abs(st.arcLength - distances[i]) < 60f) return null;
+        if (Mathf.Abs(nextStopAt - distances[i]) < 60f) return null;
+
+        nextSidePathAt = distances[i] + Range(sidePathSpacing);
+        Vector3 r = Right(tangents[i]);
+        float edge = HalfRoad + shoulderWidth;
+        var path = new SidePath
+        {
+            start = points[i] + r * edge,
+            direction = r,
+            house = points[i] + r * (edge + sidePathLength),
+            arcLength = distances[i],
+            chunk = chunk,
+        };
+        sidePaths.Add(path);
+        sidePaths.RemoveAll(sp => sp.chunk == null);
+        return path;
+    }
+
+    /// <summary>Is this point on a dirt track or in a house clearing (no trees there)?</summary>
+    public bool InClearing(Vector3 pos, float margin = 0f)
+    {
+        foreach (var sp in sidePaths)
+        {
+            if (sp.chunk == null) continue;
+            Vector3 d = pos - sp.start;
+            d.y = 0f;
+            float along = Vector3.Dot(d, sp.direction);
+            float across = (d - sp.direction * along).magnitude;
+            if (along > -2f && along < sidePathLength && across < 3.5f + margin) return true;
+            Vector3 h = pos - sp.house;
+            h.y = 0f;
+            if (h.magnitude < 11f + margin) return true;
+        }
+        return false;
     }
 
     bool TooCloseToRoad(Vector3 pos, int around, float minDistance)
@@ -356,8 +431,8 @@ public class ForestRoad : MonoBehaviour
     {
         Vector3 p = points[i], t = tangents[i], r = Right(t);
         Quaternion along = Quaternion.LookRotation(t);
-        string stopName = stopNames.Length > 0 ? stopNames[stops.Count % stopNames.Length] : "Haltestelle";
-        if (stops.Count >= stopNames.Length) stopName = stopNames[rng.Next(stopNames.Length)];
+        int stopIndex = stopsBuilt++;
+        string stopName = StopNameAt(stopIndex);
 
         var root = new GameObject("BusStop " + stopName).transform;
         root.SetParent(parent, false);
@@ -404,10 +479,12 @@ public class ForestRoad : MonoBehaviour
 
         var stop = root.gameObject.AddComponent<BusStop>();
         stop.stopName = stopName;
+        stop.index = stopIndex;
         stop.waitPoint = waitPoint;
         stop.arcLength = distances[i];
         stop.roadDirection = t;
         stops.Add(stop);
+        StopBuilt?.Invoke(stop);
     }
 
     // ---------------------------------------------------------------- ground

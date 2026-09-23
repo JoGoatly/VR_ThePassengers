@@ -61,7 +61,7 @@ public class OncomingTraffic : MonoBehaviour
 
         if (Time.time >= nextCarAt)
         {
-            nextCarAt = Time.time + Random.Range(interval.x, interval.y);
+            nextCarAt = Time.time + Random.Range(interval.x, interval.y) * (1f + DayManager.Dread);   // lonelier every night
             Spawn(busS + Random.Range(spawnAhead.x, spawnAhead.y));
         }
 

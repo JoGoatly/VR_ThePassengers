@@ -68,7 +68,8 @@ public class BusController : MonoBehaviour
     public Transform[] doors;
 
     [Header("HUD")]
-    public bool showSpeedometer = true;
+    [Tooltip("Old on-screen speed text (the dashboard display shows it now)")]
+    public bool showSpeedometer = false;
 
     /// <summary>Raised when the doors start opening (true) or closing (false).</summary>
     public event System.Action<bool> DoorsChanged;
@@ -407,7 +408,7 @@ public class BusController : MonoBehaviour
 
     void OnGUI()
     {
-        if (!showSpeedometer) return;
+        if (!showSpeedometer || GameUI.PlayerOutside || GameUI.MenuOpen) return;
         var style = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold };
         style.normal.textColor = Color.black;
         string lockText = DriveLockReason != null ? "  [" + DriveLockReason.ToUpperInvariant() + "]" : "";

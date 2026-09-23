@@ -59,8 +59,9 @@ public class WindowScare : MonoBehaviour
 
         if (current == null)
         {
-            if (Time.time < nextAt || GameUI.PlayerOutside) return;
-            nextAt = Time.time + Random.Range(interval.x, interval.y);
+            if (Time.time < nextAt || GameUI.PlayerOutside || Progress.Day == 1) return;
+            // From the second night on, and more often every night.
+            nextAt = Time.time + Random.Range(interval.x, interval.y) / (0.6f + DayManager.Dread);
             if (Random.value > chance) return;
             var spot = Spots[Random.Range(0, Spots.Length)];
             // Only where the player is not looking right now.

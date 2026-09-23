@@ -21,7 +21,7 @@ public class BusRadio : MonoBehaviour
     public AudioClip tuningStatic;
 
     [Header("Device (bus space)")]
-    public Vector3 position = new Vector3(-0.05f, 1.36f, 4.9f);
+    public Vector3 position = new Vector3(-0.62f, 1.35f, 4.93f);
     public Vector3 viewerPosition = new Vector3(-0.83f, 1.72f, 4.3f);
     public Vector2 screenSize = new Vector2(0.24f, 0.09f);
     public Material caseMaterial;
@@ -97,7 +97,7 @@ public class BusRadio : MonoBehaviour
         UpdatePointer();
 
         var mouse = Mouse.current;
-        bool click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.AnyOpen;
+        bool click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.AnyOpen && !GameUI.PhoneOpen;
         if (click) HandleClick();
         if (GameKeys.Pressed(GameAction.Radio) && !GameUI.MenuOpen && !GameUI.TerminalTyping)
             Tune(current + 1 >= (stations?.Length ?? 0) ? -1 : current + 1);
@@ -153,6 +153,14 @@ public class BusRadio : MonoBehaviour
                 case 4: volume = Mathf.Clamp01(Mathf.Round((volume + 0.1f) * 10f) / 10f); break;
             }
         }
+    }
+
+    /// <summary>The radio switches itself on, to the last station (66.6).</summary>
+    public void Hijack()
+    {
+        if (stations == null || stations.Length == 0) return;
+        volume = Mathf.Max(volume, 0.6f);
+        Tune(stations.Length - 1);
     }
 
     void Tune(int station)

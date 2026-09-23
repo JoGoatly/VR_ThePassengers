@@ -920,6 +920,13 @@ GameObject:
   - component: {fileID: 2100000012}
   - component: {fileID: 2100000013}
   - component: {fileID: 2100000014}
+  - component: {fileID: 2100000015}
+  - component: {fileID: 2100000016}
+  - component: {fileID: 2100000017}
+  - component: {fileID: 2100000018}
+  - component: {fileID: 2100000019}
+  - component: {fileID: 2100000020}
+  - component: {fileID: 2100000021}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1080,6 +1087,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: cd5bf661eb894058b08d8c68cd58ea2c, type: 3}
   scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
   knock: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
+  stopRequest: {fileID: 8300000, guid: d65435f4e6924b948d7478c446381d85, type: 3}
 --- !u!114 &2100000007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1240,6 +1248,146 @@ MonoBehaviour:
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   volume: 0.5
+--- !u!114 &2100000015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fc8cef837b343729cb0aeb2b7d555d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  bus: {fileID: 1500000004}
+  road: {fileID: 2000000003}
+  radio: {fileID: 2100000014}
+  menu: {fileID: 2100000011}
+--- !u!114 &2100000016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 362cea1b69d544759f97ec8dba2c5a4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  wood: {fileID: 2100000, guid: 1ad9a653a54143fd9559939f043100a2, type: 2}
+  concrete: {fileID: 2100000, guid: a329d9e2ea974e1e8c099c1fbd33d309, type: 2}
+  metal: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  gravel: {fileID: 2100000, guid: 1898e772ef9a42ea8344a87992f18d2c, type: 2}
+  glow: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
+  dwellers:
+  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
+  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
+  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
+  - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
+  corpses: []
+  growl: {fileID: 8300000, guid: 20fd31ba28ab4c5c8c19db65bf50c17a, type: 3}
+  hit: {fileID: 8300000, guid: 00d5276639cf4e3c8e1f7ef34e0b38b3, type: 3}
+  vanish: {fileID: 8300000, guid: d7b0d4653ba2492f926c44d12c2f22f1, type: 3}
+  trapdoor: {fileID: 8300000, guid: c758591c026d43a3a6a8a58012a33fec, type: 3}
+  pickupSound: {fileID: 8300000, guid: 7a46eb95ef92466f98fd3fa62bc473bd, type: 3}
+  coinSound: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
+  stopItemChance: 0.3
+--- !u!114 &2100000017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2893d7e6c4343fe91a647a138f282d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onFoot: {fileID: 2100000008}
+  sound: {fileID: 2100000006}
+  batMaterial: {fileID: 2100000, guid: 1ad9a653a54143fd9559939f043100a2, type: 2}
+  gunMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  gunshot: {fileID: 8300000, guid: d3b87955dfd14df8a0c69266a1246aac, type: 3}
+  swing: {fileID: 8300000, guid: dfd6ee3457464a3493fd4ce610bcf705, type: 3}
+  hit: {fileID: 8300000, guid: 00d5276639cf4e3c8e1f7ef34e0b38b3, type: 3}
+  hurt: {fileID: 8300000, guid: ab95be53e42d41d78faa2f346b76f11d, type: 3}
+  emptyClick: {fileID: 8300000, guid: 50353d517ac444d7a48ec32509a239b5, type: 3}
+  maxHealth: 100
+  batDamage: 1
+  pistolDamage: 2
+--- !u!114 &2100000018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7123977d0314c4eb932ba2f61236202, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  paperSound: {fileID: 8300000, guid: 7a46eb95ef92466f98fd3fa62bc473bd, type: 3}
+--- !u!114 &2100000019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4806403264bf4a2284e6f039554210dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 1500000004}
+  game: {fileID: 2100000003}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+--- !u!114 &2100000020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65f394fabde24644ae38f0c937450306, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  bus: {fileID: 1500000004}
+  road: {fileID: 2000000003}
+  sound: {fileID: 2100000006}
+  bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
+  siren: {fileID: 8300000, guid: 21658bed6a2f49f6bc9ac013baeb47be, type: 3}
+  carDoor: {fileID: 8300000, guid: 085e70a01d0e461991830d5db6d0e80c, type: 3}
+  arrestBonus: 60
+  falseAlarmFine: 30
+  approachSpeed: 18
+--- !u!114 &2100000021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62c0b216615a406bb5ceadcd02dbf114, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  police: {fileID: 2100000020}
+  sound: {fileID: 2100000006}
+  smsSound: {fileID: 8300000, guid: 7cbc0ccac0214d4395f4fb1c7213cd59, type: 3}
+  ringSound: {fileID: 8300000, guid: 00869181ba04469e9be179388c66371e, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

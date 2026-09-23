@@ -94,7 +94,7 @@ public class DriverCamera : MonoBehaviour
         var gp = Gamepad.current;
 
         if (kb != null && kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping) LockCursor(false);
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen) LockCursor(true);
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen && !GameUI.PhoneOpen) LockCursor(true);
 
         // Zoom: wheel steps, right mouse button = full zoom while held.
         if (mouse != null)

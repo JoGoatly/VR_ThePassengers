@@ -51,7 +51,7 @@ public class OffRoadGuard : MonoBehaviour
             float fromBus = Vector3.Distance(pos, bus.transform.position);
             // Keep the bus' search position valid for the road.
             road.ArcLengthAt(bus.transform.position);
-            if (lateral > road.EdgeOffset + walkIntoForest || fromBus > maxDistanceFromBus)
+            if (!SideAreas.IsInside(pos) && (lateral > road.EdgeOffset + walkIntoForest || fromBus > maxDistanceFromBus))
             {
                 onFoot.ReturnToBus();
                 Scare();

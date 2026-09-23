@@ -64,6 +64,16 @@ public class BoardingManager : MonoBehaviour
         Discrepancy.WrongExpiry,
     };
     readonly List<Passenger> riders = new List<Passenger>();
+    readonly List<Passenger> leaving = new List<Passenger>();   // walking to the rear door
+    Vector3 rearDoorLocal;
+    float nextExitAt;
+    int lastPassedStop = -1;
+
+    /// <summary>Someone wants to get off at the next stop (the "stop" button was pressed).</summary>
+    public bool StopRequested { get; private set; }
+    // Who got on tonight (and with which model), for passengers who come a second time.
+    readonly List<(IdCard card, GameObject prefab)> boardedTonight = new List<(IdCard, GameObject)>();
+    readonly Dictionary<IdCard, GameObject> prefabOf = new Dictionary<IdCard, GameObject>();
     readonly List<(float time, System.Action action)> scheduled = new List<(float, System.Action)>();
     Passenger active;
     BusStop activeStop;
@@ -89,6 +99,7 @@ public class BoardingManager : MonoBehaviour
         if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
         doorLocal = FindDoorCentre();
+        rearDoorLocal = FindDoorCentre("Door_BL", "Door_BR", new Vector3(doorLocal.x, 0f, -2.5f));
         var seat = bus.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "DriverSeat");
         driverLocal = seat != null ? bus.transform.InverseTransformPoint(seat.position) : new Vector3(-0.83f, 0f, 4.15f);
         driverLocal.y = 0f;
@@ -99,15 +110,58 @@ public class BoardingManager : MonoBehaviour
     void BeginShift()
     {
         started = true;
-        Registry = new CitizenRegistry(seed);
+        Registry = new CitizenRegistry(seed + Progress.Day * 101);
+        UnlockRules();
         SendWelcomeMails();
     }
 
-    Vector3 FindDoorCentre()
+    bool policeOnTheWay;
+
+    /// <summary>The police were called for the passenger at the door: no decision until they arrive.</summary>
+    public bool PoliceOnTheWay => policeOnTheWay;
+
+    public void PoliceCalled() => policeOnTheWay = true;
+
+    /// <summary>The patrol car stopped behind the bus. Returns true if the passenger was wanted and is taken away.</summary>
+    public bool PoliceArrived(Vector3 carDoor)
+    {
+        policeOnTheWay = false;
+        if (CurrentPhase != Phase.AwaitingDecision || active == null) return false;
+        var card = active.Card;
+        if (card.Truth != Discrepancy.Wanted) return false;   // false alarm: the passenger is still waiting
+
+        var p = active;
+        Correct++;
+        decisions++;
+        Decided?.Invoke(false);
+        Judged?.Invoke(true, card);
+        Schedule(6f, () => Mail.Send(Loc.T("Polizei Revier Nord", "Police, North Precinct"), Loc.T("Festnahme", "Arrest"),
+            Loc.T($"{card.FullName} wurde dank Ihres Anrufs festgenommen. Vielen Dank.", $"{card.FullName} was arrested thanks to your call. Thank you."), ClockText));
+        p.CurrentState = Passenger.State.Leaving;
+        p.SetSpace(null);
+        p.WalkPath(new[] { carDoor }, null, () => { if (p != null) Destroy(p.gameObject); });
+        if (activeStop != null) activeStop.WaitingPassenger = null;
+        active = null;
+        CurrentPhase = Phase.Driving;
+        return true;
+    }
+
+    /// <summary>Raised after a decision: was it right, and whose card was it.</summary>
+    public event System.Action<bool, IdCard> Judged;
+
+    /// <summary>Set when tonight's passengers are done: no more passengers at the stops.</summary>
+    [System.NonSerialized] public bool ServingDone;
+
+    /// <summary>How many passengers were dealt with tonight.</summary>
+    public int Decisions => decisions;
+
+    Vector3 FindDoorCentre() => FindDoorCentre("Door_FL", "Door_FR", new Vector3(-1.3f, 0, 4.3f));
+
+    Vector3 FindDoorCentre(string a, string b, Vector3 fallback)
     {
         var doors = bus.GetComponentsInChildren<Transform>()
-            .Where(t => t.name == "Door_FL" || t.name == "Door_FR").ToList();
-        if (doors.Count == 0) return new Vector3(-1.3f, 0, 4.3f);
+            .Where(t => t.name == a || t.name == b).ToList();
+        if (doors.Count == 0) return fallback;
         Vector3 sum = Vector3.zero;
         foreach (var d in doors)
         {
@@ -130,6 +184,7 @@ public class BoardingManager : MonoBehaviour
         RunScheduled();
         UpdateSpawns();
         HandleKeys();
+        UpdateExits();
 
         switch (CurrentPhase)
         {
@@ -139,8 +194,10 @@ public class BoardingManager : MonoBehaviour
         }
 
         bool busy = CurrentPhase != Phase.Driving;
-        bus.throttleLockReason = busy ? Loc.T("Fahrgast an der Tür", "Passenger at the door") : null;
-        bus.doorsLocked = busy;
+        bool exiting = leaving.Count > 0;
+        bus.throttleLockReason = busy ? Loc.T("Fahrgast an der Tür", "Passenger at the door")
+                               : exiting ? Loc.T("Fahrgäste steigen aus", "Passengers getting off") : null;
+        bus.doorsLocked = busy || exiting;
     }
 
     void HandleKeys()
@@ -149,7 +206,7 @@ public class BoardingManager : MonoBehaviour
         if (kb == null || GameUI.TerminalTyping || GameUI.DialogueOpen) return;
 
         if (GameKeys.Pressed(GameAction.Interact) && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
-        if (PendingCard != null)
+        if (PendingCard != null && !policeOnTheWay)
         {
             if (GameKeys.Pressed(GameAction.LetIn)) Decide(true);
             else if (GameKeys.Pressed(GameAction.TurnAway)) Decide(false);
@@ -168,7 +225,7 @@ public class BoardingManager : MonoBehaviour
             var waiting = stop.WaitingPassenger;
 
             // One passenger per stop, spawned before the bus sees the stop.
-            if (waiting == null && !stop.Visited && ahead < spawnDistance && ahead > 25f)
+            if (waiting == null && !stop.Visited && !ServingDone && ahead < spawnDistance && ahead > 25f)
             {
                 stop.WaitingPassenger = SpawnPassenger(stop);
                 stop.Visited = true;
@@ -185,7 +242,19 @@ public class BoardingManager : MonoBehaviour
     Passenger SpawnPassenger(BusStop stop)
     {
         int story = NextStoryIndex();
-        var card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null);
+        IdCard card;
+        GameObject prefab = null;
+        if (story < 0 && boardedTonight.Count >= 2 && Random.value < 0.1f + 0.02f * Progress.Day)
+        {
+            // Someone who is already sitting in the bus stands at the stop again - same face, same papers.
+            var original = boardedTonight[Random.Range(0, boardedTonight.Count)];
+            card = Registry.CreateDuplicate(original.card);
+            prefab = original.prefab;
+        }
+        else
+        {
+            card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null, 0.3 + 0.05 * Progress.Day, Progress.Day >= 3);
+        }
         if (story >= 0)
         {
             card.StoryIndex = story;
@@ -195,13 +264,105 @@ public class BoardingManager : MonoBehaviour
         if (pool == null || pool.Length == 0) pool = malePassengers != null && malePassengers.Length > 0 ? malePassengers : femalePassengers;
         if (pool == null || pool.Length == 0) return null;
 
-        var prefab = pool[rng.Next(pool.Length)];
+        if (prefab == null) prefab = pool[rng.Next(pool.Length)];
+        prefabOf[card] = prefab;
+
+        // Where they get off: one to four stops further. The answer names that stop.
+        card.DestinationIndex = stop.index + Random.Range(1, 5);
+        string toStop = Loc.T("Zur Haltestelle ", "To the stop ");
+        if (card.SaidDestination != null && card.SaidDestination.StartsWith(toStop))
+            card.SaidDestination = toStop + road.StopNameAt(card.DestinationIndex) + ".";
         var go = Instantiate(prefab, stop.waitPoint.position, stop.waitPoint.rotation);
         go.name = "Passenger " + card.FullName;
         var p = go.AddComponent<Passenger>();
         p.Card = card;
         p.Stop = stop;
         return p;
+    }
+
+    // ------------------------------------------------------------------ getting off
+
+    void UpdateExits()
+    {
+        if (road == null) return;
+        riders.RemoveAll(r => r == null);
+        leaving.RemoveAll(r => r == null);
+        float busS = road.BusArcLength;
+        float doorAhead = doorLocal.z;
+
+        // Next stop ahead: does anyone want to get off there?
+        BusStop next = null;
+        float best = float.MaxValue;
+        foreach (var st in road.Stops)
+        {
+            if (st == null) continue;
+            float d = st.arcLength - busS - doorAhead;
+            if (d > -10f && d < best) { best = d; next = st; }
+        }
+        StopRequested = next != null && riders.Any(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
+                                                          r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index);
+
+        // Drove past someone's stop: they complain and get off at the next one.
+        foreach (var st in road.Stops)
+        {
+            if (st == null || st.index <= lastPassedStop || st.arcLength > busS - 25f) continue;
+            lastPassedStop = st.index;
+            int missed = riders.Count(r => r.CurrentState == Passenger.State.Riding && r.Card != null && r.Card.DestinationIndex == st.index);
+            if (missed > 0)
+            {
+                Progress.AddMoney(-10 * missed);
+                ShowToast(Loc.T($"Haltestelle {st.stopName} verpasst: -{10 * missed} €", $"Missed the stop {st.stopName}: -{10 * missed} €"));
+            }
+        }
+
+        // Standing at a stop with open doors: riders who are there (or past it) get off at the back.
+        if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen || Time.time < nextExitAt) return;
+        var here = StopNearBus();
+        if (here == null) return;
+        var rider = riders.FirstOrDefault(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
+                                               r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index);
+        if (rider == null) return;
+        nextExitAt = Time.time + 1.4f;
+        StartExit(rider, here);
+    }
+
+    BusStop StopNearBus()
+    {
+        Vector3 doorWorld = bus.transform.TransformPoint(doorLocal);
+        foreach (var stop in road.Stops)
+        {
+            if (stop == null) continue;
+            Vector3 d = stop.waitPoint.position - doorWorld;
+            d.y = 0f;
+            if (Mathf.Abs(Vector3.Dot(d, stop.roadDirection)) < stopTolerance + 4f && Vector3.ProjectOnPlane(d, stop.roadDirection).magnitude < 6f)
+                return stop;
+        }
+        return null;
+    }
+
+    void StartExit(Passenger p, BusStop stop)
+    {
+        riders.Remove(p);
+        leaving.Add(p);
+        p.CurrentState = Passenger.State.Leaving;
+        float side = DoorSide;
+        var path = new[]
+        {
+            new Vector3(0f, floorHeight, rearDoorLocal.z + 0.6f),
+            new Vector3(rearDoorLocal.x - side * 0.45f, floorHeight, rearDoorLocal.z),
+            new Vector3(rearDoorLocal.x, floorHeight * 0.5f, rearDoorLocal.z),
+            new Vector3(rearDoorLocal.x + side * 0.8f, 0f, rearDoorLocal.z),
+        };
+        p.WalkPath(path, bus.transform, () =>
+        {
+            // Out of the bus: walk off into the dark and disappear.
+            leaving.Remove(p);
+            p.SetSpace(null);
+            Vector3 outside = p.transform.position;
+            Vector3 away = bus.transform.right * side * 6f - stop.roadDirection * 3f;
+            p.WalkPath(new[] { outside + away, outside + away * 2.2f }, null, () => { if (p != null) Destroy(p.gameObject); });
+            Destroy(p.gameObject, 25f);
+        });
     }
 
     // ------------------------------------------------------------------ story
@@ -251,6 +412,7 @@ public class BoardingManager : MonoBehaviour
 
     int NextStoryIndex()
     {
+        if (Progress.Day != 1) return -1;   // the scripted passengers belong to the first night
         for (int i = 0; i < 3; i++)
         {
             if (storyDone.Contains(i)) continue;
@@ -332,14 +494,20 @@ public class BoardingManager : MonoBehaviour
         var p = active;
         var card = p.Card;
         bool shouldBoard = card.Truth == Discrepancy.None;
-        bool correct = letIn == shouldBoard;
+        // Wanted persons are neither let in nor sent away: the police must be called.
+        bool correct = card.Truth != Discrepancy.Wanted && letIn == shouldBoard;
         if (correct) Correct++; else Wrong++;
         if (card.StoryIndex >= 0) storyDone.Add(card.StoryIndex);
         decisions++;
         ScheduleFeedback(card, letIn, correct);
         Decided?.Invoke(letIn);
-        UnlockRules();
+        Judged?.Invoke(correct, card);
 
+        // Boarding stamps the ticket - a second one with the same number is already stamped.
+        if (letIn && card.HasTicket && string.IsNullOrEmpty(card.TicketStamp))
+            card.TicketStamp = $"{CitizenRegistry.Today:dd.MM.} {ClockText}";
+        if (letIn && card.Truth != Discrepancy.Duplicate && prefabOf.TryGetValue(card, out var model))
+            boardedTonight.Add((card, model));
 
         if (letIn)
         {
@@ -411,17 +579,21 @@ public class BoardingManager : MonoBehaviour
 
     void UnlockRules()
     {
-        if (decisions == 2 && knownRules.Add(Discrepancy.Wanted))
+        if (Progress.Day >= 2 && knownRules.Add(Discrepancy.Wanted) && Progress.Day == 2)
         {
             Schedule(4f, () => Mail.Send(Dispatch, Loc.T("NEU: Fahndungsliste im Register", "NEW: Wanted list in the register"),
                 Loc.T("Ab sofort sind im Einwohnerregister auch Personen mit dem Status GESUCHT markiert.\n\n" +
-                "Gesuchte Personen dürfen NICHT befördert werden. Weisen Sie sie ab, auch wenn der Ausweis gültig ist.\n\n" +
+                "Gesuchte Personen dürfen NICHT befördert werden - und auch nicht einfach weggeschickt werden.\n" +
+                "Öffnen Sie Ihr Diensthandy (" + GameKeys.Name(GameAction.Phone) + "), rufen Sie die Polizei (110) und halten Sie die Person an der Tür fest, " +
+                "bis der Streifenwagen da ist. Für jede Festnahme gibt es eine Prämie. Fehlalarme kosten Geld.\n\n" +
                 "Leitstelle Nachtlinie 13",
                 "From now on the register also marks people with the status WANTED.\n\n" +
-                "Wanted persons must NOT be transported. Turn them away, even if their ID is valid.\n\n" +
+                "Wanted persons must NOT be transported - and must not simply be sent away either.\n" +
+                "Open your work phone (" + GameKeys.Name(GameAction.Phone) + "), call the police (110) and keep the person at the door " +
+                "until the patrol car arrives. Every arrest earns a bonus. False alarms cost money.\n\n" +
                 "Dispatch, Night Line 13"), ClockText));
         }
-        if (decisions == 3 && knownRules.Add(Discrepancy.Doppelganger))
+        if (Progress.Day >= 3 && knownRules.Add(Discrepancy.Doppelganger) && Progress.Day == 3)
         {
             Schedule(5f, () => Mail.Send(Dispatch, Loc.T("Anomalien auf Linie 13", "Anomalies on line 13"),
                 Loc.T("Es wurden Fahrgäste gemeldet, deren Papiere einwandfrei sind, die aber einfache Fragen über ihr " +
@@ -435,7 +607,29 @@ public class BoardingManager : MonoBehaviour
                 "Talk to every passenger (" + GameKeys.Name(GameAction.Talk) + ") and compare the answers with the register. " +
                 "If an answer is wrong: do NOT let them on.\n\nDispatch, Night Line 13"), ClockText));
         }
-        if (decisions == 5 && knownRules.Add(Discrepancy.Deceased))
+        if (Progress.Day >= 3)
+        {
+            knownRules.Add(Discrepancy.TicketWrongNight);
+            knownRules.Add(Discrepancy.TicketUsed);
+            knownRules.Add(Discrepancy.TicketWrongDirection);
+            if (Progress.Day == 3)
+                Schedule(12f, () => Mail.Send(Dispatch, Loc.T("NEU: Fahrscheinkontrolle", "NEW: Ticket check"), Loc.T(
+                    "Ab heute zeigt jeder Fahrgast zusätzlich seinen Fahrschein (oben links).\n\n" +
+                    "Ein Fahrschein ist nur gültig, wenn:\n" +
+                    " - er für die heutige Nacht ausgestellt ist (Datum wie am Armaturenbrett),\n" +
+                    " - er noch NICHT entwertet ist (kein roter Stempel),\n" +
+                    " - die Fahrtrichtung ENDSTATION ist - das ist die Richtung der Linie 13.\n\n" +
+                    "Ungültiger Fahrschein: NICHT einsteigen lassen. Beim Einsteigen wird der Fahrschein automatisch entwertet.\n\n" +
+                    "Leitstelle Nachtlinie 13",
+                    "From today every passenger also shows a ticket (top left).\n\n" +
+                    "A ticket is only valid if:\n" +
+                    " - it is issued for tonight (date as on the dashboard),\n" +
+                    " - it is NOT stamped yet (no red stamp),\n" +
+                    " - the direction is ENDSTATION - that is the direction of line 13.\n\n" +
+                    "Invalid ticket: do NOT let them on. The ticket is stamped automatically when boarding.\n\n" +
+                    "Dispatch, Night Line 13"), ClockText));
+        }
+        if (Progress.Day >= 4 && knownRules.Add(Discrepancy.Deceased) && Progress.Day == 4)
         {
             Schedule(5f, () => Mail.Send(Dispatch, Loc.T("DRINGEND: Status VERSTORBEN", "URGENT: Status DECEASED"),
                 Loc.T("Fahrer der Nachtlinie melden Fahrgäste, deren Ausweise auf Personen ausgestellt sind, " +
@@ -453,17 +647,18 @@ public class BoardingManager : MonoBehaviour
 
     void ScheduleFeedback(IdCard card, bool letIn, bool correct)
     {
-        if (correct)
-        {
-            if (!letIn && card.Truth == Discrepancy.Wanted)
-                Schedule(8f, () => Mail.Send(Loc.T("Polizei Revier Nord", "Police, North Precinct"), Loc.T("Danke für Ihre Meldung", "Thank you for your report"),
-                    Loc.T($"Die abgewiesene Person ({card.FullName}) wurde kurz darauf festgenommen. Danke für Ihre Aufmerksamkeit.",
-                          $"The person you turned away ({card.FullName}) was arrested shortly afterwards. Thank you for your attention."), ClockText));
-            return;
-        }
+        if (correct) return;
 
         string subject, body;
-        if (!letIn)
+        if (!letIn && card.Truth == Discrepancy.Wanted)
+        {
+            subject = Loc.T("Gesuchte Person entkommen", "Wanted person escaped");
+            body = Loc.T($"Sie haben {card.FullName} einfach gehen lassen. Die Person steht auf der Fahndungsliste.\n\n" +
+                         "Bei GESUCHTEN Personen rufen Sie über Ihr Diensthandy die Polizei (110) und halten die Person an der Tür fest.",
+                         $"You simply let {card.FullName} go. This person is on the wanted list.\n\n" +
+                         "For WANTED persons call the police (110) on your work phone and keep the person at the door.");
+        }
+        else if (!letIn)
         {
             subject = Loc.T("Beschwerde eines Fahrgasts", "Passenger complaint");
             body = Loc.T($"Frau/Herr {card.LastName} hat sich beschwert, an der Haltestelle ohne Grund abgewiesen worden zu sein. " +
@@ -500,6 +695,23 @@ public class BoardingManager : MonoBehaviour
                     body = Loc.T($"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.",
                                  $"The ID of {card.FullName} was forged: the expiry date did not match the register.");
                     break;
+                case Discrepancy.TicketWrongNight:
+                case Discrepancy.TicketUsed:
+                case Discrepancy.TicketWrongDirection:
+                    subject = Loc.T("Fahrscheinkontrolle", "Ticket inspection");
+                    string why = card.Truth == Discrepancy.TicketWrongNight ? Loc.T("für eine andere Nacht ausgestellt", "issued for another night")
+                               : card.Truth == Discrepancy.TicketUsed ? Loc.T("bereits entwertet", "already stamped")
+                               : Loc.T("für die falsche Fahrtrichtung", "for the wrong direction");
+                    body = Loc.T($"Der Fahrschein von {card.FullName} war {why}. Schwarzfahrer werden Ihnen vom Lohn abgezogen.",
+                                 $"The ticket of {card.FullName} was {why}. Fare dodgers are deducted from your wages.");
+                    break;
+                case Discrepancy.Duplicate:
+                    subject = Loc.T("Zwei Fahrgäste, ein Name", "Two passengers, one name");
+                    body = Loc.T($"{card.FullName} ist heute Nacht zweimal in Ihren Bus gestiegen. Beide sitzen noch drin.\n\n" +
+                                 "Jede Person fährt nur EINMAL pro Nacht. Merken Sie sich, wen Sie einsteigen lassen - der Suchverlauf im Register hilft.",
+                                 $"{card.FullName} got on your bus twice tonight. Both of them are still sitting in it.\n\n" +
+                                 "Every person rides only ONCE per night. Remember who you let on - the search history in the register helps.");
+                    break;
                 case Discrepancy.NotRegistered:
                     body = Loc.T($"Eine Person namens \"{card.FullName}\" existiert in keinem Register der Stadt. " +
                            "Fahrgäste berichten, sie habe während der Fahrt die ganze Zeit Sie angestarrt.",
@@ -520,6 +732,11 @@ public class BoardingManager : MonoBehaviour
 
     void SendWelcomeMails()
     {
+        if (Progress.Day > 1)
+        {
+            SendNightMails();
+            return;
+        }
         string today = CitizenRegistry.Today.ToString("dd.MM.yyyy");
         Mail.Send(Dispatch, Loc.T("Ihre erste Nachtschicht - Linie 13", "Your first night shift - Line 13"), Loc.T(
             "Willkommen bei den Verkehrsbetrieben.\n\n" +
@@ -527,7 +744,8 @@ public class BoardingManager : MonoBehaviour
             "Einsteigen darf nur, wer:\n" +
             " - im Register mit genau diesem Namen eingetragen ist,\n" +
             " - das gleiche Geburtsdatum, die gleiche Ausweisnummer und das gleiche Ablaufdatum hat wie im Register,\n" +
-            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + today + ").\n\n" +
+            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + today + "),\n" +
+            " - heute Nacht noch NICHT mit Ihnen gefahren ist. Niemand steigt zweimal ein. (Suchverlauf im Register!)\n\n" +
             "Alle anderen weisen Sie ab. Fahren Sie erst weiter, wenn der Fahrgast versorgt ist.\n\n" +
             "Gute Fahrt.\nLeitstelle Nachtlinie 13",
             "Welcome to the transport company.\n\n" +
@@ -535,7 +753,8 @@ public class BoardingManager : MonoBehaviour
             "Only those may board who:\n" +
             " - are listed in the register with exactly this name,\n" +
             " - have the same date of birth, ID number and expiry date as in the register,\n" +
-            " - have a valid ID (expiry date after " + today + ").\n\n" +
+            " - have a valid ID (expiry date after " + today + "),\n" +
+            " - have NOT ridden with you tonight yet. Nobody gets on twice. (Search history in the register!)\n\n" +
             "Turn everyone else away. Only drive on once the passenger has been dealt with.\n\n" +
             "Have a good trip.\nDispatch, Night Line 13"), ClockText);
         Schedule(20f, () => Mail.Send(Loc.T("Horst (Kollege)", "Horst (colleague)"), Loc.T("Tipp", "Tip"), Loc.T(
@@ -543,6 +762,63 @@ public class BoardingManager : MonoBehaviour
             "Und wenn einer am Waldfriedhof einsteigen will... schau lieber zweimal ins Register. Und halt nicht an, wenn da draußen jemand zwischen den Bäumen steht.\n\nHorst",
             "Hey, you're driving the 13 now? Small tip: typos in names are no accident. " +
             "And if someone wants to get on at the Waldfriedhof... better check the register twice. And don't stop if someone is standing out there between the trees.\n\nHorst"), ClockText));
+    }
+
+    // Nights 2-7: a short reminder of all rules and a story mail.
+    void SendNightMails()
+    {
+        int day = Progress.Day;
+        string today = CitizenRegistry.Today.ToString("dd.MM.yyyy");
+        string rulesDe = " - Name genau wie im Register\n - Geburtsdatum, Ausweisnummer und Ablaufdatum wie im Register\n - Ausweis gültig (nach dem " + today + ")";
+        string rulesEn = " - name exactly as in the register\n - date of birth, ID number and expiry date as in the register\n - valid ID (after " + today + ")";
+        if (day >= 2) { rulesDe += "\n - Status GESUCHT: Polizei rufen (Handy, 110), nicht abweisen"; rulesEn += "\n - status WANTED: call the police (phone, 110), don't turn away"; }
+        if (day >= 3) { rulesDe += "\n - falsche Antworten auf Fragen (Doppelgänger): abweisen"; rulesEn += "\n - wrong answers to questions (doppelganger): turn away"; }
+        if (day >= 4) { rulesDe += "\n - Status VERSTORBEN: abweisen"; rulesEn += "\n - status DECEASED: turn away"; }
+        if (day >= 3) { rulesDe += "\n - Fahrschein: heutige Nacht, nicht entwertet, Richtung ENDSTATION"; rulesEn += "\n - ticket: tonight, not stamped, direction ENDSTATION"; }
+        rulesDe += "\n - wer heute Nacht schon eingestiegen ist, steigt nicht noch einmal ein (Suchverlauf!)";
+        rulesEn += "\n - whoever already got on tonight does not get on again (search history!)";
+        Mail.Send(Dispatch, Loc.T($"Nacht {day} - Dienstanweisung", $"Night {day} - Instructions"), Loc.T(
+            $"Heute Nacht: {DayManager.QuotaFor(day)} Fahrgäste. Danach zum Depot.\n\nEinsteigen darf nur, wer:\n" + rulesDe +
+            "\n\nRichtige Entscheidungen werden vergütet, Fehler werden vom Lohn abgezogen.\n\nLeitstelle Nachtlinie 13",
+            $"Tonight: {DayManager.QuotaFor(day)} passengers. Then to the depot.\n\nOnly those may board who have:\n" + rulesEn +
+            "\n\nCorrect decisions are paid, mistakes are deducted from your wages.\n\nDispatch, Night Line 13"), ClockText);
+
+        string from = Loc.T("Horst (Kollege)", "Horst (colleague)");
+        switch (day)
+        {
+            case 2:
+                Schedule(25f, () => Mail.Send(from, Loc.T("Das Radio", "The radio"), Loc.T(
+                    "Hast du auch das Rauschen auf 66,6 gehört? Wenn das Radio von selbst angeht: mach es aus. Und halt an der nächsten Haltestelle nicht.\n\nHorst",
+                    "Did you hear the noise on 66.6 too? If the radio turns on by itself: switch it off. And don't stop at the next bus stop.\n\nHorst"), ClockText));
+                break;
+            case 3:
+                Schedule(25f, () => Mail.Send(from, Loc.T("Das Haus im Wald", "The house in the woods"), Loc.T(
+                    "Neben der Strecke gehen manchmal Feldwege in den Wald, mit einer Laterne am Anfang. Ich war in einem der Häuser. " +
+                    "Im Keller lag ein Fahrerausweis. Karl Weber. Der ist '95 verschwunden.\n\nNimm dir was zum Wehren mit. Im Laden am Computer gibt's was.\n\nHorst",
+                    "Sometimes dirt tracks lead off the route into the forest, with a lantern at the start. I went into one of the houses. " +
+                    "There was a driver's badge in the cellar. Karl Weber. He disappeared in '95.\n\nTake something to defend yourself. The shop on the computer has stuff.\n\nHorst"), ClockText));
+                break;
+            case 4:
+                Schedule(20f, () => Mail.Send(Dispatch, Loc.T("Personalmitteilung", "Staff notice"), Loc.T(
+                    "Ihr Kollege Horst ist nicht mehr im Dienst. Stellen Sie keine Fragen.\n\nLeitstelle",
+                    "Your colleague Horst is no longer on duty. Do not ask questions.\n\nDispatch"), ClockText));
+                break;
+            case 5:
+                Schedule(40f, () => Mail.Send("H.", "...", Loc.T(
+                    "sie sind nicht die fahrgäste. WIR sind die fahrgäste. such die keller. such alle vier.",
+                    "they are not the passengers. WE are the passengers. search the cellars. find all four."), ClockText));
+                break;
+            case 6:
+                Schedule(20f, () => Mail.Send(Dispatch, Loc.T("Anweisung", "Instruction"), Loc.T(
+                    "Betreten Sie keine Gebäude entlang der Strecke. Verlassen Sie den Bus nicht. Das ist eine Anweisung.\n\nLeitstelle",
+                    "Do not enter any buildings along the route. Do not leave the bus. This is an instruction.\n\nDispatch"), ClockText));
+                break;
+            case 7:
+                Schedule(20f, () => Mail.Send(Dispatch, Loc.T("Letzte Schicht", "Last shift"), Loc.T(
+                    "Dies ist Ihre letzte Schicht. Halten Sie danach am Depot. Danach sind Sie frei.\n\nLeitstelle",
+                    "This is your last shift. Stop at the depot afterwards. Then you are free.\n\nDispatch"), ClockText));
+                break;
+        }
     }
 
     // ------------------------------------------------------------------ portrait
@@ -637,7 +913,9 @@ public class BoardingManager : MonoBehaviour
         switch (CurrentPhase)
         {
             case Phase.Driving:
-                if (stopHere != null)
+                if (leaving.Count > 0)
+                    prompt = Loc.T("Fahrgäste steigen hinten aus...", "Passengers getting off at the back...");
+                else if (stopHere != null)
                     prompt = Mathf.Abs(bus.Speed) > 0.3f ? Loc.T("Anhalten", "Stop the bus") : bus.doorsOpen ? Loc.T("Türen öffnen sich...", "Doors opening...") : Loc.T("Türen öffnen  ", "Open doors  ") + GameKeys.Tag(GameAction.Doors);
                 else if (!bus.DoorsFullyClosed)
                     prompt = Loc.T("Türen schließen  ", "Close doors  ") + GameKeys.Tag(GameAction.Doors);
@@ -646,7 +924,8 @@ public class BoardingManager : MonoBehaviour
                 prompt = Loc.T("Fahrgast kommt zur Tür", "Passenger coming to the door");
                 break;
             case Phase.AwaitingDecision:
-                prompt = Loc.T("Ausweis prüfen, Ansprechen ", "Check the ID, talk ") + GameKeys.Tag(GameAction.Talk) + "  -  " + Loc.T("Einlassen ", "Let in ") + GameKeys.Tag(GameAction.LetIn) + "   " + Loc.T("Abweisen ", "Turn away ") + GameKeys.Tag(GameAction.TurnAway);
+                prompt = policeOnTheWay ? Loc.T("Die Polizei ist unterwegs...", "The police are on their way...") :
+                    Loc.T("Ausweis prüfen, Ansprechen ", "Check the ID, talk ") + GameKeys.Tag(GameAction.Talk) + "  -  " + Loc.T("Einlassen ", "Let in ") + GameKeys.Tag(GameAction.LetIn) + "   " + Loc.T("Abweisen ", "Turn away ") + GameKeys.Tag(GameAction.TurnAway);
                 break;
             case Phase.PassengerEntering:
                 prompt = Loc.T("Fahrgast steigt ein", "Passenger getting on");

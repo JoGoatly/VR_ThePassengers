@@ -54,7 +54,7 @@ public class PlayerOnFoot : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb == null || bus == null || GameUI.MenuOpen) return;
+        if (kb == null || bus == null || GameUI.MenuOpen || GameUI.NoteOpen) return;
         bool ePressed = GameKeys.Pressed(GameAction.Interact) && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
 
         if (!GameUI.PlayerOutside)
@@ -65,7 +65,9 @@ public class PlayerOnFoot : MonoBehaviour
         }
 
         Walk(kb);
-        if (ePressed && NearDoor) Enter();
+        var usable = Interactable.Nearest(walker.transform.position, walker.transform.forward);
+        if (ePressed && usable != null) usable.Use();
+        else if (ePressed && NearDoor) Enter();
         else if (GameKeys.Pressed(GameAction.Lights) && flashlight != null && !GameUI.MenuOpen) flashlight.enabled = !flashlight.enabled;
     }
 
@@ -113,9 +115,10 @@ public class PlayerOnFoot : MonoBehaviour
         flashlight.transform.SetParent(cam, false);
         flashlight.transform.localPosition = new Vector3(0.2f, -0.2f, 0.1f);
         flashlight.type = LightType.Spot;
-        flashlight.spotAngle = 45f;
-        flashlight.range = 20f;
-        flashlight.intensity = 9f;
+        bool strong = Progress.Owns("flashlight2");
+        flashlight.spotAngle = strong ? 55f : 45f;
+        flashlight.range = strong ? 34f : 20f;
+        flashlight.intensity = strong ? 16f : 9f;
         flashlight.color = new Color(1f, 0.95f, 0.85f);
         flashlight.shadows = LightShadows.None;
         flashlight.enabled = false;
@@ -136,6 +139,24 @@ public class PlayerOnFoot : MonoBehaviour
         Destroy(walker);
         walker = null;
         GameUI.PlayerOutside = false;
+    }
+
+    /// <summary>Back into the driver's seat, wherever the player is (e.g. after dying).</summary>
+    public void ForceEnter()
+    {
+        if (walker != null) Enter();
+    }
+
+    /// <summary>Move the walking player somewhere else (trapdoors, ladders).</summary>
+    public void TeleportTo(Vector3 position, Vector3 lookDirection)
+    {
+        if (walker == null) return;
+        controller.enabled = false;
+        lookDirection.y = 0f;
+        walker.transform.SetPositionAndRotation(position,
+            lookDirection.sqrMagnitude > 0.01f ? Quaternion.LookRotation(lookDirection) : walker.transform.rotation);
+        controller.enabled = true;
+        verticalSpeed = 0f;
     }
 
     /// <summary>The walking player, or null while in the bus.</summary>
@@ -167,7 +188,7 @@ public class PlayerOnFoot : MonoBehaviour
             pitch = Mathf.Clamp(pitch - d.y, -85f, 85f);
             cam.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.PhoneOpen)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -204,7 +225,9 @@ public class PlayerOnFoot : MonoBehaviour
         float w = RetroGUI.VirtualWidth;
         if (GameUI.PlayerOutside)
         {
-            string text = NearDoor ? Loc.T("Einsteigen ", "Get in ") + GameKeys.Tag(GameAction.Interact) : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe ", "Back to the bus door   -   Flashlight ") + GameKeys.Tag(GameAction.Lights);
+            var usable = walker != null ? Interactable.Nearest(walker.transform.position, walker.transform.forward) : null;
+            string text = usable != null ? usable.Prompt + "  " + GameKeys.Tag(GameAction.Interact) :
+                NearDoor ? Loc.T("Einsteigen ", "Get in ") + GameKeys.Tag(GameAction.Interact) : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe ", "Back to the bus door   -   Flashlight ") + GameKeys.Tag(GameAction.Lights);
             RetroGUI.ShadowLabel(new Rect(0, 318, w, 14), text, new Color(1f, 0.85f, 0.3f));
         }
         else if (Mathf.Abs(bus.Speed) < 0.3f && game != null && game.CurrentPhase == BoardingManager.Phase.Driving && !GameUI.TerminalTyping)

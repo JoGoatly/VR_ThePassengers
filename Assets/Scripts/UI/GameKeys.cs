@@ -7,7 +7,7 @@ using UnityEngine.InputSystem.Controls;
 public enum GameAction
 {
     Forward, Backward, SteerLeft, SteerRight, Handbrake,
-    Doors, Lights, Interact, Talk, Continue, LetIn, TurnAway, CenterView, Radio,
+    Doors, Lights, Interact, Talk, Continue, LetIn, TurnAway, CenterView, Radio, Heal, Phone,
 }
 
 /// <summary>
@@ -24,7 +24,7 @@ public static class GameKeys
         { GameAction.Lights, Key.L }, { GameAction.Interact, Key.E },
         { GameAction.Talk, Key.T }, { GameAction.Continue, Key.F },
         { GameAction.LetIn, Key.J }, { GameAction.TurnAway, Key.N },
-        { GameAction.CenterView, Key.V }, { GameAction.Radio, Key.R },
+        { GameAction.CenterView, Key.V }, { GameAction.Radio, Key.R }, { GameAction.Heal, Key.H }, { GameAction.Phone, Key.Q },
     };
 
     static Dictionary<GameAction, Key> keys;
@@ -94,6 +94,8 @@ public static class GameKeys
         GameAction.TurnAway => Loc.T("Abweisen", "Turn away"),
         GameAction.CenterView => Loc.T("Blick geradeaus", "Look straight ahead"),
         GameAction.Radio => Loc.T("Radio (Sender wechseln)", "Radio (next station)"),
+        GameAction.Heal => Loc.T("Verbandskasten benutzen", "Use first aid kit"),
+        GameAction.Phone => Loc.T("Handy", "Phone"),
         _ => a.ToString(),
     };
 }
