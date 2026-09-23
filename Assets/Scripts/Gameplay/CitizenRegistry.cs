@@ -15,6 +15,9 @@ public enum Discrepancy
     WrongExpiry,      // expiry date on the card differs from the register (forged)
     Doppelganger,     // papers perfect, but the person gets facts about themselves wrong when asked
     Duplicate,        // this person already got on the bus tonight - there can't be two of them
+    TicketWrongNight, // ticket is for another night (from night 3)
+    TicketUsed,       // ticket already stamped
+    TicketWrongDirection, // ticket for the other direction
 }
 
 public enum Gender { Male, Female }
@@ -53,6 +56,15 @@ public class IdCard
     /// <summary>Index of the scripted story passenger, or -1.</summary>
     public int StoryIndex = -1;
 
+    // Ticket (from night 3).
+    public bool HasTicket;
+    public string TicketNumber;
+    public DateTime TicketNight;      // evening date the ticket is valid for
+    public string TicketDirection;    // "ENDSTATION" is the direction of the bus
+    public string TicketStamp;        // non-empty = already used
+    /// <summary>Stop (index along the route) where the passenger gets off.</summary>
+    public int DestinationIndex = -1;
+
     public string FullName => FirstName + " " + LastName;
 }
 
@@ -62,7 +74,10 @@ public class IdCard
 /// </summary>
 public class CitizenRegistry
 {
-    public static readonly DateTime Today = new DateTime(1998, 11, 13);
+    /// <summary>Tonight's date (the evening the shift starts). Night 1 is Friday, 13 November 1998.</summary>
+    public static DateTime Today => new DateTime(1998, 11, 13).AddDays(Progress.Day - 1);
+
+    public const string BusDirection = "ENDSTATION";
 
     static readonly string[] MaleNames =
     {
@@ -183,7 +198,7 @@ public class CitizenRegistry
     /// Creates the ID card of the next passenger. allowed = discrepancies the player
     /// already knows the rules for (from the mails).
     /// </summary>
-    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed, Discrepancy? forced = null, double anomalyChance = 0.45)
+    public IdCard CreatePassengerCard(ICollection<Discrepancy> allowed, Discrepancy? forced = null, double anomalyChance = 0.45, bool withTicket = false)
     {
         Discrepancy kind = forced ?? Discrepancy.None;
         if (!forced.HasValue && rng.NextDouble() < anomalyChance && allowed.Count > 0)
@@ -237,6 +252,7 @@ public class CitizenRegistry
                 break;
         }
         WriteAnswers(card, source);
+        if (withTicket) WriteTicket(card);
         return card;
     }
 
@@ -256,12 +272,43 @@ public class CitizenRegistry
             District = original.District,
             ExpiryDate = original.ExpiryDate,
             Truth = Discrepancy.Duplicate,
+            HasTicket = original.HasTicket,
+            TicketNumber = original.TicketNumber,
+            TicketNight = original.TicketNight,
+            TicketDirection = original.TicketDirection,
+            TicketStamp = original.TicketStamp,
             SaidName = original.SaidName,
             SaidBirth = original.SaidBirth,
             SaidHome = original.SaidHome,
             SaidJob = original.SaidJob,
             SaidDestination = rng.NextDouble() < 0.5 ? original.SaidDestination : Loc.T("Zurück. Ich habe etwas vergessen.", "Back. I forgot something."),
         };
+    }
+
+    // ------------------------------------------------------------------ tickets
+
+    static readonly string[] OtherDirections = { "STADTMITTE", "BAHNHOF NORD", "DEPOT" };
+
+    void WriteTicket(IdCard card)
+    {
+        card.HasTicket = true;
+        card.TicketNumber = "N13-" + rng.Next(100000, 999999);
+        card.TicketNight = Today;
+        card.TicketDirection = BusDirection;
+        card.TicketStamp = "";
+        switch (card.Truth)
+        {
+            case Discrepancy.TicketWrongNight:
+                card.TicketNight = Today.AddDays(rng.NextDouble() < 0.7 ? -rng.Next(1, 4) : rng.Next(1, 3));
+                break;
+            case Discrepancy.TicketUsed:
+                var when = Today.AddDays(-rng.Next(0, 3));
+                card.TicketStamp = $"{when:dd.MM.} {rng.Next(20, 24)}:{rng.Next(0, 60):00}";
+                break;
+            case Discrepancy.TicketWrongDirection:
+                card.TicketDirection = OtherDirections[rng.Next(OtherDirections.Length)];
+                break;
+        }
     }
 
     // ------------------------------------------------------------------ talking

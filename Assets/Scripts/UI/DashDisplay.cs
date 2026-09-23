@@ -110,7 +110,7 @@ public class DashDisplay : MonoBehaviour
 
         // Time and date (after midnight it is the next day).
         string clock = game != null ? game.ClockText : "--:--";
-        var date = CitizenRegistry.Today.AddDays(Progress.Day - 1);
+        var date = CitizenRegistry.Today;
         if (clock.Length >= 2 && int.TryParse(clock.Substring(0, 2), out int hour) && hour < 12) date = date.AddDays(1);
         canvas.Text(4, 2, clock, Text);
         string d = date.ToString("dd.MM.yy");

@@ -209,7 +209,7 @@ public class BoardingManager : MonoBehaviour
         }
         else
         {
-            card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null, 0.3 + 0.05 * Progress.Day);
+            card = Registry.CreatePassengerCard(knownRules, story >= 0 ? StoryPassengers[story].truth : (Discrepancy?)null, 0.3 + 0.05 * Progress.Day, Progress.Day >= 3);
         }
         if (story >= 0)
         {
@@ -367,6 +367,9 @@ public class BoardingManager : MonoBehaviour
         Decided?.Invoke(letIn);
         Judged?.Invoke(correct, card);
 
+        // Boarding stamps the ticket - a second one with the same number is already stamped.
+        if (letIn && card.HasTicket && string.IsNullOrEmpty(card.TicketStamp))
+            card.TicketStamp = $"{CitizenRegistry.Today:dd.MM.} {ClockText}";
         if (letIn && card.Truth != Discrepancy.Duplicate && prefabOf.TryGetValue(card, out var model))
             boardedTonight.Add((card, model));
 
@@ -464,6 +467,28 @@ public class BoardingManager : MonoBehaviour
                 "Talk to every passenger (" + GameKeys.Name(GameAction.Talk) + ") and compare the answers with the register. " +
                 "If an answer is wrong: do NOT let them on.\n\nDispatch, Night Line 13"), ClockText));
         }
+        if (Progress.Day >= 3)
+        {
+            knownRules.Add(Discrepancy.TicketWrongNight);
+            knownRules.Add(Discrepancy.TicketUsed);
+            knownRules.Add(Discrepancy.TicketWrongDirection);
+            if (Progress.Day == 3)
+                Schedule(12f, () => Mail.Send(Dispatch, Loc.T("NEU: Fahrscheinkontrolle", "NEW: Ticket check"), Loc.T(
+                    "Ab heute zeigt jeder Fahrgast zusätzlich seinen Fahrschein (oben links).\n\n" +
+                    "Ein Fahrschein ist nur gültig, wenn:\n" +
+                    " - er für die heutige Nacht ausgestellt ist (Datum wie am Armaturenbrett),\n" +
+                    " - er noch NICHT entwertet ist (kein roter Stempel),\n" +
+                    " - die Fahrtrichtung ENDSTATION ist - das ist die Richtung der Linie 13.\n\n" +
+                    "Ungültiger Fahrschein: NICHT einsteigen lassen. Beim Einsteigen wird der Fahrschein automatisch entwertet.\n\n" +
+                    "Leitstelle Nachtlinie 13",
+                    "From today every passenger also shows a ticket (top left).\n\n" +
+                    "A ticket is only valid if:\n" +
+                    " - it is issued for tonight (date as on the dashboard),\n" +
+                    " - it is NOT stamped yet (no red stamp),\n" +
+                    " - the direction is ENDSTATION - that is the direction of line 13.\n\n" +
+                    "Invalid ticket: do NOT let them on. The ticket is stamped automatically when boarding.\n\n" +
+                    "Dispatch, Night Line 13"), ClockText));
+        }
         if (Progress.Day >= 4 && knownRules.Add(Discrepancy.Deceased) && Progress.Day == 4)
         {
             Schedule(5f, () => Mail.Send(Dispatch, Loc.T("DRINGEND: Status VERSTORBEN", "URGENT: Status DECEASED"),
@@ -528,6 +553,16 @@ public class BoardingManager : MonoBehaviour
                 case Discrepancy.WrongExpiry:
                     body = Loc.T($"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.",
                                  $"The ID of {card.FullName} was forged: the expiry date did not match the register.");
+                    break;
+                case Discrepancy.TicketWrongNight:
+                case Discrepancy.TicketUsed:
+                case Discrepancy.TicketWrongDirection:
+                    subject = Loc.T("Fahrscheinkontrolle", "Ticket inspection");
+                    string why = card.Truth == Discrepancy.TicketWrongNight ? Loc.T("für eine andere Nacht ausgestellt", "issued for another night")
+                               : card.Truth == Discrepancy.TicketUsed ? Loc.T("bereits entwertet", "already stamped")
+                               : Loc.T("für die falsche Fahrtrichtung", "for the wrong direction");
+                    body = Loc.T($"Der Fahrschein von {card.FullName} war {why}. Schwarzfahrer werden Ihnen vom Lohn abgezogen.",
+                                 $"The ticket of {card.FullName} was {why}. Fare dodgers are deducted from your wages.");
                     break;
                 case Discrepancy.Duplicate:
                     subject = Loc.T("Zwei Fahrgäste, ein Name", "Two passengers, one name");
@@ -598,6 +633,7 @@ public class BoardingManager : MonoBehaviour
         if (day >= 2) { rulesDe += "\n - Status GESUCHT: abweisen"; rulesEn += "\n - status WANTED: turn away"; }
         if (day >= 3) { rulesDe += "\n - falsche Antworten auf Fragen (Doppelgänger): abweisen"; rulesEn += "\n - wrong answers to questions (doppelganger): turn away"; }
         if (day >= 4) { rulesDe += "\n - Status VERSTORBEN: abweisen"; rulesEn += "\n - status DECEASED: turn away"; }
+        if (day >= 3) { rulesDe += "\n - Fahrschein: heutige Nacht, nicht entwertet, Richtung ENDSTATION"; rulesEn += "\n - ticket: tonight, not stamped, direction ENDSTATION"; }
         rulesDe += "\n - wer heute Nacht schon eingestiegen ist, steigt nicht noch einmal ein (Suchverlauf!)";
         rulesEn += "\n - whoever already got on tonight does not get on again (search history!)";
         Mail.Send(Dispatch, Loc.T($"Nacht {day} - Dienstanweisung", $"Night {day} - Instructions"), Loc.T(

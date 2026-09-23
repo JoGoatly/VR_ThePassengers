@@ -31,6 +31,8 @@ public class IdCardView : MonoBehaviour
             return;
         }
 
+        if (card.HasTicket) DrawTicket(card);
+
         var r = new Rect(10, 95, 214, 138);
         // Slightly darkened by the night.
         RetroGUI.Frame(r, Paper, PaperDark, 2f);
@@ -66,6 +68,40 @@ public class IdCardView : MonoBehaviour
             RetroGUI.Label(new Rect(sr.x + 5, sr.y + 2, sr.width - 10, 11),
                 forged ? Loc.T("PRÜFGERÄT: FÄLSCHUNG ERKANNT", "SCANNER: FORGERY DETECTED") : Loc.T("PRÜFGERÄT: KEINE FÄLSCHUNG", "SCANNER: NO FORGERY"),
                 forged ? new Color(1f, 0.35f, 0.3f) : new Color(0.5f, 1f, 0.6f), true, true);
+        }
+    }
+
+    // The ticket above the ID card: night, direction, number and the stamp field.
+    static void DrawTicket(IdCard card)
+    {
+        var t = new Rect(10, 24, 176, 66);
+        var paper = new Color(0.78f, 0.8f, 0.66f);
+        var ink = new Color(0.12f, 0.14f, 0.1f);
+        var faint = new Color(0.35f, 0.38f, 0.3f);
+        RetroGUI.Frame(t, paper, new Color(0.45f, 0.48f, 0.38f), 1f);
+        RetroGUI.Fill(new Rect(t.x + 1, t.y + 1, t.width - 2, 11), new Color(0.2f, 0.35f, 0.22f));
+        RetroGUI.Label(new Rect(t.x + 4, t.y + 2, t.width - 8, 10), Loc.T("FAHRSCHEIN - LINIE 13 NACHT", "TICKET - LINE 13 NIGHT"), new Color(0.9f, 1f, 0.9f), true, true);
+
+        var night = card.TicketNight;
+        string nightText = $"{night:dd.}/{night.AddDays(1):dd.MM.yyyy}";
+        RetroGUI.Label(new Rect(t.x + 5, t.y + 14, 60, 10), Loc.T("GÜLTIG NACHT", "VALID NIGHT"), faint, false, true);
+        RetroGUI.Label(new Rect(t.x + 5, t.y + 22, 110, 12), nightText, ink, true);
+        RetroGUI.Label(new Rect(t.x + 5, t.y + 35, 60, 10), Loc.T("RICHTUNG", "DIRECTION"), faint, false, true);
+        RetroGUI.Label(new Rect(t.x + 5, t.y + 43, 110, 12), card.TicketDirection, ink, true);
+        RetroGUI.Label(new Rect(t.x + 5, t.y + 55, 110, 10), "NR. " + card.TicketNumber, faint, false, true);
+
+        // Stamp field.
+        var stamp = new Rect(t.xMax - 62, t.y + 16, 56, 44);
+        RetroGUI.Frame(stamp, new Color(0.72f, 0.74f, 0.6f), faint, 1f);
+        if (!string.IsNullOrEmpty(card.TicketStamp))
+        {
+            var red = new Color(0.75f, 0.1f, 0.08f);
+            RetroGUI.Label(new Rect(stamp.x + 3, stamp.y + 8, stamp.width - 6, 10), Loc.T("ENTWERTET", "STAMPED"), red, true, true);
+            RetroGUI.Label(new Rect(stamp.x + 3, stamp.y + 20, stamp.width - 6, 10), card.TicketStamp, red, false, true);
+        }
+        else
+        {
+            RetroGUI.Label(new Rect(stamp.x + 3, stamp.y + 16, stamp.width - 6, 10), Loc.T("entwerten", "stamp here"), faint, false, true, TextAnchor.UpperCenter);
         }
     }
 
