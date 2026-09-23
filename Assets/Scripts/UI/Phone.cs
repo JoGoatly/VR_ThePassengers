@@ -93,7 +93,7 @@ public class Phone : MonoBehaviour
         if (ring != null) ring.volume = 0.18f * GameSettings.Effects;
 
         var kb = Keyboard.current;
-        if (kb == null || GameUI.MenuOpen || GameUI.TerminalTyping || GameUI.NoteOpen || GameUI.PcOpen) return;
+        if (kb == null || GameUI.MenuOpen || GameUI.TerminalTyping || GameUI.NoteOpen || GameUI.PcOpen || GameUI.MinigameOpen) return;
         if (GameKeys.Pressed(GameAction.Phone)) SetOpen(!open);
         else if (open && kb.escapeKey.wasPressedThisFrame) SetOpen(false);
     }

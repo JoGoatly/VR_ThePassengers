@@ -968,6 +968,9 @@ GameObject:
   - component: {fileID: 2100000021}
   - component: {fileID: 2100000022}
   - component: {fileID: 2100000023}
+  - component: {fileID: 2100000024}
+  - component: {fileID: 2100000025}
+  - component: {fileID: 2100000026}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1539,6 +1542,79 @@ MonoBehaviour:
   lightHum: {fileID: 8300000, guid: 29c482facfc54ac69a921f2aa6852128, type: 3}
   knock: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
   staticNoise: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
+--- !u!114 &2100000024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 055041b5f12549f5acd44773932877bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  beeps:
+  - {fileID: 8300000, guid: 8c59387a725942998e0133acbde3f16a, type: 3}
+  - {fileID: 8300000, guid: 7c657a631e634b59a2e764295fa2f9b0, type: 3}
+  - {fileID: 8300000, guid: 92807d6d57ca4e3bb4298a79e08920ad, type: 3}
+  - {fileID: 8300000, guid: f54a77e608504ab189b6b48b1e5829da, type: 3}
+  saw: {fileID: 8300000, guid: e9016f4d710946e69323f47c2436a23f, type: 3}
+  ratchet: {fileID: 8300000, guid: 0208f0064b204cb5942ad243b9916aca, type: 3}
+  spark: {fileID: 8300000, guid: 1cc5543e3d934fe6ae8620725f42c600, type: 3}
+  success: {fileID: 8300000, guid: 472f5e51f3974e138496ccac6517887f, type: 3}
+  fail: {fileID: 8300000, guid: fde5270d0d2540b8bd3654c41f586b0c, type: 3}
+  thump: {fileID: 8300000, guid: b3d91fe03dcb4134952ccd65c1d523e1, type: 3}
+  squeak: {fileID: 8300000, guid: 553920bd209c464db59e1b6b5dc1eb2e, type: 3}
+  scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
+  click: {fileID: 8300000, guid: 1ace5861b9e44eb5a37f50b683d17da3, type: 3}
+--- !u!114 &2100000025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce767ecf1679450a9ef059734803b3b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 0}
+  bus: {fileID: 0}
+  road: {fileID: 0}
+  lights: {fileID: 0}
+  radioBeep: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
+  treeFall: {fileID: 8300000, guid: 763787de77344d128498a5682fe579d3, type: 3}
+  engineStall: {fileID: 8300000, guid: 1c5ef6f593074d0bbe718abc6e6fecba, type: 3}
+  tireBang: {fileID: 8300000, guid: dcd7a3bc739246dea4821f7ea3d4aa1d, type: 3}
+  fuseSpark: {fileID: 8300000, guid: 1cc5543e3d934fe6ae8620725f42c600, type: 3}
+  handSlam: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
+  help: {fileID: 8300000, guid: ab95be53e42d41d78faa2f346b76f11d, type: 3}
+  fixedSound: {fileID: 8300000, guid: 472f5e51f3974e138496ccac6517887f, type: 3}
+  radioReward: 10
+  radioFine: 15
+  rescueReward: 30
+  deathFine: 25
+--- !u!114 &2100000026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66018805e46c4fe6b87860d0d5eba4b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 0}
+  game: {fileID: 0}
+  onFoot: {fileID: 0}
+  walkSpeed: 1.6
+  eyeHeight: 1.62
+  mouseSensitivity: 0.12
+  sitSound: {fileID: 8300000, guid: cd95c0f5d701442592bd75b7c2494c7e, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

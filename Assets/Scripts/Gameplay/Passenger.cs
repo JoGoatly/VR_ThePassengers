@@ -29,7 +29,7 @@ public class Passenger : MonoBehaviour
     System.Action onArrived;
     Vector3? faceDirectionLocal;  // look direction after arriving, in 'space'
 
-    Transform hips, leftUpLeg, rightUpLeg, leftLeg, rightLeg, leftArm, rightArm, leftForeArm, rightForeArm;
+    Transform hips, spine, head, leftUpLeg, rightUpLeg, leftLeg, rightLeg, leftArm, rightArm, leftForeArm, rightForeArm;
     Quaternion leftUpLegRest, rightUpLegRest, leftLegRest, rightLegRest, leftArmDown, rightArmDown;
     float walkPhase;
     float walkBlend;
@@ -40,6 +40,11 @@ public class Passenger : MonoBehaviour
         foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>()) smr.updateWhenOffscreen = true;
 
         hips = FindBone("Hips");
+        spine = FindBone("Spine1") ?? FindBone("Spine");
+        head = FindBone("Head");
+        if (spine != null) spineRest = spine.localRotation;
+        if (head != null) headRest = head.localRotation;
+        hipsOffset = hips != null ? transform.InverseTransformPoint(hips.position) : new Vector3(0f, 0.95f, 0f);
         leftUpLeg = FindBone("LeftUpLeg"); rightUpLeg = FindBone("RightUpLeg");
         leftLeg = FindBone("LeftLeg"); rightLeg = FindBone("RightLeg");
         leftArm = FindBone("LeftArm"); rightArm = FindBone("RightArm");
@@ -81,14 +86,62 @@ public class Passenger : MonoBehaviour
         transform.SetParent(inSpace, true);
     }
 
+    // ---------------------------------------------------------------- sitting
+
+    /// <summary>Sitting on a seat (in the space of the bus).</summary>
+    public bool Sitting { get; private set; }
+    /// <summary>0 = sitting upright, 1 = slumped over (collapsed).</summary>
+    public float Slump { get; set; }
+
+    Vector3 hipsOffset, seatLocal, seatForwardLocal;
+    Quaternion spineRest = Quaternion.identity, headRest = Quaternion.identity;
+    float sitBlend;
+
+    /// <summary>Sit down on a seat: top of the cushion and forward direction, local to 'inSpace'.</summary>
+    public void SitDown(Vector3 seatTopLocal, Vector3 forwardLocal, Transform inSpace)
+    {
+        waypoints.Clear();
+        onArrived = null;
+        SetSpace(inSpace);
+        seatLocal = seatTopLocal;
+        seatForwardLocal = forwardLocal;
+        faceDirectionLocal = forwardLocal;
+        Sitting = true;
+    }
+
+    /// <summary>Get up again (then WalkPath somewhere).</summary>
+    public void StandUp(Vector3 standLocal)
+    {
+        if (!Sitting) return;
+        Sitting = false;
+        Slump = 0f;
+        SetLocal(standLocal);
+    }
+
+    void PlaceOnSeat()
+    {
+        Vector3 fwd = space != null ? space.TransformDirection(seatForwardLocal) : seatForwardLocal;
+        fwd.y = 0f;
+        if (fwd.sqrMagnitude > 1e-6f) transform.rotation = Quaternion.LookRotation(fwd.normalized, Vector3.up);
+        Vector3 seat = space != null ? space.TransformPoint(seatLocal) : seatLocal;
+        // Hips a little above the cushion and towards the backrest.
+        Vector3 hipsTarget = seat + Vector3.up * 0.07f - fwd.normalized * 0.06f;
+        transform.position = hipsTarget - transform.TransformVector(hipsOffset);
+    }
+
     Vector3 CurrentLocal => space != null ? space.InverseTransformPoint(transform.position) : transform.position;
 
     void Update()
     {
         float dt = Time.deltaTime;
         bool moving = false;
+        sitBlend = Mathf.MoveTowards(sitBlend, Sitting ? 1f : 0f, dt * 3f);
 
-        if (waypoints.Count > 0)
+        if (Sitting)
+        {
+            PlaceOnSeat();
+        }
+        else if (waypoints.Count > 0)
         {
             Vector3 target = waypoints.Peek();
             Vector3 pos = CurrentLocal;
@@ -155,6 +208,29 @@ public class Passenger : MonoBehaviour
 
         PoseArm(leftArm, leftArmDown, swing, right);
         PoseArm(rightArm, rightArmDown, -swing, right);
+
+        if (spine != null) spine.localRotation = spineRest;
+        if (head != null) head.localRotation = headRest;
+        if (sitBlend > 0f) PoseSitting(right);
+    }
+
+    // Thighs forward, shins down, hands in the lap; slumped: upper body and head fall forward.
+    void PoseSitting(Vector3 right)
+    {
+        float s = sitBlend;
+        foreach (var upLeg in new[] { leftUpLeg, rightUpLeg })
+            if (upLeg != null) upLeg.rotation = Quaternion.AngleAxis(-82f * s, right) * upLeg.rotation;
+        foreach (var leg in new[] { leftLeg, rightLeg })
+            if (leg != null) leg.rotation = Quaternion.AngleAxis(75f * s, right) * leg.rotation;
+        foreach (var arm in new[] { leftArm, rightArm })
+            if (arm != null) arm.rotation = Quaternion.AngleAxis(-35f * s, right) * arm.rotation;
+        foreach (var fore in new[] { leftForeArm, rightForeArm })
+            if (fore != null) fore.rotation = Quaternion.AngleAxis(-30f * s, right) * fore.rotation;
+        if (Slump > 0f)
+        {
+            if (spine != null) spine.rotation = Quaternion.AngleAxis(45f * Slump, right) * spine.rotation;
+            if (head != null) head.rotation = Quaternion.AngleAxis(35f * Slump, right) * head.rotation;
+        }
     }
 
     // Positive swing moves the leg forward; knee bends the shin backwards.

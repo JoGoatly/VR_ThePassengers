@@ -91,7 +91,7 @@ public class PlayerCombat : MonoBehaviour
             if (Time.time >= deathAt) WakeUpInBus();
             return;
         }
-        if (GameUI.MenuOpen || GameUI.NoteOpen || GameUI.PcOpen) return;
+        if (GameUI.MenuOpen || GameUI.NoteOpen || GameUI.PcOpen || GameUI.MinigameOpen) return;
 
         var kb = Keyboard.current;
         var mouse = Mouse.current;

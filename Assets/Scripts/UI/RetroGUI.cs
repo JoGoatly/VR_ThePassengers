@@ -23,6 +23,12 @@ public static class GameUI
     /// <summary>The depot office PC is being used (mouse cursor free for it).</summary>
     public static bool PcOpen;
 
+    /// <summary>Walking around inside the bus (not in the driver's seat).</summary>
+    public static bool InBus;
+
+    /// <summary>A repair minigame or the talk menu in the bus is open (mouse cursor free).</summary>
+    public static bool MinigameOpen;
+
     /// <summary>Frame in which a note / the PC was closed (the same key press must not open it again).</summary>
     public static int ClosedFrame = -1;
     public static bool JustClosed => Time.frameCount - ClosedFrame <= 1;
@@ -31,7 +37,7 @@ public static class GameUI
     public static bool MenuOpen;
 
     /// <summary>Driving input is ignored (menu, typing, talking or not in the driver's seat).</summary>
-    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen || PcOpen;
+    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen || PcOpen || InBus || MinigameOpen;
 }
 
 /// <summary>

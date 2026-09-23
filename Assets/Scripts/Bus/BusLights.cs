@@ -37,6 +37,14 @@ public class BusLights : MonoBehaviour
     /// <summary>Raised when the mode changes (for the switch sound).</summary>
     public event System.Action<Mode> Switched;
 
+    bool powerCut;
+    /// <summary>A blown fuse: every light of the bus is off until it is fixed.</summary>
+    public bool PowerCut
+    {
+        get => powerCut;
+        set { powerCut = value; Apply(); }
+    }
+
     Light left, right, farLeft, farRight, tail, cabin;
     FogVolume fog;
     PrecisionVolume precision;
@@ -130,8 +138,10 @@ public class BusLights : MonoBehaviour
 
     void Apply()
     {
-        bool on = mode != Mode.Off;
-        bool high = mode == Mode.HighBeam;
+        if (left == null) return;
+        bool on = mode != Mode.Off && !powerCut;
+        bool high = mode == Mode.HighBeam && !powerCut;
+        if (cabin != null) cabin.enabled = !powerCut;
         // Low beam lights the near field in both modes; high beam adds far lights.
         foreach (var l in new[] { left, right })
         {
