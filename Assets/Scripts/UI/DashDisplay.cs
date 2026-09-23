@@ -125,6 +125,13 @@ public class DashDisplay : MonoBehaviour
         canvas.Text(sx + sw + 2, 25, "km/h", Dim);
         if (bus.Speed < -0.1f) canvas.Text(4, 25, "R", Warn);
 
+        // Stop request lamp.
+        if (game != null && game.StopRequested)
+        {
+            canvas.Fill(W / 2 - 16, H - 13, 32, 11, new Color32(90, 60, 10, 255));
+            canvas.Text(W / 2 - 12, H - 12, "HALT", new Color32(255, 190, 60, 255));
+        }
+
         // Lights and the reason the bus can't drive.
         string light = lights == null ? "" : lights.mode switch
         {

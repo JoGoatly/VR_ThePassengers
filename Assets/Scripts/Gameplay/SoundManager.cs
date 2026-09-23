@@ -25,6 +25,7 @@ public class SoundManager : MonoBehaviour
     public AudioClip[] maleVoices, femaleVoices;
     public AudioClip scare;
     public AudioClip knock;
+    public AudioClip stopRequest;
 
     [Header("Mix")]
     [Range(0f, 1f)] public float engineVolume = 0.35f;
@@ -37,6 +38,7 @@ public class SoundManager : MonoBehaviour
     public Vector2 forestNoiseInterval = new Vector2(12f, 40f);
 
     AudioSource engine, road, ambience, droneSource, ui;
+    bool stopWasRequested;
     float lastSpeed;
     float nextForestNoise;
 
@@ -156,6 +158,10 @@ public class SoundManager : MonoBehaviour
     void Update()
     {
         float fx = GameSettings.Effects;
+        // "Stop" bell when a passenger wants to get off at the next stop.
+        bool requested = game != null && game.StopRequested;
+        if (requested && !stopWasRequested && stopRequest != null && ui != null) ui.PlayOneShot(stopRequest, 0.7f);
+        stopWasRequested = requested;
         if (ui != null) ui.volume = uiVolume * fx;
         if (ambience != null) ambience.volume = ambienceVolume * fx;
         if (droneSource != null) droneSource.volume = droneVolume * fx;

@@ -1085,6 +1085,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: cd5bf661eb894058b08d8c68cd58ea2c, type: 3}
   scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
   knock: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
+  stopRequest: {fileID: 8300000, guid: d65435f4e6924b948d7478c446381d85, type: 3}
 --- !u!114 &2100000007
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -64,6 +64,13 @@ public class BoardingManager : MonoBehaviour
         Discrepancy.WrongExpiry,
     };
     readonly List<Passenger> riders = new List<Passenger>();
+    readonly List<Passenger> leaving = new List<Passenger>();   // walking to the rear door
+    Vector3 rearDoorLocal;
+    float nextExitAt;
+    int lastPassedStop = -1;
+
+    /// <summary>Someone wants to get off at the next stop (the "stop" button was pressed).</summary>
+    public bool StopRequested { get; private set; }
     // Who got on tonight (and with which model), for passengers who come a second time.
     readonly List<(IdCard card, GameObject prefab)> boardedTonight = new List<(IdCard, GameObject)>();
     readonly Dictionary<IdCard, GameObject> prefabOf = new Dictionary<IdCard, GameObject>();
@@ -92,6 +99,7 @@ public class BoardingManager : MonoBehaviour
         if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
         doorLocal = FindDoorCentre();
+        rearDoorLocal = FindDoorCentre("Door_BL", "Door_BR", new Vector3(doorLocal.x, 0f, -2.5f));
         var seat = bus.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "DriverSeat");
         driverLocal = seat != null ? bus.transform.InverseTransformPoint(seat.position) : new Vector3(-0.83f, 0f, 4.15f);
         driverLocal.y = 0f;
@@ -116,11 +124,13 @@ public class BoardingManager : MonoBehaviour
     /// <summary>How many passengers were dealt with tonight.</summary>
     public int Decisions => decisions;
 
-    Vector3 FindDoorCentre()
+    Vector3 FindDoorCentre() => FindDoorCentre("Door_FL", "Door_FR", new Vector3(-1.3f, 0, 4.3f));
+
+    Vector3 FindDoorCentre(string a, string b, Vector3 fallback)
     {
         var doors = bus.GetComponentsInChildren<Transform>()
-            .Where(t => t.name == "Door_FL" || t.name == "Door_FR").ToList();
-        if (doors.Count == 0) return new Vector3(-1.3f, 0, 4.3f);
+            .Where(t => t.name == a || t.name == b).ToList();
+        if (doors.Count == 0) return fallback;
         Vector3 sum = Vector3.zero;
         foreach (var d in doors)
         {
@@ -143,6 +153,7 @@ public class BoardingManager : MonoBehaviour
         RunScheduled();
         UpdateSpawns();
         HandleKeys();
+        UpdateExits();
 
         switch (CurrentPhase)
         {
@@ -152,8 +163,10 @@ public class BoardingManager : MonoBehaviour
         }
 
         bool busy = CurrentPhase != Phase.Driving;
-        bus.throttleLockReason = busy ? Loc.T("Fahrgast an der Tür", "Passenger at the door") : null;
-        bus.doorsLocked = busy;
+        bool exiting = leaving.Count > 0;
+        bus.throttleLockReason = busy ? Loc.T("Fahrgast an der Tür", "Passenger at the door")
+                               : exiting ? Loc.T("Fahrgäste steigen aus", "Passengers getting off") : null;
+        bus.doorsLocked = busy || exiting;
     }
 
     void HandleKeys()
@@ -222,12 +235,103 @@ public class BoardingManager : MonoBehaviour
 
         if (prefab == null) prefab = pool[rng.Next(pool.Length)];
         prefabOf[card] = prefab;
+
+        // Where they get off: one to four stops further. The answer names that stop.
+        card.DestinationIndex = stop.index + Random.Range(1, 5);
+        string toStop = Loc.T("Zur Haltestelle ", "To the stop ");
+        if (card.SaidDestination != null && card.SaidDestination.StartsWith(toStop))
+            card.SaidDestination = toStop + road.StopNameAt(card.DestinationIndex) + ".";
         var go = Instantiate(prefab, stop.waitPoint.position, stop.waitPoint.rotation);
         go.name = "Passenger " + card.FullName;
         var p = go.AddComponent<Passenger>();
         p.Card = card;
         p.Stop = stop;
         return p;
+    }
+
+    // ------------------------------------------------------------------ getting off
+
+    void UpdateExits()
+    {
+        if (road == null) return;
+        riders.RemoveAll(r => r == null);
+        leaving.RemoveAll(r => r == null);
+        float busS = road.BusArcLength;
+        float doorAhead = doorLocal.z;
+
+        // Next stop ahead: does anyone want to get off there?
+        BusStop next = null;
+        float best = float.MaxValue;
+        foreach (var st in road.Stops)
+        {
+            if (st == null) continue;
+            float d = st.arcLength - busS - doorAhead;
+            if (d > -10f && d < best) { best = d; next = st; }
+        }
+        StopRequested = next != null && riders.Any(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
+                                                          r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= next.index);
+
+        // Drove past someone's stop: they complain and get off at the next one.
+        foreach (var st in road.Stops)
+        {
+            if (st == null || st.index <= lastPassedStop || st.arcLength > busS - 25f) continue;
+            lastPassedStop = st.index;
+            int missed = riders.Count(r => r.CurrentState == Passenger.State.Riding && r.Card != null && r.Card.DestinationIndex == st.index);
+            if (missed > 0)
+            {
+                Progress.AddMoney(-10 * missed);
+                ShowToast(Loc.T($"Haltestelle {st.stopName} verpasst: -{10 * missed} €", $"Missed the stop {st.stopName}: -{10 * missed} €"));
+            }
+        }
+
+        // Standing at a stop with open doors: riders who are there (or past it) get off at the back.
+        if (Mathf.Abs(bus.Speed) > 0.3f || !bus.DoorsFullyOpen || Time.time < nextExitAt) return;
+        var here = StopNearBus();
+        if (here == null) return;
+        var rider = riders.FirstOrDefault(r => r.CurrentState == Passenger.State.Riding && r.Card != null &&
+                                               r.Card.DestinationIndex >= 0 && r.Card.DestinationIndex <= here.index);
+        if (rider == null) return;
+        nextExitAt = Time.time + 1.4f;
+        StartExit(rider, here);
+    }
+
+    BusStop StopNearBus()
+    {
+        Vector3 doorWorld = bus.transform.TransformPoint(doorLocal);
+        foreach (var stop in road.Stops)
+        {
+            if (stop == null) continue;
+            Vector3 d = stop.waitPoint.position - doorWorld;
+            d.y = 0f;
+            if (Mathf.Abs(Vector3.Dot(d, stop.roadDirection)) < stopTolerance + 4f && Vector3.ProjectOnPlane(d, stop.roadDirection).magnitude < 6f)
+                return stop;
+        }
+        return null;
+    }
+
+    void StartExit(Passenger p, BusStop stop)
+    {
+        riders.Remove(p);
+        leaving.Add(p);
+        p.CurrentState = Passenger.State.Leaving;
+        float side = DoorSide;
+        var path = new[]
+        {
+            new Vector3(0f, floorHeight, rearDoorLocal.z + 0.6f),
+            new Vector3(rearDoorLocal.x - side * 0.45f, floorHeight, rearDoorLocal.z),
+            new Vector3(rearDoorLocal.x, floorHeight * 0.5f, rearDoorLocal.z),
+            new Vector3(rearDoorLocal.x + side * 0.8f, 0f, rearDoorLocal.z),
+        };
+        p.WalkPath(path, bus.transform, () =>
+        {
+            // Out of the bus: walk off into the dark and disappear.
+            leaving.Remove(p);
+            p.SetSpace(null);
+            Vector3 outside = p.transform.position;
+            Vector3 away = bus.transform.right * side * 6f - stop.roadDirection * 3f;
+            p.WalkPath(new[] { outside + away, outside + away * 2.2f }, null, () => { if (p != null) Destroy(p.gameObject); });
+            Destroy(p.gameObject, 25f);
+        });
     }
 
     // ------------------------------------------------------------------ story
@@ -772,7 +876,9 @@ public class BoardingManager : MonoBehaviour
         switch (CurrentPhase)
         {
             case Phase.Driving:
-                if (stopHere != null)
+                if (leaving.Count > 0)
+                    prompt = Loc.T("Fahrgäste steigen hinten aus...", "Passengers getting off at the back...");
+                else if (stopHere != null)
                     prompt = Mathf.Abs(bus.Speed) > 0.3f ? Loc.T("Anhalten", "Stop the bus") : bus.doorsOpen ? Loc.T("Türen öffnen sich...", "Doors opening...") : Loc.T("Türen öffnen  ", "Open doors  ") + GameKeys.Tag(GameAction.Doors);
                 else if (!bus.DoorsFullyClosed)
                     prompt = Loc.T("Türen schließen  ", "Close doors  ") + GameKeys.Tag(GameAction.Doors);

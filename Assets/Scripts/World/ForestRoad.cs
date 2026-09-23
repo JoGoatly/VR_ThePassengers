@@ -82,6 +82,10 @@ public class ForestRoad : MonoBehaviour
     public IReadOnlyList<SidePath> SidePaths => sidePaths;
 
     readonly List<SidePath> sidePaths = new List<SidePath>();
+    int stopsBuilt;
+
+    /// <summary>Name of the n-th stop of the route (the names repeat in a fixed order).</summary>
+    public string StopNameAt(int index) => stopNames.Length > 0 ? stopNames[index % stopNames.Length] : "Haltestelle";
     float nextSidePathAt;
 
     // Samples of the centre line (world space).
@@ -427,8 +431,8 @@ public class ForestRoad : MonoBehaviour
     {
         Vector3 p = points[i], t = tangents[i], r = Right(t);
         Quaternion along = Quaternion.LookRotation(t);
-        string stopName = stopNames.Length > 0 ? stopNames[stops.Count % stopNames.Length] : "Haltestelle";
-        if (stops.Count >= stopNames.Length) stopName = stopNames[rng.Next(stopNames.Length)];
+        int stopIndex = stopsBuilt++;
+        string stopName = StopNameAt(stopIndex);
 
         var root = new GameObject("BusStop " + stopName).transform;
         root.SetParent(parent, false);
@@ -475,6 +479,7 @@ public class ForestRoad : MonoBehaviour
 
         var stop = root.gameObject.AddComponent<BusStop>();
         stop.stopName = stopName;
+        stop.index = stopIndex;
         stop.waitPoint = waitPoint;
         stop.arcLength = distances[i];
         stop.roadDirection = t;
