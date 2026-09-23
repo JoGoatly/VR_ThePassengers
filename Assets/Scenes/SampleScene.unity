@@ -899,6 +899,45 @@ MonoBehaviour:
   busStopSign: {fileID: 2100000, guid: cfbd80f3be4c4b9cba9a61b0ac671a1e, type: 2}
   guidePost: {fileID: 2100000, guid: 314f59ef6e2b4ce7814dcc70e84142f2, type: 2}
   lampGlow: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
+  treeModels:
+  - model: {fileID: 919132149155446097, guid: ceeb6e1bd5d6ac84188e997e617cc8b9, type: 3}
+    weight: 3
+    height: {x: 6, y: 11}
+  - model: {fileID: 919132149155446097, guid: 67244c220c2bcd54a8a126ee24d56b64, type: 3}
+    weight: 3
+    height: {x: 8, y: 14}
+  - model: {fileID: 919132149155446097, guid: e9268cc72fb694544b07aa2772eaff7d, type: 3}
+    weight: 1.5
+    height: {x: 9, y: 15}
+  - model: {fileID: 919132149155446097, guid: 971121fb3f301d049b3ba2a44bc77091, type: 3}
+    weight: 1.5
+    height: {x: 9, y: 15}
+  - model: {fileID: 919132149155446097, guid: cb3f8331273937748b7d4d5e13195f95, type: 3}
+    weight: 0.6
+    height: {x: 9, y: 13}
+  - model: {fileID: 919132149155446097, guid: 93896a485c29eb842b19aefa94289db0, type: 3}
+    weight: 0.7
+    height: {x: 7, y: 12}
+  - model: {fileID: 919132149155446097, guid: a0314f10426479e4d8472816b46d36d1, type: 3}
+    weight: 0.7
+    height: {x: 5, y: 9}
+  - model: {fileID: 919132149155446097, guid: b183425f23f3b974aa987f4146bbc19d, type: 3}
+    weight: 1.5
+    height: {x: 1.5, y: 3.5}
+  treeMaterials:
+  - {fileID: 2100000, guid: ad2c620fc5104f34a8a070e354b968fc, type: 2}
+  - {fileID: 2100000, guid: e11d25b263f44135b14e4368ef024d45, type: 2}
+  - {fileID: 2100000, guid: 5bbd2ccc6eb74c829f718c66489f1ea1, type: 2}
+  - {fileID: 2100000, guid: 90d179aac230494cbe6d62876ef79e3f, type: 2}
+  - {fileID: 2100000, guid: 0f0812a1be0f401fa2e35d5b0a8733f9, type: 2}
+  - {fileID: 2100000, guid: b8d7ec7766fb421bbbff61df3607b825, type: 2}
+  - {fileID: 2100000, guid: a95876706156444082d1c3125af246f8, type: 2}
+  - {fileID: 2100000, guid: c86b50b51dcf433d9b4655972fe1602b, type: 2}
+  - {fileID: 2100000, guid: fc62b745a18241dea3d246ca011b07eb, type: 2}
+  - {fileID: 2100000, guid: 4deadc02a2ae4a5487b490ea30a8069f, type: 2}
+  - {fileID: 2100000, guid: e1c654d2f8924397a47d0d296c247d64, type: 2}
+  - {fileID: 2100000, guid: bc8f6bdcffd345bba8e1f339d453ce99, type: 2}
+  - {fileID: 2100000, guid: 105dc1bdd85c4e6aae8c595ffb48b1e0, type: 2}
 --- !u!1 &2100000001
 GameObject:
   m_ObjectHideFlags: 0

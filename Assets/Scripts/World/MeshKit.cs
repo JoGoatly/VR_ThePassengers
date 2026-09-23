@@ -153,6 +153,20 @@ public static class MeshKit
             foreach (int t in mesh.triangles) tris.Add(offset + t);
         }
 
+        /// <summary>Appends raw triangle data transformed by a matrix (cached parts of imported models).</summary>
+        public void AddArrays(Vector3[] v, Vector3[] n, Vector2[] uv, int[] triangles, Matrix4x4 m)
+        {
+            var normalMatrix = m.inverse.transpose;
+            int offset = verts.Count;
+            for (int i = 0; i < v.Length; i++)
+            {
+                verts.Add(m.MultiplyPoint3x4(v[i]));
+                normals.Add(i < n.Length ? normalMatrix.MultiplyVector(n[i]).normalized : Vector3.up);
+                uvs.Add(i < uv.Length ? uv[i] : Vector2.zero);
+            }
+            foreach (int t in triangles) tris.Add(offset + t);
+        }
+
         public Mesh ToMesh(string name)
         {
             var mesh = new Mesh { name = name };

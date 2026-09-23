@@ -36,6 +36,21 @@ public class ForestRoad : MonoBehaviour
     public int treesPerSide = 26;
     public float forestDepth = 55f;
 
+    [System.Serializable]
+    public class TreeModel
+    {
+        public GameObject model;
+        [Tooltip("How often this tree appears compared to the others")]
+        public float weight = 1f;
+        [Tooltip("Height range in metres")]
+        public Vector2 height = new Vector2(7f, 13f);
+    }
+
+    [Header("Tree models (Retro Tree Pack); empty = simple cone trees")]
+    public TreeModel[] treeModels;
+    [Tooltip("Materials for the tree models, matched by name to the model's own materials")]
+    public Material[] treeMaterials;
+
     [Header("Materials")]
     public Material road;
     public Material shoulder;
@@ -112,6 +127,12 @@ public class ForestRoad : MonoBehaviour
     Transform ground;
     Mesh trunkMesh, coneMesh, postMesh;
 
+    // A tree model broken into one piece per material, pivot at the bottom centre.
+    class TreePart { public Vector3[] v, n; public Vector2[] uv; public int[] tris; public Material mat; }
+    class BakedTree { public List<TreePart> parts; public float height, radius, weight; public Vector2 heightRange; }
+    readonly List<BakedTree> bakedTrees = new List<BakedTree>();
+    float treeWeightSum;
+
     float HalfRoad => laneWidth;
 
     void Awake()
@@ -127,6 +148,7 @@ public class ForestRoad : MonoBehaviour
         trunkMesh = MeshKit.Prism(0.22f, 3f, 5, 1f);
         coneMesh = MeshKit.Cone(1f, 1f, 7);
         postMesh = MeshKit.Box(new Vector3(0.12f, 1f, 0.12f), 1f);
+        BakeTrees();
 
         var bc = FindAnyObjectByType<BusController>();
         bus = bc != null ? bc.transform : null;
@@ -308,6 +330,148 @@ public class ForestRoad : MonoBehaviour
 
     void BuildForest(Transform parent, int a, int b)
     {
+        if (bakedTrees.Count == 0) { BuildConeForest(parent, a, b); return; }
+
+        var builders = new Dictionary<Material, MeshKit.Builder>();
+        float edge = HalfRoad + shoulderWidth;
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            for (int n = 0; n < treesPerSide; n++)
+            {
+                var tree = PickTree();
+                float h = Range(tree.heightRange);
+                float scale = h / tree.height;
+                float width = Range(0.85f, 1.15f);
+
+                int i = rng.Next(a, b);
+                float along = Range(0f, sampleSpacing);
+                // More trees close to the road, thinning out into the dark.
+                float t = (float)rng.NextDouble();
+                // Wide crowns keep their distance so they don't hang over the road.
+                float crown = tree.radius * scale * width * 0.75f;
+                float offset = Mathf.Max(edge + 2.5f + t * t * forestDepth, edge + 1f + crown);
+                Vector3 pos = points[i] + tangents[i] * along + Right(tangents[i]) * offset * side;
+                if (TooCloseToRoad(pos, i, edge + 1f + crown * 0.8f) || InClearing(pos)) continue;
+
+                var m = Matrix4x4.TRS(pos, Quaternion.Euler(0f, Range(0f, 360f), 0f), new Vector3(scale * width, scale, scale * width));
+                foreach (var part in tree.parts)
+                {
+                    if (part.mat == null) continue;
+                    if (!builders.TryGetValue(part.mat, out var mb)) builders[part.mat] = mb = new MeshKit.Builder();
+                    mb.AddArrays(part.v, part.n, part.uv, part.tris, m);
+                }
+
+                // Trees right next to the road block the bus (bushes don't).
+                if (offset < edge + 12f && h > 3f)
+                {
+                    var col = new GameObject("Tree Collider").AddComponent<CapsuleCollider>();
+                    col.transform.SetParent(parent, false);
+                    col.transform.position = pos + Vector3.up * 2f;
+                    col.radius = 0.3f;
+                    col.height = 4f;
+                }
+            }
+        }
+        foreach (var kv in builders)
+            MeshKit.Spawn("Trees " + kv.Key.name, parent, kv.Value.ToMesh("Trees"), kv.Key, Vector3.zero, Quaternion.identity, false);
+    }
+
+    BakedTree PickTree()
+    {
+        float r = (float)rng.NextDouble() * treeWeightSum;
+        foreach (var tree in bakedTrees)
+        {
+            r -= tree.weight;
+            if (r <= 0f) return tree;
+        }
+        return bakedTrees[bakedTrees.Count - 1];
+    }
+
+    // Reads the tree models once: one vertex list per material, pivot moved to the bottom centre.
+    void BakeTrees()
+    {
+        bakedTrees.Clear();
+        treeWeightSum = 0f;
+        if (treeModels == null) return;
+        foreach (var tm in treeModels)
+        {
+            if (tm == null || tm.model == null || tm.weight <= 0f) continue;
+            var root = tm.model.transform;
+            var parts = new List<TreePart>();
+            bool readable = true;
+            foreach (var mf in tm.model.GetComponentsInChildren<MeshFilter>(true))
+            {
+                var mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+                if (!mesh.isReadable) { readable = false; break; }
+                var renderer = mf.GetComponent<MeshRenderer>();
+                var imported = renderer != null ? renderer.sharedMaterials : null;
+                Matrix4x4 local = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                Matrix4x4 normalMatrix = local.inverse.transpose;
+                var v = mesh.vertices;
+                var nrm = mesh.normals;
+                var uv = mesh.uv;
+                for (int sub = 0; sub < mesh.subMeshCount; sub++)
+                {
+                    // Only the vertices this material uses.
+                    var src = mesh.GetTriangles(sub);
+                    var remap = new Dictionary<int, int>();
+                    var pv = new List<Vector3>(); var pn = new List<Vector3>(); var puv = new List<Vector2>();
+                    var pt = new int[src.Length];
+                    for (int k = 0; k < src.Length; k++)
+                    {
+                        int idx = src[k];
+                        if (!remap.TryGetValue(idx, out int j))
+                        {
+                            j = pv.Count;
+                            remap[idx] = j;
+                            pv.Add(local.MultiplyPoint3x4(v[idx]));
+                            pn.Add(idx < nrm.Length ? normalMatrix.MultiplyVector(nrm[idx]).normalized : Vector3.up);
+                            puv.Add(idx < uv.Length ? uv[idx] : Vector2.zero);
+                        }
+                        pt[k] = j;
+                    }
+                    if (pt.Length == 0) continue;
+                    parts.Add(new TreePart { v = pv.ToArray(), n = pn.ToArray(), uv = puv.ToArray(), tris = pt, mat = TreeMaterialFor(imported, sub) });
+                }
+            }
+            if (!readable)
+            {
+                Debug.LogWarning($"ForestRoad: the mesh of '{tm.model.name}' is not readable. Enable Read/Write in its import settings.");
+                continue;
+            }
+            if (parts.Count == 0) continue;
+
+            // Bounds, then move the pivot to the foot of the trunk.
+            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+            foreach (var p in parts) foreach (var x in p.v) { min = Vector3.Min(min, x); max = Vector3.Max(max, x); }
+            float height = max.y - min.y;
+            if (height < 0.01f) continue;
+            Vector3 foot = new Vector3((min.x + max.x) * 0.5f, min.y, (min.z + max.z) * 0.5f);
+            foreach (var p in parts) for (int k = 0; k < p.v.Length; k++) p.v[k] -= foot;
+            float radius = Mathf.Max(max.x - min.x, max.z - min.z) * 0.5f;
+
+            bakedTrees.Add(new BakedTree { parts = parts, height = height, radius = radius, weight = tm.weight, heightRange = tm.height });
+            treeWeightSum += tm.weight;
+        }
+    }
+
+    // The own material of the same name (longest match, so "tree_rt_2_1" beats "tree_rt_2").
+    Material TreeMaterialFor(Material[] imported, int sub)
+    {
+        string name = imported != null && sub < imported.Length && imported[sub] != null ? imported[sub].name : "";
+        Material best = null;
+        if (treeMaterials != null)
+            foreach (var m in treeMaterials)
+                if (m != null && name.Contains(m.name) && (best == null || m.name.Length > best.name.Length)) best = m;
+        if (best != null) return best;
+        return name.ToLowerInvariant().Contains("bark") ? bark : needles;
+    }
+
+    // Fallback without tree models: trunks with stacked cones.
+    void BuildConeForest(Transform parent, int a, int b)
+    {
         var trunks = new MeshKit.Builder();
         var crowns = new MeshKit.Builder();
         float edge = HalfRoad + shoulderWidth;
@@ -318,7 +482,6 @@ public class ForestRoad : MonoBehaviour
             {
                 int i = rng.Next(a, b);
                 float along = Range(0f, sampleSpacing);
-                // More trees close to the road, thinning out into the dark.
                 float t = (float)rng.NextDouble();
                 float offset = edge + 2.5f + t * t * forestDepth;
                 Vector3 pos = points[i] + tangents[i] * along + Right(tangents[i]) * offset * side;
@@ -336,7 +499,6 @@ public class ForestRoad : MonoBehaviour
                     crowns.AddMesh(coneMesh, pos + Vector3.up * (h * 0.22f + f * h * 0.62f), rot, new Vector3(r, h * 0.36f, r));
                 }
 
-                // Trees right next to the road block the bus.
                 if (offset < edge + 12f)
                 {
                     var col = new GameObject("Tree Collider").AddComponent<CapsuleCollider>();
