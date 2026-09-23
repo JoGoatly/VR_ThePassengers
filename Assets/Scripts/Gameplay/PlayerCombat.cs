@@ -54,6 +54,12 @@ public class PlayerCombat : MonoBehaviour
         fadeUntil = Time.time + seconds;
     }
 
+    public void Heal(int amount)
+    {
+        if (Health <= 0) return;
+        Health = Mathf.Min(maxHealth, Health + amount);
+    }
+
     public void Damage(int amount)
     {
         if (Health <= 0 || !GameUI.PlayerOutside) return;
@@ -85,7 +91,7 @@ public class PlayerCombat : MonoBehaviour
             if (Time.time >= deathAt) WakeUpInBus();
             return;
         }
-        if (GameUI.MenuOpen || GameUI.NoteOpen) return;
+        if (GameUI.MenuOpen || GameUI.NoteOpen || GameUI.PcOpen) return;
 
         var kb = Keyboard.current;
         var mouse = Mouse.current;

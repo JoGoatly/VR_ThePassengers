@@ -20,11 +20,18 @@ public static class GameUI
     /// <summary>A found note is being read.</summary>
     public static bool NoteOpen;
 
+    /// <summary>The depot office PC is being used (mouse cursor free for it).</summary>
+    public static bool PcOpen;
+
+    /// <summary>Frame in which a note / the PC was closed (the same key press must not open it again).</summary>
+    public static int ClosedFrame = -1;
+    public static bool JustClosed => Time.frameCount - ClosedFrame <= 1;
+
     /// <summary>Start menu / intro is shown, the game is paused.</summary>
     public static bool MenuOpen;
 
     /// <summary>Driving input is ignored (menu, typing, talking or not in the driver's seat).</summary>
-    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen;
+    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen || PcOpen;
 }
 
 /// <summary>

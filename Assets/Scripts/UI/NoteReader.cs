@@ -30,7 +30,10 @@ public class NoteReader : MonoBehaviour
         var mouse = Mouse.current;
         if ((kb != null && (GameKeys.Pressed(GameAction.Interact) || kb.escapeKey.wasPressedThisFrame)) ||
             (mouse != null && mouse.leftButton.wasPressedThisFrame))
+        {
             GameUI.NoteOpen = false;
+            GameUI.ClosedFrame = Time.frameCount;
+        }
     }
 
     void OnGUI()

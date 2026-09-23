@@ -245,7 +245,7 @@ public class SideAreas : MonoBehaviour
             SpawnDweller(cellar.TransformPoint(new Vector3(1.6f, 0f, 1.4f)), cellar);
     }
 
-    void SpawnDweller(Vector3 position, Transform parent)
+    public void SpawnDweller(Vector3 position, Transform parent)
     {
         if (dwellers == null || dwellers.Length == 0) return;
         var go = Instantiate(dwellers[Random.Range(0, dwellers.Length)], position, parent.rotation * Quaternion.Euler(0, 180f, 0), parent);
