@@ -10,12 +10,23 @@ public class OncomingTraffic : MonoBehaviour
     public ForestRoad road;
     public BusController bus;
 
+    /// <summary>A car model and its paint jobs (textures).</summary>
+    [System.Serializable]
+    public class CarModel
+    {
+        public GameObject model;
+        public Texture2D[] paints;
+    }
+
     [Header("Cars")]
-    [Tooltip("Car models (any prefab/FBX). Empty = simple low-poly box car")]
-    public GameObject[] carPrefabs;
+    [Tooltip("Car models with their paint textures. Empty = simple low-poly box car")]
+    public CarModel[] cars;
+    [Tooltip("PSX material for the cars; its texture is replaced by the paint")]
+    public Material carMaterial;
     [Tooltip("Extra rotation of the models if their front does not point along +Z")]
     public float modelYaw = 0f;
-    public float modelScale = 1f;
+    [Tooltip("The PSX car pack is about 1.5x real size")]
+    public float modelScale = 0.7f;
     public Material bodyMaterial;
     [Tooltip("Unlit glow material for head- and tail lights (e.g. HeadlightGlow)")]
     public Material glowMaterial;
@@ -98,11 +109,14 @@ public class OncomingTraffic : MonoBehaviour
         root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
 
         Bounds local;
-        if (carPrefabs != null && carPrefabs.Length > 0 && carPrefabs[0] != null)
+        var pick = cars != null && cars.Length > 0 ? cars[Random.Range(0, cars.Length)] : null;
+        if (pick != null && pick.model != null)
         {
-            var model = Instantiate(carPrefabs[Random.Range(0, carPrefabs.Length)], root.transform);
+            var model = Instantiate(pick.model, root.transform);
             model.transform.localRotation = Quaternion.Euler(0f, modelYaw, 0f);
             model.transform.localScale *= modelScale;
+            Texture2D paint = pick.paints != null && pick.paints.Length > 0 ? pick.paints[Random.Range(0, pick.paints.Length)] : null;
+            ApplyPaint(model, paint);
             foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
             foreach (var rb in model.GetComponentsInChildren<Rigidbody>()) Destroy(rb);
             local = LocalBounds(root.transform);
@@ -135,13 +149,34 @@ public class OncomingTraffic : MonoBehaviour
             car.sound.maxDistance = 90f;
             car.sound.rolloffMode = AudioRolloffMode.Linear;
             car.sound.dopplerLevel = 1.2f;
-            car.sound.pitch = Random.Range(1.1f, 1.35f);
+            car.sound.pitch = Random.Range(0.9f, 1.15f);
             car.sound.volume = 0f;
             car.sound.Play();
         }
         Vector3 right = Vector3.Cross(Vector3.up, t).normalized;
         root.transform.SetPositionAndRotation(p - right * road.laneWidth * 0.5f, Quaternion.LookRotation(-t));
         cars.Add(car);
+    }
+
+    readonly Dictionary<Texture2D, Material> paintMaterials = new Dictionary<Texture2D, Material>();
+
+    // The imported OBJ materials don't work with the PSX pipeline: use the PSX car material with the paint.
+    void ApplyPaint(GameObject model, Texture2D paint)
+    {
+        if (carMaterial == null) return;
+        Material mat = carMaterial;
+        if (paint != null && !paintMaterials.TryGetValue(paint, out mat))
+        {
+            mat = new Material(carMaterial) { name = "Car " + paint.name };
+            mat.SetTexture("_MainTex", paint);
+            paintMaterials[paint] = mat;
+        }
+        foreach (var r in model.GetComponentsInChildren<Renderer>())
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+            r.sharedMaterials = mats;
+        }
     }
 
     static Bounds LocalBounds(Transform root)

@@ -16,6 +16,13 @@ public class PoliceDispatch : MonoBehaviour
     public Material glowMaterial;
     public AudioClip siren, carDoor;
 
+    [Header("Model (empty = simple box car)")]
+    public GameObject policeModel;
+    public Texture2D policeTexture;
+    [Tooltip("PSX car material; its texture is replaced by the police paint")]
+    public Material carMaterial;
+    public float modelScale = 0.7f;
+
     public int arrestBonus = 60;
     public int falseAlarmFine = 30;
     public float approachSpeed = 18f;
@@ -61,13 +68,41 @@ public class PoliceDispatch : MonoBehaviour
         handled = false;
 
         car = new GameObject("Police Car");
-        var green = bodyMaterial != null ? new Material(bodyMaterial) : null;
-        var white = bodyMaterial != null ? new Material(bodyMaterial) : null;
-        if (green != null) green.SetColor("_MainColor", new Color(0.12f, 0.32f, 0.2f));
-        if (white != null) white.SetColor("_MainColor", new Color(0.85f, 0.85f, 0.82f));
-        Part("Body", new Vector3(1.8f, 0.7f, 4.4f), new Vector3(0f, 0.3f, 0f), green);
-        Part("Cabin", new Vector3(1.6f, 0.55f, 2.2f), new Vector3(0f, 1.0f, -0.3f), white);
-        Part("Light Bar", new Vector3(1.1f, 0.12f, 0.3f), new Vector3(0f, 1.55f, -0.2f), white);
+        bool model = policeModel != null;
+        float front = 2.2f, lightY = 1.67f, lightZ = -0.2f;
+        if (model)
+        {
+            // The police car of the PSX car pack; its light bar sits on the roof.
+            var m = Instantiate(policeModel, car.transform);
+            m.transform.localPosition = Vector3.zero;
+            m.transform.localRotation = Quaternion.identity;
+            m.transform.localScale *= modelScale;
+            if (carMaterial != null)
+            {
+                var mat = new Material(carMaterial) { name = "Police Car" };
+                if (policeTexture != null) mat.SetTexture("_MainTex", policeTexture);
+                foreach (var r in m.GetComponentsInChildren<Renderer>())
+                {
+                    var mats = r.sharedMaterials;
+                    for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                    r.sharedMaterials = mats;
+                }
+            }
+            foreach (var c in m.GetComponentsInChildren<Collider>()) Destroy(c);
+            front = 3.73f * modelScale;
+            lightY = 2.08f * modelScale;
+            lightZ = -0.28f * modelScale;
+        }
+        else
+        {
+            var green = bodyMaterial != null ? new Material(bodyMaterial) : null;
+            var white = bodyMaterial != null ? new Material(bodyMaterial) : null;
+            if (green != null) green.SetColor("_MainColor", new Color(0.12f, 0.32f, 0.2f));
+            if (white != null) white.SetColor("_MainColor", new Color(0.85f, 0.85f, 0.82f));
+            Part("Body", new Vector3(1.8f, 0.7f, 4.4f), new Vector3(0f, 0.3f, 0f), green);
+            Part("Cabin", new Vector3(1.6f, 0.55f, 2.2f), new Vector3(0f, 1.0f, -0.3f), white);
+            Part("Light Bar", new Vector3(1.1f, 0.12f, 0.3f), new Vector3(0f, 1.55f, -0.2f), white);
+        }
 
         Material blue = glowMaterial != null ? new Material(glowMaterial) : null;
         if (blue != null)
@@ -75,16 +110,16 @@ public class PoliceDispatch : MonoBehaviour
             blue.SetColor("_MainColor", new Color(0.2f, 0.4f, 1f));
             if (blue.HasProperty("_EmissionColor")) blue.SetColor("_EmissionColor", new Color(0.2f, 0.4f, 1f));
         }
-        glowA = Part("Blue L", new Vector3(0.35f, 0.14f, 0.28f), new Vector3(-0.35f, 1.67f, -0.2f), blue);
-        glowB = Part("Blue R", new Vector3(0.35f, 0.14f, 0.28f), new Vector3(0.35f, 1.67f, -0.2f), blue);
-        blueA = BlueLight(new Vector3(-0.4f, 1.9f, -0.2f));
-        blueB = BlueLight(new Vector3(0.4f, 1.9f, -0.2f));
+        glowA = Part("Blue L", new Vector3(0.38f, 0.14f, 0.26f), new Vector3(-0.3f, lightY, lightZ), blue);
+        glowB = Part("Blue R", new Vector3(0.38f, 0.14f, 0.26f), new Vector3(0.3f, lightY, lightZ), blue);
+        blueA = BlueLight(new Vector3(-0.4f, lightY + 0.3f, lightZ));
+        blueB = BlueLight(new Vector3(0.4f, lightY + 0.3f, lightZ));
         foreach (float side in new[] { -0.6f, 0.6f })
         {
-            Part("Headlight", new Vector3(0.28f, 0.12f, 0.03f), new Vector3(side, 0.55f, 2.2f), glowMaterial);
+            if (!model) Part("Headlight", new Vector3(0.28f, 0.12f, 0.03f), new Vector3(side, 0.55f, front), glowMaterial);
             var l = new GameObject("Beam").AddComponent<Light>();
             l.transform.SetParent(car.transform, false);
-            l.transform.localPosition = new Vector3(side, 0.55f, 2.3f);
+            l.transform.localPosition = new Vector3(side, 0.55f, front + 0.1f);
             l.transform.localRotation = Quaternion.Euler(5f, 0f, 0f);
             l.type = LightType.Spot;
             l.spotAngle = 65f;
@@ -93,7 +128,7 @@ public class PoliceDispatch : MonoBehaviour
         }
         var col = car.AddComponent<BoxCollider>();
         col.center = new Vector3(0f, 0.75f, 0f);
-        col.size = new Vector3(1.8f, 1.5f, 4.4f);
+        col.size = model ? new Vector3(1.95f, 1.5f, 5.2f) : new Vector3(1.8f, 1.5f, 4.4f);
         car.AddComponent<Rigidbody>().isKinematic = true;
 
         if (siren != null)
