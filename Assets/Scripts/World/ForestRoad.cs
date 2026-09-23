@@ -129,7 +129,22 @@ public class ForestRoad : MonoBehaviour
 
     // A tree model broken into one piece per material, pivot at the bottom centre.
     class TreePart { public Vector3[] v, n; public Vector2[] uv; public int[] tris; public Material mat; }
-    class BakedTree { public List<TreePart> parts; public float height, radius, weight; public Vector2 heightRange; }
+    class BakedTree
+    {
+        public List<TreePart> parts;
+        public GameObject prefab;           // used as is when its mesh can't be read
+        public Vector3 foot;
+        public float height, radius, weight;
+        public Vector2 heightRange;
+    }
+
+    // Fallback when the scene has no tree list: the Retro Tree Pack in Resources/RetroTrees.
+    const string TreePackPath = "RetroTrees";
+    static readonly (string name, float weight, float min, float max)[] DefaultTrees =
+    {
+        ("tree_rt_1", 3f, 6f, 11f), ("tree_rt_3", 3f, 8f, 14f), ("tree_rt_2_1", 1.5f, 9f, 15f), ("tree_rt_2", 1.5f, 9f, 15f),
+        ("tree_rt_4", 0.6f, 9f, 13f), ("dead_tree_rt_1", 0.7f, 7f, 12f), ("dead_tree_rt_2", 0.7f, 5f, 9f), ("small_tree_rt_1", 1.5f, 1.5f, 3.5f),
+    };
     readonly List<BakedTree> bakedTrees = new List<BakedTree>();
     float treeWeightSum;
 
@@ -355,6 +370,7 @@ public class ForestRoad : MonoBehaviour
                 if (TooCloseToRoad(pos, i, edge + 1f + crown * 0.8f) || InClearing(pos)) continue;
 
                 var m = Matrix4x4.TRS(pos, Quaternion.Euler(0f, Range(0f, 360f), 0f), new Vector3(scale * width, scale, scale * width));
+                if (tree.prefab != null) PlaceTreeCopy(tree, parent, m);
                 foreach (var part in tree.parts)
                 {
                     if (part.mat == null) continue;
@@ -393,21 +409,36 @@ public class ForestRoad : MonoBehaviour
     {
         bakedTrees.Clear();
         treeWeightSum = 0f;
-        if (treeModels == null) return;
+        if (treeMaterials == null || treeMaterials.Length == 0 || System.Array.TrueForAll(treeMaterials, m => m == null))
+            treeMaterials = Resources.LoadAll<Material>(TreePackPath + "/Materials");
+        if (treeModels == null || !System.Array.Exists(treeModels, t => t != null && t.model != null))
+            treeModels = LoadTreePack();
+
         foreach (var tm in treeModels)
         {
             if (tm == null || tm.model == null || tm.weight <= 0f) continue;
             var root = tm.model.transform;
             var parts = new List<TreePart>();
             bool readable = true;
+            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             foreach (var mf in tm.model.GetComponentsInChildren<MeshFilter>(true))
             {
                 var mesh = mf.sharedMesh;
                 if (mesh == null) continue;
-                if (!mesh.isReadable) { readable = false; break; }
+                Matrix4x4 toRoot = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                // Bounds from the mesh bounds (works even when the mesh can't be read).
+                var b = mesh.bounds;
+                for (int c = 0; c < 8; c++)
+                {
+                    var corner = toRoot.MultiplyPoint3x4(b.center + Vector3.Scale(b.extents,
+                        new Vector3((c & 1) == 0 ? -1 : 1, (c & 2) == 0 ? -1 : 1, (c & 4) == 0 ? -1 : 1)));
+                    min = Vector3.Min(min, corner);
+                    max = Vector3.Max(max, corner);
+                }
+                if (!mesh.isReadable) { readable = false; continue; }
                 var renderer = mf.GetComponent<MeshRenderer>();
                 var imported = renderer != null ? renderer.sharedMaterials : null;
-                Matrix4x4 local = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                Matrix4x4 local = toRoot;
                 Matrix4x4 normalMatrix = local.inverse.transpose;
                 var v = mesh.vertices;
                 var nrm = mesh.normals;
@@ -436,24 +467,59 @@ public class ForestRoad : MonoBehaviour
                     parts.Add(new TreePart { v = pv.ToArray(), n = pn.ToArray(), uv = puv.ToArray(), tris = pt, mat = TreeMaterialFor(imported, sub) });
                 }
             }
-            if (!readable)
-            {
-                Debug.LogWarning($"ForestRoad: the mesh of '{tm.model.name}' is not readable. Enable Read/Write in its import settings.");
-                continue;
-            }
-            if (parts.Count == 0) continue;
-
-            // Bounds, then move the pivot to the foot of the trunk.
-            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
-            foreach (var p in parts) foreach (var x in p.v) { min = Vector3.Min(min, x); max = Vector3.Max(max, x); }
             float height = max.y - min.y;
-            if (height < 0.01f) continue;
-            Vector3 foot = new Vector3((min.x + max.x) * 0.5f, min.y, (min.z + max.z) * 0.5f);
-            foreach (var p in parts) for (int k = 0; k < p.v.Length; k++) p.v[k] -= foot;
-            float radius = Mathf.Max(max.x - min.x, max.z - min.z) * 0.5f;
+            if (height < 0.01f || float.IsInfinity(height)) continue;
 
-            bakedTrees.Add(new BakedTree { parts = parts, height = height, radius = radius, weight = tm.weight, heightRange = tm.height });
+            // Move the pivot to the foot of the trunk.
+            Vector3 foot = new Vector3((min.x + max.x) * 0.5f, min.y, (min.z + max.z) * 0.5f);
+            float radius = Mathf.Max(max.x - min.x, max.z - min.z) * 0.5f;
+            var baked = new BakedTree { foot = foot, height = height, radius = radius, weight = tm.weight, heightRange = tm.height };
+            if (readable && parts.Count > 0)
+            {
+                foreach (var p in parts) for (int k = 0; k < p.v.Length; k++) p.v[k] -= foot;
+                baked.parts = parts;
+            }
+            else
+            {
+                // Mesh not readable (Read/Write off): place copies of the model instead of merging.
+                baked.parts = new List<TreePart>();
+                baked.prefab = tm.model;
+            }
+            bakedTrees.Add(baked);
             treeWeightSum += tm.weight;
+        }
+        if (bakedTrees.Count == 0) Debug.LogWarning("ForestRoad: no tree models found, using the simple cone trees.");
+    }
+
+    static TreeModel[] LoadTreePack()
+    {
+        var models = Resources.LoadAll<GameObject>(TreePackPath);
+        var list = new List<TreeModel>();
+        foreach (var d in DefaultTrees)
+        {
+            var m = System.Array.Find(models, g => g.name == d.name);
+            if (m != null) list.Add(new TreeModel { model = m, weight = d.weight, height = new Vector2(d.min, d.max) });
+        }
+        return list.ToArray();
+    }
+
+    // A single copy of a tree model (only when its mesh can't be merged).
+    void PlaceTreeCopy(BakedTree tree, Transform parent, Matrix4x4 m)
+    {
+        var holder = new GameObject("Tree").transform;
+        holder.SetParent(parent, false);
+        holder.SetPositionAndRotation(m.GetColumn(3), m.rotation);
+        holder.localScale = m.lossyScale;
+        var copy = Instantiate(tree.prefab, holder);
+        copy.transform.localPosition = -tree.foot;
+        copy.transform.localRotation = Quaternion.identity;
+        copy.transform.localScale = Vector3.one;
+        foreach (var c in copy.GetComponentsInChildren<Collider>()) Destroy(c);
+        foreach (var r in copy.GetComponentsInChildren<MeshRenderer>())
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++) mats[i] = TreeMaterialFor(r.sharedMaterials, i) ?? mats[i];
+            r.sharedMaterials = mats;
         }
     }
 
