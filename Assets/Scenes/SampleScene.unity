@@ -927,6 +927,7 @@ GameObject:
   - component: {fileID: 2100000019}
   - component: {fileID: 2100000020}
   - component: {fileID: 2100000021}
+  - component: {fileID: 2100000022}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1296,7 +1297,7 @@ MonoBehaviour:
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   volume: 0.5
-  radioPosition: {x: 0.16, y: 1.36, z: 4.9}
+  radioPosition: {x: 0, y: 1.36, z: 4.9}
 --- !u!114 &2100000015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1399,8 +1400,8 @@ MonoBehaviour:
   game: {fileID: 2100000003}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   panelBackLeft: {x: -2.062, y: 0.534, z: -0.455}
-  panelFrontLeft: {x: -2.15, y: 0.506, z: -0.455}
-  panelFrontRight: {x: -2.15, y: 0.506, z: -0.265}
+  panelFrontLeft: {x: -2.15, y: 0.6, z: -0.455}
+  panelFrontRight: {x: -2.15, y: 0.6, z: -0.265}
   panelBackRight: {x: -2.062, y: 0.534, z: -0.265}
 --- !u!114 &2100000020
 MonoBehaviour:
@@ -1446,6 +1447,24 @@ MonoBehaviour:
   sound: {fileID: 2100000006}
   smsSound: {fileID: 8300000, guid: 7cbc0ccac0214d4395f4fb1c7213cd59, type: 3}
   ringSound: {fileID: 8300000, guid: 00869181ba04469e9be179388c66371e, type: 3}
+--- !u!114 &2100000022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c530d1b5e81475da47a61e3ea9a344b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  armsModel: {fileID: 919132149155446097, guid: 2c3aa3d0551d9714ebcdd9a7f44c6ede, type: 3}
+  armsMaterial: {fileID: 2100000, guid: fda9b69c788b483f9b7c86df3e28b333, type: 2}
+  flashlightMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  viewOffset: {x: 0, y: -0.02, z: 0}
+  onFoot: {fileID: 2100000008}
+  combat: {fileID: 2100000017}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

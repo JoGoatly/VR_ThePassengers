@@ -20,6 +20,16 @@ public class PlayerCombat : MonoBehaviour
 
     public int Health { get; private set; }
 
+    /// <summary>0 = hands, 1 = bat, 2 = pistol.</summary>
+    public int CurrentWeapon => (int)weapon;
+
+    /// <summary>Something is after the player (fists up).</summary>
+    public bool InDanger => Dweller.Chasers > 0 || Time.time < lastHurtAt + 6f;
+    float lastHurtAt = -100f;
+    public int fistDamage = 1;
+    bool pendingPunch;
+    float punchTime;
+
     enum Weapon { Hands, Bat, Pistol }
     Weapon weapon = Weapon.Hands;
     Transform viewRoot, batModel, gunModel;
@@ -49,6 +59,7 @@ public class PlayerCombat : MonoBehaviour
         if (Health <= 0 || !GameUI.PlayerOutside) return;
         Health = Mathf.Max(0, Health - amount);
         hurtFlash = 1f;
+        lastHurtAt = Time.time;
         Play(hurt, 1f);
         if (Health <= 0) deathAt = Time.time + 1.6f;
     }
@@ -108,6 +119,20 @@ public class PlayerCombat : MonoBehaviour
                 break;
             }
         }
+        // A punch lands a moment after the click.
+        if (pendingPunch && Time.time - punchTime > 0.16f)
+        {
+            pendingPunch = false;
+            var cam = Camera.main.transform;
+            foreach (var c in Physics.OverlapSphere(cam.position + cam.forward * 1.0f, 0.7f))
+            {
+                var d = c.GetComponentInParent<Dweller>();
+                if (d == null) continue;
+                d.TakeHit(fistDamage, cam.forward);
+                Play(hit, 0.8f);
+                break;
+            }
+        }
         AnimateViewModels();
     }
 
@@ -121,6 +146,7 @@ public class PlayerCombat : MonoBehaviour
                 swingTime = Time.time;
                 pendingBatHit = true;
                 Play(swing, 0.8f);
+                if (Arms != null) Arms.Swing();
                 break;
             case Weapon.Pistol:
                 cooldown = 0.35f;
@@ -136,7 +162,12 @@ public class PlayerCombat : MonoBehaviour
                 }
                 break;
             default:
-                cooldown = 0.5f;
+                // Fists.
+                cooldown = 0.45f;
+                pendingPunch = true;
+                punchTime = Time.time;
+                Play(swing, 0.5f);
+                if (Arms != null) Arms.Punch();
                 break;
         }
     }
@@ -197,11 +228,39 @@ public class PlayerCombat : MonoBehaviour
         muzzle.enabled = false;
     }
 
+    FirstPersonArms Arms => FirstPersonArms.Instance != null && FirstPersonArms.Instance.Ready ? FirstPersonArms.Instance : null;
+
     void AnimateViewModels()
     {
         if (viewRoot == null) return;
+        // The arms were rebuilt (and took the weapons with them): build the weapons again.
+        if (batModel == null || gunModel == null)
+        {
+            Destroy(viewRoot.gameObject);
+            viewRoot = null;
+            return;
+        }
         batModel.gameObject.SetActive(weapon == Weapon.Bat);
         gunModel.gameObject.SetActive(weapon == Weapon.Pistol);
+
+        // With the arms: bat and pistol sit in the right hand and move with the animations.
+        var arms = Arms;
+        if (arms != null)
+        {
+            if (batModel.parent != arms.RightGrip)
+            {
+                batModel.SetParent(arms.RightGrip, false);
+                batModel.localPosition = new Vector3(0f, 0.02f, 0f);
+                batModel.localRotation = Quaternion.Euler(25f, 0f, 0f);   // bat pointing up, a bit forward
+                gunModel.SetParent(arms.RightGrip, false);
+                gunModel.localRotation = Quaternion.identity;
+            }
+            recoil = Mathf.MoveTowards(recoil, 0f, Time.deltaTime * 6f);
+            gunModel.localPosition = new Vector3(0f, 0.03f + recoil * 0.015f, 0.02f - recoil * 0.04f);
+            gunModel.localRotation = Quaternion.Euler(-recoil * 14f, 0f, 0f);
+            if (muzzle != null && recoil < 0.75f) muzzle.enabled = false;
+            return;
+        }
 
         float s = Time.time - swingTime;
         float swingAngle = s >= 0f && s < 0.35f ? Mathf.Sin(s / 0.35f * Mathf.PI) * 80f : 0f;

@@ -22,7 +22,7 @@ public class BusRadio : MonoBehaviour
 
     [Header("Device (bus space)")]
     [Tooltip("Where the radio sits (bus space): right of the steering wheel")]
-    public Vector3 radioPosition = new Vector3(0.16f, 1.36f, 4.9f);
+    public Vector3 radioPosition = new Vector3(0.0f, 1.36f, 4.9f);
     public Vector3 viewerPosition = new Vector3(-0.83f, 1.72f, 4.3f);
     public Vector2 screenSize = new Vector2(0.24f, 0.09f);
     public Material caseMaterial;
