@@ -402,7 +402,8 @@ public class MainMenu : MonoBehaviour
 
     static void Label(Rect v, string s, GUIStyle style, Color color, TextAnchor anchor, bool wrap = false)
     {
-        style.normal.textColor = color;
+        // Same colour in every state, so text does not light up under the mouse.
+        style.normal.textColor = style.hover.textColor = style.active.textColor = style.focused.textColor = color;
         style.alignment = anchor;
         style.wordWrap = wrap;
         GUI.Label(RetroGUI.R(v.x, v.y, v.width, v.height), s, style);

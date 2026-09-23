@@ -95,7 +95,7 @@ public static class RetroGUI
     {
         Build();
         var st = small ? labelSmall : bold ? labelBold : label;
-        st.normal.textColor = color;
+        st.normal.textColor = st.hover.textColor = color;
         st.alignment = anchor;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, st);
     }
@@ -103,7 +103,7 @@ public static class RetroGUI
     public static void Header(Rect v, string text, Color color, TextAnchor anchor = TextAnchor.UpperLeft)
     {
         Build();
-        header.normal.textColor = color;
+        header.normal.textColor = header.hover.textColor = color;
         header.alignment = anchor;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, header);
     }
@@ -111,7 +111,7 @@ public static class RetroGUI
     public static void Wrapped(Rect v, string text, Color color)
     {
         Build();
-        wrap.normal.textColor = color;
+        wrap.normal.textColor = wrap.hover.textColor = color;
         GUI.Label(R(v.x, v.y, v.width, v.height), text, wrap);
     }
 
