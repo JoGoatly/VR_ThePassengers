@@ -15,10 +15,10 @@ public class DashDisplay : MonoBehaviour
     public Material screenMaterial;
 
     [Header("Corners in bus model coordinates (front = away from the driver)")]
-    public Vector3 backLeft = new Vector3(-2.096f, 0.502f, -0.455f);
-    public Vector3 frontLeft = new Vector3(-2.165f, 0.514f, -0.455f);
-    public Vector3 frontRight = new Vector3(-2.165f, 0.514f, -0.265f);
-    public Vector3 backRight = new Vector3(-2.096f, 0.502f, -0.265f);
+    public Vector3 panelBackLeft = new Vector3(-2.062f, 0.534f, -0.455f);
+    public Vector3 panelFrontLeft = new Vector3(-2.150f, 0.506f, -0.455f);
+    public Vector3 panelFrontRight = new Vector3(-2.150f, 0.506f, -0.265f);
+    public Vector3 panelBackRight = new Vector3(-2.062f, 0.534f, -0.265f);
 
     const int W = 128, H = 52;
     PixelCanvas canvas;
@@ -50,8 +50,8 @@ public class DashDisplay : MonoBehaviour
         if (!TryModelToBus(out Matrix4x4 m)) { Debug.LogWarning("DashDisplay: bus model parts not found.", this); return; }
 
         Vector3 up = new Vector3(0f, 0.004f, 0f);   // just above the panel
-        Vector3 a = m.MultiplyPoint3x4(backLeft + up), b = m.MultiplyPoint3x4(frontLeft + up);
-        Vector3 c = m.MultiplyPoint3x4(frontRight + up), d = m.MultiplyPoint3x4(backRight + up);
+        Vector3 a = m.MultiplyPoint3x4(panelBackLeft + up), b = m.MultiplyPoint3x4(panelFrontLeft + up);
+        Vector3 c = m.MultiplyPoint3x4(panelFrontRight + up), d = m.MultiplyPoint3x4(panelBackRight + up);
         var mb = new MeshKit.Builder();
         // Both windings, so it shows whatever way the model is mirrored.
         mb.Quad(a, b, c, d, new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));

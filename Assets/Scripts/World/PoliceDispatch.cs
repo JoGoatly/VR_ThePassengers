@@ -68,6 +68,8 @@ public class PoliceDispatch : MonoBehaviour
         handled = false;
 
         car = new GameObject("Police Car");
+        if (policeModel == null) policeModel = Resources.Load<GameObject>(OncomingTraffic.CarPackPath + "/Car 05/Car5_Police");
+        if (policeTexture == null) policeTexture = Resources.Load<Texture2D>(OncomingTraffic.CarPackPath + "/Car 05/car5_police");
         bool model = policeModel != null;
         float front = 2.2f, lightY = 1.67f, lightZ = -0.2f;
         if (model)
@@ -76,7 +78,7 @@ public class PoliceDispatch : MonoBehaviour
             var m = Instantiate(policeModel, car.transform);
             m.transform.localPosition = Vector3.zero;
             m.transform.localRotation = Quaternion.identity;
-            m.transform.localScale *= modelScale;
+            OncomingTraffic.FitToRealSize(m, car.transform, modelScale);
             if (carMaterial != null)
             {
                 var mat = new Material(carMaterial) { name = "Police Car" };
