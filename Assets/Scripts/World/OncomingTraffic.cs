@@ -48,7 +48,7 @@ public class OncomingTraffic : MonoBehaviour
         public AudioSource sound;
     }
 
-    readonly List<Car> cars = new List<Car>();
+    readonly List<Car> driving = new List<Car>();
     float nextCarAt;
     Material tailMaterial;
 
@@ -81,9 +81,9 @@ public class OncomingTraffic : MonoBehaviour
         if (road.TrySample(busS, out Vector3 bp, out Vector3 bt))
             busLateral = Vector3.Dot(bus.transform.position - bp, Vector3.Cross(Vector3.up, bt).normalized);
 
-        for (int i = cars.Count - 1; i >= 0; i--)
+        for (int i = driving.Count - 1; i >= 0; i--)
         {
-            var car = cars[i];
+            var car = driving[i];
             // Brake if the bus blocks the lane just ahead.
             float gap = car.s - busS;
             bool blocked = busLateral < 0.3f && gap > 0f && gap < 30f;
@@ -93,7 +93,7 @@ public class OncomingTraffic : MonoBehaviour
             if (car.s < busS - 60f || !road.TrySample(car.s, out Vector3 p, out Vector3 t))
             {
                 Destroy(car.go);
-                cars.RemoveAt(i);
+                driving.RemoveAt(i);
                 continue;
             }
             Vector3 right = Vector3.Cross(Vector3.up, t).normalized;
@@ -155,7 +155,7 @@ public class OncomingTraffic : MonoBehaviour
         }
         Vector3 right = Vector3.Cross(Vector3.up, t).normalized;
         root.transform.SetPositionAndRotation(p - right * road.laneWidth * 0.5f, Quaternion.LookRotation(-t));
-        cars.Add(car);
+        driving.Add(car);
     }
 
     readonly Dictionary<Texture2D, Material> paintMaterials = new Dictionary<Texture2D, Material>();
