@@ -453,7 +453,7 @@ public class MainMenu : MonoBehaviour
         // Right column: the help wanted ad.
         var ad = new Rect(x + colW + 10, page.y + 58, pw - colW - 10, 196);
         RetroGUI.Frame(ad, Paper, Ink, 1.5f);
-        Label(new Rect(ad.x + 4, ad.y + 6, ad.width - 8, 24), Loc.T("FAHRER GESUCHT", "HELP WANTED"), big, Ink, TextAnchor.MiddleCenter);
+        Label(new Rect(ad.x + 2, ad.y + 6, ad.width - 4, 24), Loc.T("FAHRER GESUCHT", "HELP WANTED"), title, Ink, TextAnchor.MiddleCenter);
         Label(new Rect(ad.x + 6, ad.y + 34, ad.width - 12, 158), Loc.T(
             "Verkehrsbetriebe Schwarzwald suchen ab SOFORT Busfahrer/in für die Nachtlinie 13.\n\n" +
             "Dienst: 23:40 - 06:00 Uhr\nKeine Erfahrung nötig.\nGute Bezahlung.\n\n" +
@@ -469,12 +469,12 @@ public class MainMenu : MonoBehaviour
             var m = GUI.matrix;
             var centre = RetroGUI.R(ad.center.x, ad.y + 150, 0, 0).position;
             GUIUtility.RotateAroundPivot(-14f, centre);
-            var stamp = new Rect(ad.center.x - 55, ad.y + 136, 110, 28);
+            var stamp = new Rect(ad.center.x - 64, ad.y + 136, 128, 28);
             RetroGUI.Fill(new Rect(stamp.x, stamp.y, stamp.width, 2), Stamp);
             RetroGUI.Fill(new Rect(stamp.x, stamp.yMax - 2, stamp.width, 2), Stamp);
             RetroGUI.Fill(new Rect(stamp.x, stamp.y, 2, stamp.height), Stamp);
             RetroGUI.Fill(new Rect(stamp.xMax - 2, stamp.y, 2, stamp.height), Stamp);
-            Label(stamp, Loc.T("EINGESTELLT", "HIRED"), big, Stamp, TextAnchor.MiddleCenter);
+            Label(stamp, Loc.T("EINGESTELLT", "HIRED"), title, Stamp, TextAnchor.MiddleCenter);
             GUI.matrix = m;
         }
 

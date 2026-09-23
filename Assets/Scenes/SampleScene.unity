@@ -1399,10 +1399,10 @@ MonoBehaviour:
   bus: {fileID: 1500000004}
   game: {fileID: 2100000003}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
-  panelBackLeft: {x: -2.062, y: 0.534, z: -0.455}
-  panelFrontLeft: {x: -2.15, y: 0.6, z: -0.455}
-  panelFrontRight: {x: -2.15, y: 0.6, z: -0.265}
-  panelBackRight: {x: -2.062, y: 0.534, z: -0.265}
+  panelBackLeft: {x: -2.062, y: 0.534, z: -0.44}
+  panelFrontLeft: {x: -2.108, y: 0.568, z: -0.44}
+  panelFrontRight: {x: -2.108, y: 0.568, z: -0.28}
+  panelBackRight: {x: -2.062, y: 0.534, z: -0.28}
 --- !u!114 &2100000020
 MonoBehaviour:
   m_ObjectHideFlags: 0
