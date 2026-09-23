@@ -276,9 +276,10 @@ public class Phone : MonoBehaviour
             var a = PhoneContent.News[i];
             if (a.night > Progress.Day) continue;
             bool isNew = !readArticles.Contains(i);
-            if (Line(new Rect(c.x, y, c.width, 24), (isNew ? "* " : "") + Loc.T(a.titleDe, a.titleEn), isNew))
+            if (WrapLine(new Rect(c.x, y, c.width, 24), (isNew ? "* " : "") + Loc.T(a.titleDe, a.titleEn), isNew))
             {
                 article = i;
+                articleScroll = 0f;
                 readArticles.Add(i);
                 page = Page.Article;
             }
@@ -286,12 +287,57 @@ public class Phone : MonoBehaviour
         }
     }
 
+    float articleScroll;
+
+    // Title and text in a small font, scrollable with the arrows (or the mouse wheel).
+    // Like Line, but the text may wrap onto two lines (news headlines).
+    bool WrapLine(Rect r, string text, bool highlight)
+    {
+        bool hover = RetroGUI.R(r.x, r.y, r.width, r.height).Contains(Event.current.mousePosition);
+        if (hover || highlight) RetroGUI.Fill(r, hover ? Ink : LcdDark);
+        GUI.Label(RetroGUI.R(r.x + 2, r.y + 1, r.width - 4, r.height - 2), text, TinyWrap(hover ? Lcd : Ink));
+        return GUI.Button(RetroGUI.R(r.x, r.y, r.width, r.height), GUIContent.none, GUIStyle.none);
+    }
+
     void DrawArticle(Rect c)
     {
         var a = PhoneContent.News[article];
-        GUI.Label(RetroGUI.R(c.x, c.y, c.width, 30), Loc.T(a.titleDe, a.titleEn), SmallWrap(Ink));
-        RetroGUI.Fill(new Rect(c.x, c.y + 30, c.width, 1), InkDim);
-        GUI.Label(RetroGUI.R(c.x, c.y + 34, c.width, c.height - 34), Loc.T(a.textDe, a.textEn), SmallWrap(Ink));
+        var style = TinyWrap(Ink);
+        string text = Loc.T(a.titleDe, a.titleEn).ToUpperInvariant() + "\n\n" + Loc.T(a.textDe, a.textEn);
+        var view = RetroGUI.R(c.x, c.y, c.width - 10, c.height);
+        float contentHeight = style.CalcHeight(new GUIContent(text), view.width);
+        float maxScroll = Mathf.Max(0f, contentHeight - view.height);
+
+        var mouse = Mouse.current;
+        if (mouse != null && view.Contains(Event.current.mousePosition) && Event.current.type == EventType.Repaint)
+            articleScroll -= mouse.scroll.ReadValue().y * 0.25f;
+        articleScroll = Mathf.Clamp(articleScroll, 0f, maxScroll);
+
+        GUI.BeginGroup(view);
+        GUI.Label(new Rect(0, -articleScroll, view.width, contentHeight + 4), text, style);
+        GUI.EndGroup();
+
+        if (maxScroll > 0f)
+        {
+            float step = 10f * RetroGUI.Scale;
+            if (Line(new Rect(c.xMax - 9, c.y, 9, 12), "^")) articleScroll = Mathf.Max(0f, articleScroll - step);
+            if (Line(new Rect(c.xMax - 9, c.yMax - 12, 9, 12), "v")) articleScroll = Mathf.Min(maxScroll, articleScroll + step);
+        }
+    }
+
+    GUIStyle tinyWrap;
+    float tinyWrapScale;
+    GUIStyle TinyWrap(Color c)
+    {
+        if (tinyWrap == null || !Mathf.Approximately(tinyWrapScale, RetroGUI.Scale))
+        {
+            tinyWrapScale = RetroGUI.Scale;
+            tinyWrap = new GUIStyle(GUI.skin.label) { fontSize = Mathf.Max(8, Mathf.RoundToInt(6.2f * RetroGUI.Scale)), wordWrap = true, clipping = TextClipping.Overflow };
+            tinyWrap.padding = new RectOffset(0, 0, 0, 0);
+            tinyWrap.margin = new RectOffset(0, 0, 0, 0);
+        }
+        tinyWrap.normal.textColor = tinyWrap.hover.textColor = c;
+        return tinyWrap;
     }
 
     void DrawContacts(Rect c)

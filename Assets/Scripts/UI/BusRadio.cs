@@ -21,7 +21,8 @@ public class BusRadio : MonoBehaviour
     public AudioClip tuningStatic;
 
     [Header("Device (bus space)")]
-    public Vector3 position = new Vector3(0.1f, 1.36f, 4.9f);
+    [Tooltip("Where the radio sits (bus space): right of the steering wheel")]
+    public Vector3 radioPosition = new Vector3(0.16f, 1.36f, 4.9f);
     public Vector3 viewerPosition = new Vector3(-0.83f, 1.72f, 4.3f);
     public Vector2 screenSize = new Vector2(0.24f, 0.09f);
     public Material caseMaterial;
@@ -70,8 +71,8 @@ public class BusRadio : MonoBehaviour
     {
         var root = new GameObject("Radio").transform;
         root.SetParent(bus.transform, false);
-        root.localPosition = position;
-        root.localRotation = Quaternion.LookRotation(position - viewerPosition);
+        root.localPosition = radioPosition;
+        root.localRotation = Quaternion.LookRotation(radioPosition - viewerPosition);
 
         float w = screenSize.x, h = screenSize.y;
         var c = MeshKit.Spawn("Case", root, MeshKit.Box(new Vector3(w + 0.03f, h + 0.03f, 0.08f), 0.5f), caseMaterial, root.position, root.rotation, false);

@@ -100,7 +100,7 @@ public class DriverCamera : MonoBehaviour
         if (mouse != null)
         {
             float wheel = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(wheel) > 0.01f) zoomTarget = Mathf.Clamp01(zoomTarget + Mathf.Sign(wheel) * zoomStep);
+            if (Mathf.Abs(wheel) > 0.01f && !GameUI.PhoneOpen) zoomTarget = Mathf.Clamp01(zoomTarget + Mathf.Sign(wheel) * zoomStep);
         }
         float wanted = mouse != null && mouse.rightButton.isPressed ? 1f : zoomTarget;
         zoom = Mathf.Lerp(zoom, wanted, 1f - Mathf.Exp(-zoomSpeed * Time.deltaTime));

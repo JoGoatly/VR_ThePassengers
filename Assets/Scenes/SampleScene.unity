@@ -1249,7 +1249,7 @@ MonoBehaviour:
   modelScale: 0.7
   bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
   glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
-  driveSound: {fileID: 8300000, guid: 9edcd4bcd08acf0459b5ca43e2f8604a, type: 3}
+  driveSound: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
 --- !u!114 &2100000013
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1296,6 +1296,7 @@ MonoBehaviour:
   caseMaterial: {fileID: 2100000, guid: 5bb9b3139bfb4e41a0608b0c11e26d57, type: 2}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
   volume: 0.5
+  radioPosition: {x: 0.16, y: 1.36, z: 4.9}
 --- !u!114 &2100000015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1313,6 +1314,7 @@ MonoBehaviour:
   road: {fileID: 2000000003}
   radio: {fileID: 2100000014}
   menu: {fileID: 2100000011}
+  titleSound: {fileID: 8300000, guid: f3f3360ae4c04975aaef3be75f6d3986, type: 3}
 --- !u!114 &2100000016
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1396,6 +1398,10 @@ MonoBehaviour:
   bus: {fileID: 1500000004}
   game: {fileID: 2100000003}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+  panelBackLeft: {x: -2.062, y: 0.534, z: -0.455}
+  panelFrontLeft: {x: -2.15, y: 0.506, z: -0.455}
+  panelFrontRight: {x: -2.15, y: 0.506, z: -0.265}
+  panelBackRight: {x: -2.062, y: 0.534, z: -0.265}
 --- !u!114 &2100000020
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -13,6 +13,9 @@ public class DayManager : MonoBehaviour
     public BusRadio radio;
     public MainMenu menu;
 
+    [Tooltip("Sound of the big 'TAG 1' title when the shift starts")]
+    public AudioClip titleSound;
+
     [Header("Money")]
     public int correctPay = 25;
     public int wrongFine = 40;
@@ -26,6 +29,7 @@ public class DayManager : MonoBehaviour
 
     BusStop depot;
     bool quotaDone, ended;
+    float titleAt = -1f;
     float nextHijackAt;
 
     public int Quota => QuotaFor(Progress.Day);
@@ -64,6 +68,13 @@ public class DayManager : MonoBehaviour
     void Update()
     {
         if (ended || game == null || bus == null || road == null || GameUI.MenuOpen) return;
+        if (titleAt < 0f)
+        {
+            // The shift begins: show the day big at the top.
+            titleAt = Time.time;
+            var sm = FindAnyObjectByType<SoundManager>();
+            if (sm != null && titleSound != null && Camera.main != null) sm.PlayWorld(titleSound, Camera.main.transform.position, 0.9f, 0f);
+        }
         float busS = road.BusArcLength;
 
         if (!quotaDone && game.Decisions >= Quota && game.CurrentPhase == BoardingManager.Phase.Driving)
@@ -135,9 +146,44 @@ public class DayManager : MonoBehaviour
         if (menu != null) menu.ShowShiftEnd(wage);
     }
 
+    GUIStyle titleStyle, subStyle;
+    float titleScale;
+
+    // "TAG 1" big and red at the top for a few seconds when the shift starts.
+    void DrawDayTitle()
+    {
+        float t = Time.time - titleAt;
+        const float duration = 5f;
+        if (titleAt < 0f || t > duration) return;
+        float a = t < 0.9f ? 0f : t < 1.6f ? (t - 0.9f) / 0.7f : t > duration - 1.2f ? (duration - t) / 1.2f : 1f;
+        if (a <= 0f) return;
+        if (titleStyle == null || !Mathf.Approximately(titleScale, RetroGUI.Scale))
+        {
+            titleScale = RetroGUI.Scale;
+            titleStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(34 * titleScale), fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            subStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(8 * titleScale), alignment = TextAnchor.MiddleCenter };
+        }
+        float w = RetroGUI.VirtualWidth;
+        // Dark band behind it.
+        RetroGUI.Fill(new Rect(0, 22, w, 64), new Color(0f, 0f, 0f, 0.55f * a));
+        string title = Loc.T($"TAG {Progress.Day}", $"DAY {Progress.Day}");
+        // Letter spacing and a slight tremble.
+        string spaced = string.Join(" ", title.ToCharArray());
+        float shake = t < 2.2f ? (2.2f - t) * 1.5f : 0.3f;
+        Vector2 j = new Vector2(Random.Range(-shake, shake), Random.Range(-shake, shake));
+        titleStyle.normal.textColor = new Color(0f, 0f, 0f, a);
+        GUI.Label(RetroGUI.R(j.x + 2, 26 + j.y + 2, w, 44), spaced, titleStyle);
+        titleStyle.normal.textColor = new Color(0.78f, 0.05f, 0.03f, a);
+        GUI.Label(RetroGUI.R(j.x, 26 + j.y, w, 44), spaced, titleStyle);
+        var date = CitizenRegistry.Today;
+        subStyle.normal.textColor = new Color(0.8f, 0.75f, 0.68f, a * 0.9f);
+        GUI.Label(RetroGUI.R(0, 68, w, 14), Loc.T($"NACHTLINIE 13  -  {date:dd.MM.yyyy}  -  23:40", $"NIGHT LINE 13  -  {date:dd.MM.yyyy}  -  11:40 PM"), subStyle);
+    }
+
     void OnGUI()
     {
         if (GameUI.MenuOpen || game == null) return;
+        DrawDayTitle();
         string text = Loc.T($"NACHT {Progress.Day}/{Progress.LastDay}", $"NIGHT {Progress.Day}/{Progress.LastDay}") +
                       $"   {Mathf.Min(game.Decisions, Quota)}/{Quota}   {Progress.Money} €";
         RetroGUI.ShadowLabel(new Rect(8, 6, 220, 14), text, new Color(0.85f, 0.8f, 0.7f), true, TextAnchor.UpperLeft);

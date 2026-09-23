@@ -57,6 +57,7 @@ public class OncomingTraffic : MonoBehaviour
         if (road == null) road = FindAnyObjectByType<ForestRoad>();
         if (bus == null) bus = FindAnyObjectByType<BusController>();
         nextCarAt = Time.time + firstCarAfter;
+        LoadCarPack();
         if (glowMaterial != null)
         {
             tailMaterial = new Material(glowMaterial) { name = "Tail Light" };
@@ -114,7 +115,7 @@ public class OncomingTraffic : MonoBehaviour
         {
             var model = Instantiate(pick.model, root.transform);
             model.transform.localRotation = Quaternion.Euler(0f, modelYaw, 0f);
-            model.transform.localScale *= modelScale;
+            FitToRealSize(model, root.transform, modelScale);
             Texture2D paint = pick.paints != null && pick.paints.Length > 0 ? pick.paints[Random.Range(0, pick.paints.Length)] : null;
             ApplyPaint(model, paint);
             foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
@@ -149,13 +150,58 @@ public class OncomingTraffic : MonoBehaviour
             car.sound.maxDistance = 90f;
             car.sound.rolloffMode = AudioRolloffMode.Linear;
             car.sound.dopplerLevel = 1.2f;
-            car.sound.pitch = Random.Range(0.9f, 1.15f);
+            car.sound.pitch = Random.Range(1.1f, 1.35f);
             car.sound.volume = 0f;
             car.sound.Play();
         }
         Vector3 right = Vector3.Cross(Vector3.up, t).normalized;
         root.transform.SetPositionAndRotation(p - right * road.laneWidth * 0.5f, Quaternion.LookRotation(-t));
         driving.Add(car);
+    }
+
+    public const string CarPackPath = "PSX_Style_Cars_by_GGBot";
+
+    // If the models are not assigned in the inspector, take them straight from the car pack
+    // (Assets/Resources/PSX_Style_Cars_by_GGBot) with all their paints.
+    void LoadCarPack()
+    {
+        bool anyModel = cars != null && System.Array.Exists(cars, c => c != null && c.model != null);
+        if (anyModel) return;
+        var list = new List<CarModel>();
+        foreach (var model in Resources.LoadAll<GameObject>(CarPackPath))
+        {
+            string n = model.name;
+            if (!n.StartsWith("Car") || n.Contains("Shadow") || n.Contains("Police")) continue;
+            list.Add(new CarModel { model = model, paints = PaintsFor(model) });
+        }
+        if (list.Count > 0) cars = list.ToArray();
+        Debug.Log($"OncomingTraffic: {list.Count} car models loaded from Resources/{CarPackPath}.");
+    }
+
+    // Paints of a model: textures in the same pack whose name starts like the model ("car5", "car5_grey"...).
+    static Texture2D[] PaintsFor(GameObject model)
+    {
+        string key = model.name.ToLowerInvariant();      // "car", "car2", "car5_taxi"
+        var all = Resources.LoadAll<Texture2D>(CarPackPath);
+        var paints = new List<Texture2D>();
+        foreach (var t in all)
+        {
+            string n = t.name.ToLowerInvariant();
+            if (n.Contains("snow") || n.Contains("shadow") || n.Contains("wheel")) continue;
+            bool match = key.Contains("_") ? n == key : (n == key || (n.StartsWith(key + "_") && !n.Contains("police") && !n.Contains("taxi")));
+            if (match) paints.Add(t);
+        }
+        return paints.ToArray();
+    }
+
+    /// <summary>Scales a pack model to real size, whatever units it was imported with.</summary>
+    public static void FitToRealSize(GameObject model, Transform root, float packScale)
+    {
+        model.transform.localScale = Vector3.one;
+        float length = LocalBounds(root).size.z;
+        // The pack is modelled at about 1.5x real size in metres; if it came in as centimetres, fix that too.
+        float units = length < 1f ? 100f : 1f;
+        model.transform.localScale = Vector3.one * packScale * units;
     }
 
     readonly Dictionary<Texture2D, Material> paintMaterials = new Dictionary<Texture2D, Material>();
