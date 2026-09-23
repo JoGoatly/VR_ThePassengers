@@ -92,7 +92,7 @@ public class MainMenu : MonoBehaviour
         if (screen == Page.Playing)
         {
             // Esc: pause (not while typing on the computer or choosing a question).
-            if (kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping && !GameUI.DialogueOpen)
+            if (kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping && !GameUI.DialogueOpen && !GameUI.NoteOpen)
             {
                 settingsReturn = Page.Paused;
                 Show(Page.Paused);

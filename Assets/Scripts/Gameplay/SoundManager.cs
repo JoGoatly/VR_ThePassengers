@@ -110,6 +110,9 @@ public class SoundManager : MonoBehaviour
         if (scare != null) ui.PlayOneShot(scare, 3.5f);
     }
 
+    /// <summary>Any clip at a place in the world.</summary>
+    public void PlayWorld(AudioClip clip, Vector3 position, float volume = 1f, float spatial = 1f) => PlayAt(clip, position, volume, spatial);
+
     /// <summary>Knocking on a window at the given position.</summary>
     public void PlayKnock(Vector3 position) => PlayAt(knock, position, 1f, 0.85f);
 

@@ -14,11 +14,14 @@ public static class GameUI
     /// <summary>The talk menu (T) is open: mouse cursor is free to pick a question.</summary>
     public static bool DialogueOpen;
 
+    /// <summary>A found note is being read.</summary>
+    public static bool NoteOpen;
+
     /// <summary>Start menu / intro is shown, the game is paused.</summary>
     public static bool MenuOpen;
 
     /// <summary>Driving input is ignored (menu, typing, talking or not in the driver's seat).</summary>
-    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen;
+    public static bool AnyOpen => MenuOpen || TerminalTyping || PlayerOutside || DialogueOpen || NoteOpen;
 }
 
 /// <summary>

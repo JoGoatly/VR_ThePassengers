@@ -407,7 +407,7 @@ public class BusController : MonoBehaviour
 
     void OnGUI()
     {
-        if (!showSpeedometer) return;
+        if (!showSpeedometer || GameUI.PlayerOutside || GameUI.MenuOpen) return;
         var style = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold };
         style.normal.textColor = Color.black;
         string lockText = DriveLockReason != null ? "  [" + DriveLockReason.ToUpperInvariant() + "]" : "";

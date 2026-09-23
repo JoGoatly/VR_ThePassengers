@@ -921,6 +921,9 @@ GameObject:
   - component: {fileID: 2100000013}
   - component: {fileID: 2100000014}
   - component: {fileID: 2100000015}
+  - component: {fileID: 2100000016}
+  - component: {fileID: 2100000017}
+  - component: {fileID: 2100000018}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1258,6 +1261,74 @@ MonoBehaviour:
   road: {fileID: 2000000003}
   radio: {fileID: 2100000014}
   menu: {fileID: 2100000011}
+--- !u!114 &2100000016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 362cea1b69d544759f97ec8dba2c5a4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  wood: {fileID: 2100000, guid: 1ad9a653a54143fd9559939f043100a2, type: 2}
+  concrete: {fileID: 2100000, guid: a329d9e2ea974e1e8c099c1fbd33d309, type: 2}
+  metal: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  gravel: {fileID: 2100000, guid: 1898e772ef9a42ea8344a87992f18d2c, type: 2}
+  glow: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
+  dwellers:
+  - {fileID: 919132149155446097, guid: 2b45732afd9fab048a95a510dea09018, type: 3}
+  - {fileID: 919132149155446097, guid: da37371145430574eb6ee23d46ea7536, type: 3}
+  - {fileID: 919132149155446097, guid: 448aa17258a7d7f4fa148916333b0655, type: 3}
+  - {fileID: 919132149155446097, guid: 429486250b9f5b348a89e1eb55fdb589, type: 3}
+  corpses: []
+  growl: {fileID: 8300000, guid: 20fd31ba28ab4c5c8c19db65bf50c17a, type: 3}
+  hit: {fileID: 8300000, guid: 00d5276639cf4e3c8e1f7ef34e0b38b3, type: 3}
+  vanish: {fileID: 8300000, guid: d7b0d4653ba2492f926c44d12c2f22f1, type: 3}
+  trapdoor: {fileID: 8300000, guid: c758591c026d43a3a6a8a58012a33fec, type: 3}
+  pickupSound: {fileID: 8300000, guid: 7a46eb95ef92466f98fd3fa62bc473bd, type: 3}
+  coinSound: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
+  stopItemChance: 0.3
+--- !u!114 &2100000017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2893d7e6c4343fe91a647a138f282d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onFoot: {fileID: 2100000008}
+  sound: {fileID: 2100000006}
+  batMaterial: {fileID: 2100000, guid: 1ad9a653a54143fd9559939f043100a2, type: 2}
+  gunMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  gunshot: {fileID: 8300000, guid: d3b87955dfd14df8a0c69266a1246aac, type: 3}
+  swing: {fileID: 8300000, guid: dfd6ee3457464a3493fd4ce610bcf705, type: 3}
+  hit: {fileID: 8300000, guid: 00d5276639cf4e3c8e1f7ef34e0b38b3, type: 3}
+  hurt: {fileID: 8300000, guid: ab95be53e42d41d78faa2f346b76f11d, type: 3}
+  emptyClick: {fileID: 8300000, guid: 50353d517ac444d7a48ec32509a239b5, type: 3}
+  maxHealth: 100
+  batDamage: 1
+  pistolDamage: 2
+--- !u!114 &2100000018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7123977d0314c4eb932ba2f61236202, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  paperSound: {fileID: 8300000, guid: 7a46eb95ef92466f98fd3fa62bc473bd, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
