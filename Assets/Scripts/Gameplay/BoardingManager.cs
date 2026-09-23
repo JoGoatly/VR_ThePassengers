@@ -74,15 +74,17 @@ public class BoardingManager : MonoBehaviour
     Camera portraitCamera;
     System.Random rng;
     int decisions;
+    bool started;
     string toast;
     float toastUntil;
+
+    static string Dispatch => Loc.T("Leitstelle", "Dispatch");
 
     float GameMinutes => 23 * 60 + 40 + Time.timeSinceLevelLoad / 8f;
 
     void Start()
     {
         rng = new System.Random(seed);
-        Registry = new CitizenRegistry(seed);
         if (bus == null) bus = FindAnyObjectByType<BusController>();
         if (road == null) road = FindAnyObjectByType<ForestRoad>();
 
@@ -90,7 +92,14 @@ public class BoardingManager : MonoBehaviour
         var seat = bus.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "DriverSeat");
         driverLocal = seat != null ? bus.transform.InverseTransformPoint(seat.position) : new Vector3(-0.83f, 0f, 4.15f);
         driverLocal.y = 0f;
-        Mail.Received += m => ShowToast("Neue Mail: " + m.Subject);
+        Mail.Received += m => ShowToast(Loc.T("Neue Mail: ", "New mail: ") + m.Subject);
+    }
+
+    // The shift starts when the start menu is closed (the language is known by then).
+    void BeginShift()
+    {
+        started = true;
+        Registry = new CitizenRegistry(seed);
         SendWelcomeMails();
     }
 
@@ -113,6 +122,11 @@ public class BoardingManager : MonoBehaviour
 
     void Update()
     {
+        if (!started)
+        {
+            if (GameUI.MenuOpen) return;
+            BeginShift();
+        }
         RunScheduled();
         UpdateSpawns();
         HandleKeys();
@@ -125,7 +139,7 @@ public class BoardingManager : MonoBehaviour
         }
 
         bool busy = CurrentPhase != Phase.Driving;
-        bus.throttleLockReason = busy ? "Fahrgast an der Tür" : null;
+        bus.throttleLockReason = busy ? Loc.T("Fahrgast an der Tür", "Passenger at the door") : null;
         bus.doorsLocked = busy;
     }
 
@@ -194,40 +208,50 @@ public class BoardingManager : MonoBehaviour
 
     // The first passengers of the night are scripted: two real ones (the first explains the
     // job), then one that is not what it seems.
-    static readonly (Discrepancy truth, string[] lines)[] StoryPassengers =
+    static (Discrepancy truth, string[] lines)[] StoryPassengers => new[]
     {
         (Discrepancy.None, new[]
         {
-            "Oh. Ein neues Gesicht.",
-            "Sie sehen anders aus als der letzte Busfahrer. ...Der war auf einmal nicht mehr da.",
-            "Die wechseln oft auf der 13. Keiner weiß so recht, wohin.",
-            "Na, egal. Hier, mein Ausweis. (E zum Ausblenden)",
-            "Schauen Sie im Computer nach. Unter REGISTER meinen Namen eingeben.",
-            "Geburtsdatum, Ausweisnummer, gültig bis... das muss alles genau stimmen.",
-            "Sie können mich auch etwas fragen. (T)",
-            "Was ich sage, sollte zum Register passen. Sonst stimmt was nicht mit mir.",
-            "Wenn alles passt, lassen Sie mich rein. (J)",
-            "Wenn nicht, schicken Sie mich weg. (N) Ich nehm's Ihnen nicht übel.",
-            "Und lesen Sie Ihre Mails. Die Leitstelle schreibt nicht ohne Grund.",
+            Loc.T("Oh. Ein neues Gesicht.", "Oh. A new face."),
+            Loc.T("Sie sehen anders aus als der letzte Busfahrer. ...Der war auf einmal nicht mehr da.",
+                  "You look different from the last driver. ...He was just gone one day."),
+            Loc.T("Die wechseln oft auf der 13. Keiner weiß so recht, wohin.",
+                  "They change a lot on the 13. Nobody really knows where they go."),
+            Loc.T("Na, egal. Hier, mein Ausweis. (E zum Ausblenden)", "Anyway. Here's my ID. (E to hide it)"),
+            Loc.T("Schauen Sie im Computer nach. Unter REGISTER meinen Namen eingeben.",
+                  "Check it on the computer. Type my name under REGISTER."),
+            Loc.T("Geburtsdatum, Ausweisnummer, gültig bis... das muss alles genau stimmen.",
+                  "Date of birth, ID number, valid until... it all has to match exactly."),
+            Loc.T("Sie können mich auch etwas fragen. (T)", "You can ask me something, too. (T)"),
+            Loc.T("Was ich sage, sollte zum Register passen. Sonst stimmt was nicht mit mir.",
+                  "What I say should match the register. If not, something is wrong with me."),
+            Loc.T("Wenn alles passt, lassen Sie mich rein. (J)", "If everything is fine, let me in. (J)"),
+            Loc.T("Wenn nicht, schicken Sie mich weg. (N) Ich nehm's Ihnen nicht übel.",
+                  "If not, send me away. (N) I won't hold it against you."),
+            Loc.T("Und lesen Sie Ihre Mails. Die Leitstelle schreibt nicht ohne Grund.",
+                  "And read your mails. Dispatch doesn't write without a reason."),
         }),
         (Discrepancy.None, new[]
         {
-            "Abend. Schon wieder ein Neuer, hm?",
-            "Ihr Vorgänger hat zwei Wochen durchgehalten. Der davor nur eine Nacht.",
-            "Seinen Bus haben sie am Waldfriedhof gefunden. Türen offen, Licht an. Keiner drin.",
-            "...Aber Sie machen das bestimmt gut. Hier, mein Ausweis.",
+            Loc.T("Abend. Schon wieder ein Neuer, hm?", "Evening. Another new one, huh?"),
+            Loc.T("Ihr Vorgänger hat zwei Wochen durchgehalten. Der davor nur eine Nacht.",
+                  "Your predecessor lasted two weeks. The one before him just one night."),
+            Loc.T("Seinen Bus haben sie am Waldfriedhof gefunden. Türen offen, Licht an. Keiner drin.",
+                  "They found his bus at the Waldfriedhof. Doors open, lights on. Nobody inside."),
+            Loc.T("...Aber Sie machen das bestimmt gut. Hier, mein Ausweis.", "...But I'm sure you'll do fine. Here, my ID."),
         }),
         (Discrepancy.NotRegistered, new[]
         {
-            "Guten Abend.",
-            "Ich fahre jeden Abend mit dieser Linie. Seit Jahren schon.",
-            "Die anderen Fahrer kennen mich alle. Sie lassen mich immer einsteigen.",
+            Loc.T("Guten Abend.", "Good evening."),
+            Loc.T("Ich fahre jeden Abend mit dieser Linie. Seit Jahren schon.", "I take this line every night. For years now."),
+            Loc.T("Die anderen Fahrer kennen mich alle. Sie lassen mich immer einsteigen.",
+                  "The other drivers all know me. They always let me on."),
         }),
     };
 
     int NextStoryIndex()
     {
-        for (int i = 0; i < StoryPassengers.Length; i++)
+        for (int i = 0; i < 3; i++)
         {
             if (storyDone.Contains(i)) continue;
             // Still waiting at a stop? Then that one keeps the role.
@@ -292,7 +316,7 @@ public class BoardingManager : MonoBehaviour
             active.CurrentState = Passenger.State.AtDoor;
             CurrentPhase = Phase.AwaitingDecision;
             RenderPortrait(active);
-            ShowToast("Fahrgast zeigt den Ausweis");
+            ShowToast(Loc.T("Fahrgast zeigt den Ausweis", "Passenger shows the ID"));
         }, faceAtEnd: toDriver);
     }
 
@@ -389,28 +413,41 @@ public class BoardingManager : MonoBehaviour
     {
         if (decisions == 2 && knownRules.Add(Discrepancy.Wanted))
         {
-            Schedule(4f, () => Mail.Send("Leitstelle", "NEU: Fahndungsliste im Register",
-                "Ab sofort sind im Einwohnerregister auch Personen mit dem Status GESUCHT markiert.\n\n" +
+            Schedule(4f, () => Mail.Send(Dispatch, Loc.T("NEU: Fahndungsliste im Register", "NEW: Wanted list in the register"),
+                Loc.T("Ab sofort sind im Einwohnerregister auch Personen mit dem Status GESUCHT markiert.\n\n" +
                 "Gesuchte Personen dürfen NICHT befördert werden. Weisen Sie sie ab, auch wenn der Ausweis gültig ist.\n\n" +
-                "Leitstelle Nachtlinie 13", ClockText));
+                "Leitstelle Nachtlinie 13",
+                "From now on the register also marks people with the status WANTED.\n\n" +
+                "Wanted persons must NOT be transported. Turn them away, even if their ID is valid.\n\n" +
+                "Dispatch, Night Line 13"), ClockText));
         }
         if (decisions == 3 && knownRules.Add(Discrepancy.Doppelganger))
         {
-            Schedule(5f, () => Mail.Send("Leitstelle", "Anomalien auf Linie 13",
-                "Es wurden Fahrgäste gemeldet, deren Papiere einwandfrei sind, die aber einfache Fragen über ihr " +
+            Schedule(5f, () => Mail.Send(Dispatch, Loc.T("Anomalien auf Linie 13", "Anomalies on line 13"),
+                Loc.T("Es wurden Fahrgäste gemeldet, deren Papiere einwandfrei sind, die aber einfache Fragen über ihr " +
                 "eigenes Leben falsch beantworten: Geburtsdatum, Wohnort, Beruf.\n\n" +
                 "Das sind nicht die Personen, für die sie sich ausgeben.\n\n" +
-                "Stellen Sie jedem Fahrgast Fragen (Tasten 1-5) und vergleichen Sie die Antworten mit dem Register. " +
-                "Stimmt eine Antwort nicht: NICHT einsteigen lassen.\n\nLeitstelle Nachtlinie 13", ClockText));
+                "Sprechen Sie jeden Fahrgast an (T) und vergleichen Sie die Antworten mit dem Register. " +
+                "Stimmt eine Antwort nicht: NICHT einsteigen lassen.\n\nLeitstelle Nachtlinie 13",
+                "Passengers have been reported whose papers are flawless, but who get simple questions about their " +
+                "own life wrong: date of birth, home, job.\n\n" +
+                "They are not the people they claim to be.\n\n" +
+                "Talk to every passenger (T) and compare the answers with the register. " +
+                "If an answer is wrong: do NOT let them on.\n\nDispatch, Night Line 13"), ClockText));
         }
         if (decisions == 5 && knownRules.Add(Discrepancy.Deceased))
         {
-            Schedule(5f, () => Mail.Send("Leitstelle", "DRINGEND: Status VERSTORBEN",
-                "Fahrer der Nachtlinie melden Fahrgäste, deren Ausweise auf Personen ausgestellt sind, " +
+            Schedule(5f, () => Mail.Send(Dispatch, Loc.T("DRINGEND: Status VERSTORBEN", "URGENT: Status DECEASED"),
+                Loc.T("Fahrer der Nachtlinie melden Fahrgäste, deren Ausweise auf Personen ausgestellt sind, " +
                 "die im Register als VERSTORBEN geführt werden.\n\n" +
                 "Die Ausweise sind echt. Die Daten stimmen. Lassen Sie diese Personen trotzdem NICHT einsteigen.\n" +
                 "Sprechen Sie sie nicht an. Schließen Sie die Türen und fahren Sie weiter.\n\n" +
-                "Diese Mail nach dem Lesen löschen.", ClockText));
+                "Diese Mail nach dem Lesen löschen.",
+                "Night line drivers report passengers whose IDs belong to people " +
+                "listed as DECEASED in the register.\n\n" +
+                "The IDs are real. The data is correct. Do NOT let these people on anyway.\n" +
+                "Do not talk to them. Close the doors and drive on.\n\n" +
+                "Delete this mail after reading."), ClockText));
         }
     }
 
@@ -419,69 +456,93 @@ public class BoardingManager : MonoBehaviour
         if (correct)
         {
             if (!letIn && card.Truth == Discrepancy.Wanted)
-                Schedule(8f, () => Mail.Send("Polizei Revier Nord", "Danke für Ihre Meldung",
-                    $"Die abgewiesene Person ({card.FullName}) wurde kurz darauf festgenommen. Danke für Ihre Aufmerksamkeit.", ClockText));
+                Schedule(8f, () => Mail.Send(Loc.T("Polizei Revier Nord", "Police, North Precinct"), Loc.T("Danke für Ihre Meldung", "Thank you for your report"),
+                    Loc.T($"Die abgewiesene Person ({card.FullName}) wurde kurz darauf festgenommen. Danke für Ihre Aufmerksamkeit.",
+                          $"The person you turned away ({card.FullName}) was arrested shortly afterwards. Thank you for your attention."), ClockText));
             return;
         }
 
         string subject, body;
         if (!letIn)
         {
-            subject = "Beschwerde eines Fahrgasts";
-            body = $"Frau/Herr {card.LastName} hat sich beschwert, an der Haltestelle ohne Grund abgewiesen worden zu sein. " +
-                   "Die Ausweisdaten waren korrekt.\n\nBitte prüfen Sie sorgfältiger. Jeder abgewiesene Fahrgast kostet uns Geld.";
+            subject = Loc.T("Beschwerde eines Fahrgasts", "Passenger complaint");
+            body = Loc.T($"Frau/Herr {card.LastName} hat sich beschwert, an der Haltestelle ohne Grund abgewiesen worden zu sein. " +
+                   "Die Ausweisdaten waren korrekt.\n\nBitte prüfen Sie sorgfältiger. Jeder abgewiesene Fahrgast kostet uns Geld.",
+                   $"Mr/Ms {card.LastName} complained about being turned away at the stop for no reason. " +
+                   "The ID data was correct.\n\nPlease check more carefully. Every passenger turned away costs us money.");
         }
         else
         {
-            subject = "Vorfall auf Ihrer Linie";
+            subject = Loc.T("Vorfall auf Ihrer Linie", "Incident on your line");
             switch (card.Truth)
             {
                 case Discrepancy.Expired:
-                    body = $"Bei einer Kontrolle wurde {card.FullName} mit abgelaufenem Ausweis in Ihrem Bus angetroffen. Abmahnung folgt.";
+                    body = Loc.T($"Bei einer Kontrolle wurde {card.FullName} mit abgelaufenem Ausweis in Ihrem Bus angetroffen. Abmahnung folgt.",
+                                 $"During an inspection {card.FullName} was found in your bus with an expired ID. A warning will follow.");
                     break;
                 case Discrepancy.Wanted:
-                    body = $"Sie haben {card.FullName} befördert. Die Person steht auf der Fahndungsliste. Die Polizei wird sich bei Ihnen melden.";
+                    body = Loc.T($"Sie haben {card.FullName} befördert. Die Person steht auf der Fahndungsliste. Die Polizei wird sich bei Ihnen melden.",
+                                 $"You transported {card.FullName}. This person is on the wanted list. The police will contact you.");
                     break;
                 case Discrepancy.Deceased:
-                    subject = "Wir haben Sie gewarnt";
-                    body = $"{card.FullName}.\nVerstorben.\nIn Ihrem Bus.\n\nZählen Sie Ihre Fahrgäste.";
+                    subject = Loc.T("Wir haben Sie gewarnt", "We warned you");
+                    body = Loc.T($"{card.FullName}.\nVerstorben.\nIn Ihrem Bus.\n\nZählen Sie Ihre Fahrgäste.",
+                                 $"{card.FullName}.\nDeceased.\nIn your bus.\n\nCount your passengers.");
                     break;
                 case Discrepancy.Doppelganger:
-                    subject = "Wer ist in Ihrem Bus?";
-                    body = $"Die echte {card.FullName} lag zur Zeit Ihrer Fahrt zu Hause im Bett und hat das Haus nicht verlassen.\n\n" +
-                           "Wen haben Sie mitgenommen?";
+                    subject = Loc.T("Wer ist in Ihrem Bus?", "Who is in your bus?");
+                    body = Loc.T($"Die echte {card.FullName} lag zur Zeit Ihrer Fahrt zu Hause im Bett und hat das Haus nicht verlassen.\n\n" +
+                           "Wen haben Sie mitgenommen?",
+                           $"The real {card.FullName} was at home in bed at the time of your trip and never left the house.\n\n" +
+                           "Who did you pick up?");
                     break;
                 case Discrepancy.WrongExpiry:
-                    body = $"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.";
+                    body = Loc.T($"Der Ausweis von {card.FullName} war gefälscht: das Ablaufdatum stimmte nicht mit dem Register überein.",
+                                 $"The ID of {card.FullName} was forged: the expiry date did not match the register.");
                     break;
                 case Discrepancy.NotRegistered:
-                    body = $"Eine Person namens \"{card.FullName}\" existiert in keinem Register der Stadt. " +
-                           "Fahrgäste berichten, sie habe während der Fahrt die ganze Zeit Sie angestarrt.";
+                    body = Loc.T($"Eine Person namens \"{card.FullName}\" existiert in keinem Register der Stadt. " +
+                           "Fahrgäste berichten, sie habe während der Fahrt die ganze Zeit Sie angestarrt.",
+                           $"A person named \"{card.FullName}\" does not exist in any register of the town. " +
+                           "Passengers report that it stared at you the whole ride.");
                     break;
                 default:
-                    body = $"Die Ausweisdaten von {card.FullName} stimmten nicht mit dem Register überein " +
-                           $"({(card.Truth == Discrepancy.WrongBirthDate ? "Geburtsdatum" : "Ausweisnummer")}). Das war eine Fälschung.";
+                    body = Loc.T($"Die Ausweisdaten von {card.FullName} stimmten nicht mit dem Register überein " +
+                           $"({(card.Truth == Discrepancy.WrongBirthDate ? "Geburtsdatum" : "Ausweisnummer")}). Das war eine Fälschung.",
+                           $"The ID data of {card.FullName} did not match the register " +
+                           $"({(card.Truth == Discrepancy.WrongBirthDate ? "date of birth" : "ID number")}). It was a forgery.");
                     break;
             }
         }
-        if (Wrong == 3) body += "\n\nDies ist Ihre dritte Verfehlung heute Nacht. Wir beobachten Sie.";
-        Schedule(Random.Range(6f, 12f), () => Mail.Send("Leitstelle", subject, body, ClockText));
+        if (Wrong == 3) body += Loc.T("\n\nDies ist Ihre dritte Verfehlung heute Nacht. Wir beobachten Sie.", "\n\nThis is your third mistake tonight. We are watching you.");
+        Schedule(Random.Range(6f, 12f), () => Mail.Send(Dispatch, subject, body, ClockText));
     }
 
     void SendWelcomeMails()
     {
-        Mail.Send("Leitstelle", "Ihre erste Nachtschicht - Linie 13",
+        string today = CitizenRegistry.Today.ToString("dd.MM.yyyy");
+        Mail.Send(Dispatch, Loc.T("Ihre erste Nachtschicht - Linie 13", "Your first night shift - Line 13"), Loc.T(
             "Willkommen bei den Verkehrsbetrieben.\n\n" +
             "Jeder Fahrgast zeigt beim Einsteigen seinen Personalausweis. Prüfen Sie ihn im Register (Reiter REGISTER).\n\n" +
             "Einsteigen darf nur, wer:\n" +
             " - im Register mit genau diesem Namen eingetragen ist,\n" +
             " - das gleiche Geburtsdatum, die gleiche Ausweisnummer und das gleiche Ablaufdatum hat wie im Register,\n" +
-            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + CitizenRegistry.Today.ToString("dd.MM.yyyy") + ").\n\n" +
+            " - einen gültigen Ausweis hat (Ablaufdatum nach dem " + today + ").\n\n" +
             "Alle anderen weisen Sie ab. Fahren Sie erst weiter, wenn der Fahrgast versorgt ist.\n\n" +
-            "Gute Fahrt.\nLeitstelle Nachtlinie 13", ClockText);
-        Schedule(20f, () => Mail.Send("Horst (Kollege)", "Tipp",
+            "Gute Fahrt.\nLeitstelle Nachtlinie 13",
+            "Welcome to the transport company.\n\n" +
+            "Every passenger shows their ID card when boarding. Check it in the register (tab REGISTER).\n\n" +
+            "Only those may board who:\n" +
+            " - are listed in the register with exactly this name,\n" +
+            " - have the same date of birth, ID number and expiry date as in the register,\n" +
+            " - have a valid ID (expiry date after " + today + ").\n\n" +
+            "Turn everyone else away. Only drive on once the passenger has been dealt with.\n\n" +
+            "Have a good trip.\nDispatch, Night Line 13"), ClockText);
+        Schedule(20f, () => Mail.Send(Loc.T("Horst (Kollege)", "Horst (colleague)"), Loc.T("Tipp", "Tip"), Loc.T(
             "Hey, du fährst jetzt die 13? Kleiner Tipp: Tippfehler im Namen sind kein Zufall. " +
-            "Und wenn einer am Waldfriedhof einsteigen will... schau lieber zweimal ins Register. Und halt nicht an, wenn da draußen jemand zwischen den Bäumen steht.\n\nHorst", ClockText));
+            "Und wenn einer am Waldfriedhof einsteigen will... schau lieber zweimal ins Register. Und halt nicht an, wenn da draußen jemand zwischen den Bäumen steht.\n\nHorst",
+            "Hey, you're driving the 13 now? Small tip: typos in names are no accident. " +
+            "And if someone wants to get on at the Waldfriedhof... better check the register twice. And don't stop if someone is standing out there between the trees.\n\nHorst"), ClockText));
     }
 
     // ------------------------------------------------------------------ portrait
@@ -551,6 +612,7 @@ public class BoardingManager : MonoBehaviour
 
     void OnGUI()
     {
+        if (!started) return;
         float w = RetroGUI.VirtualWidth;
         var white = new Color(1f, 0.95f, 0.8f);
 
@@ -567,7 +629,7 @@ public class BoardingManager : MonoBehaviour
                 if (d > -8f && d < dist) { dist = d; next = st; }
             }
             if (next != null)
-                RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), $"Nächste Haltestelle: {next.stopName}  ({Mathf.Max(0f, dist):0} m)", white);
+                RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), Loc.T("Nächste Haltestelle: ", "Next stop: ") + $"{next.stopName}  ({Mathf.Max(0f, dist):0} m)", white);
         }
 
         string prompt = null;
@@ -576,27 +638,27 @@ public class BoardingManager : MonoBehaviour
         {
             case Phase.Driving:
                 if (stopHere != null)
-                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? "Anhalten" : bus.doorsOpen ? "Türen öffnen sich..." : "Türen öffnen  [F]";
+                    prompt = Mathf.Abs(bus.Speed) > 0.3f ? Loc.T("Anhalten", "Stop the bus") : bus.doorsOpen ? Loc.T("Türen öffnen sich...", "Doors opening...") : Loc.T("Türen öffnen  [F]", "Open doors  [F]");
                 else if (!bus.DoorsFullyClosed)
-                    prompt = "Türen schließen  [F]";
+                    prompt = Loc.T("Türen schließen  [F]", "Close doors  [F]");
                 break;
             case Phase.PassengerComing:
-                prompt = "Fahrgast kommt zur Tür";
+                prompt = Loc.T("Fahrgast kommt zur Tür", "Passenger coming to the door");
                 break;
             case Phase.AwaitingDecision:
-                prompt = "Ausweis prüfen, Ansprechen [T]  -  Einlassen [J]   Abweisen [N]";
+                prompt = Loc.T("Ausweis prüfen, Ansprechen [T]  -  Einlassen [J]   Abweisen [N]", "Check the ID, talk [T]  -  Let in [J]   Turn away [N]");
                 break;
             case Phase.PassengerEntering:
-                prompt = "Fahrgast steigt ein";
+                prompt = Loc.T("Fahrgast steigt ein", "Passenger getting on");
                 break;
             case Phase.PassengerLeaving:
-                prompt = "Fahrgast steigt aus";
+                prompt = Loc.T("Fahrgast steigt aus", "Passenger getting off");
                 break;
         }
         if (prompt != null) RetroGUI.ShadowLabel(new Rect(0, 300, w, 14), prompt, new Color(1f, 0.85f, 0.3f));
 
         if (Mail.UnreadCount > 0)
-            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), $"MAIL: {Mail.UnreadCount} ungelesen", new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
+            RetroGUI.ShadowLabel(new Rect(w - 170, 6, 160, 14), Loc.T($"MAIL: {Mail.UnreadCount} ungelesen", $"MAIL: {Mail.UnreadCount} unread"), new Color(0.6f, 1f, 0.7f), true, TextAnchor.UpperRight);
 
         if (toast != null && Time.time < toastUntil)
             RetroGUI.ShadowLabel(new Rect(0, 24, w, 14), toast, new Color(0.7f, 0.9f, 1f), false);

@@ -9,14 +9,14 @@ public class ForestWatchers : MonoBehaviour
     public ForestRoad road;
     public GameObject[] figures;
     [Tooltip("Check every ... metres driven")]
-    public float checkEvery = 150f;
-    [Range(0f, 1f)] public float chance = 0.3f;
+    public float checkEvery = 400f;
+    [Range(0f, 1f)] public float chance = 0.12f;
 
     /// <summary>Raised when a figure vanishes (for a sound).</summary>
     public event System.Action<Vector3> Vanished;
 
     GameObject current;
-    float nextCheckAt = 300f;
+    float nextCheckAt = 900f;
     float vanishDistance;
     Transform bus;
 

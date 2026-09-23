@@ -154,8 +154,8 @@ public class BusLights : MonoBehaviour
 
     public string ModeText => mode switch
     {
-        Mode.LowBeam => "ABBLENDLICHT",
-        Mode.HighBeam => "FERNLICHT",
-        _ => "LICHT AUS",
+        Mode.LowBeam => Loc.T("ABBLENDLICHT", "LOW BEAM"),
+        Mode.HighBeam => Loc.T("FERNLICHT", "HIGH BEAM"),
+        _ => Loc.T("LICHT AUS", "LIGHTS OFF"),
     };
 }

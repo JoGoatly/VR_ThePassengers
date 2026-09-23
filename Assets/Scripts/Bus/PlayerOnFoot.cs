@@ -55,7 +55,7 @@ public class PlayerOnFoot : MonoBehaviour
     {
         var kb = Keyboard.current;
         if (kb == null || bus == null) return;
-        bool ePressed = kb.eKey.wasPressedThisFrame && !GameUI.TerminalTyping;
+        bool ePressed = kb.eKey.wasPressedThisFrame && !GameUI.TerminalTyping && !GameUI.MenuOpen && !GameUI.DialogueOpen;
 
         if (!GameUI.PlayerOutside)
         {
@@ -185,12 +185,12 @@ public class PlayerOnFoot : MonoBehaviour
         float w = RetroGUI.VirtualWidth;
         if (GameUI.PlayerOutside)
         {
-            string text = NearDoor ? "Einsteigen [E]" : "Zurück zur Tür des Busses   -   Taschenlampe [L]";
+            string text = NearDoor ? Loc.T("Einsteigen [E]", "Get in [E]") : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe [L]", "Back to the bus door   -   Flashlight [L]");
             RetroGUI.ShadowLabel(new Rect(0, 318, w, 14), text, new Color(1f, 0.85f, 0.3f));
         }
         else if (Mathf.Abs(bus.Speed) < 0.3f && game != null && game.CurrentPhase == BoardingManager.Phase.Driving && !GameUI.TerminalTyping)
         {
-            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), "Aussteigen [E]", new Color(0.8f, 0.8f, 0.8f), false);
+            RetroGUI.ShadowLabel(new Rect(0, 334, w, 14), Loc.T("Aussteigen [E]", "Get out [E]"), new Color(0.8f, 0.8f, 0.8f), false);
         }
     }
 }

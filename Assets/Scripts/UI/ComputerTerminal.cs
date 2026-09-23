@@ -139,7 +139,7 @@ public class ComputerTerminal : MonoBehaviour
         UpdatePointer();
         var kb = Keyboard.current;
         var mouse = Mouse.current;
-        click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen;
+        click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen && !GameUI.MenuOpen;
 
         if (typing && kb != null)
         {
@@ -235,7 +235,7 @@ public class ComputerTerminal : MonoBehaviour
 
         // Top bar.
         canvas.Fill(0, 0, W, TopBar, Panel);
-        canvas.Text(3, 1, "VBN-OS 1.3  NACHTLINIE 13", Dim);
+        canvas.Text(3, 1, Loc.T("VBN-OS 1.3  NACHTLINIE 13", "VBN-OS 1.3  NIGHT LINE 13"), Dim);
         string clock = game != null ? game.ClockText : "--:--";
         canvas.Text(W - PixelCanvas.TextWidth(clock) - 3, 1, clock, Text);
 
@@ -243,9 +243,9 @@ public class ComputerTerminal : MonoBehaviour
         switch (app)
         {
             case App.None: DrawDesktop(top, bottom); break;
-            case App.Register: Window("REGISTER - EINWOHNERMELDEAMT", top, bottom); DrawRegister(top + 13, bottom); break;
-            case App.Mail: Window("POSTFACH", top, bottom); DrawMail(top + 13, bottom); break;
-            case App.Control: Window("FAHRGASTKONTROLLE", top, bottom); DrawControl(top + 13, bottom); break;
+            case App.Register: Window(Loc.T("REGISTER - EINWOHNERMELDEAMT", "REGISTER - RESIDENTS OFFICE"), top, bottom); DrawRegister(top + 13, bottom); break;
+            case App.Mail: Window(Loc.T("POSTFACH", "MAILBOX"), top, bottom); DrawMail(top + 13, bottom); break;
+            case App.Control: Window(Loc.T("FAHRGASTKONTROLLE", "PASSENGER CHECK"), top, bottom); DrawControl(top + 13, bottom); break;
         }
 
         DrawTaskbar();
@@ -267,11 +267,11 @@ public class ComputerTerminal : MonoBehaviour
         bool someone = game != null && game.PendingCard != null;
         int y = top + 30;
         if (Icon(40, y, "REGISTER", 0, false)) Open(App.Register);
-        if (Icon(135, y, unread > 0 ? $"POST ({unread})" : "POSTFACH", 1, unread > 0)) Open(App.Mail);
-        if (Icon(230, y, "KONTROLLE", 2, someone)) Open(App.Control);
+        if (Icon(135, y, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), 1, unread > 0)) Open(App.Mail);
+        if (Icon(230, y, Loc.T("KONTROLLE", "CHECK"), 2, someone)) Open(App.Control);
 
         canvas.WrappedText(12, bottom - 50, canvas.Width - 24, 4,
-            "Leitstelle: Halten Sie nicht außerhalb der Haltestellen. Steigen Sie nicht aus. Lassen Sie niemanden ohne Kontrolle einsteigen.", Dim);
+            Loc.T("Leitstelle: Halten Sie nicht außerhalb der Haltestellen. Steigen Sie nicht aus. Lassen Sie niemanden ohne Kontrolle einsteigen.", "Dispatch: Do not stop outside the bus stops. Do not leave the bus. Do not let anyone on without a check."), Dim);
     }
 
     bool Icon(int x, int y, string label, int kind, bool attention)
@@ -314,12 +314,12 @@ public class ComputerTerminal : MonoBehaviour
         int unread = game != null ? game.Mail.UnreadCount : 0;
         bool someone = game != null && game.PendingCard != null;
         if (Button(2, y + 1, 70, 11, "REGISTER", app == App.Register ? Hi : Panel, Text)) Open(App.Register);
-        if (Button(74, y + 1, 70, 11, unread > 0 ? $"POST ({unread})" : "POSTFACH", app == App.Mail ? Hi : (unread > 0 ? new Color32(70, 55, 10, 255) : Panel), Text)) Open(App.Mail);
+        if (Button(74, y + 1, 70, 11, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), app == App.Mail ? Hi : (unread > 0 ? new Color32(70, 55, 10, 255) : Panel), Text)) Open(App.Mail);
         Color32 ctl = app == App.Control ? Hi : (someone && Mathf.Repeat(blink, 1f) < 0.5f ? new Color32(90, 70, 10, 255) : Panel);
-        if (Button(146, y + 1, 76, 11, "KONTROLLE", ctl, Text)) Open(App.Control);
+        if (Button(146, y + 1, 76, 11, Loc.T("KONTROLLE", "CHECK"), ctl, Text)) Open(App.Control);
         if (game != null)
         {
-            string score = $"OK {game.Correct} F {game.Wrong}";
+            string score = Loc.T($"OK {game.Correct} F {game.Wrong}", $"OK {game.Correct} X {game.Wrong}");
             canvas.Text(W - PixelCanvas.TextWidth(score) - 3, y + 1, score, Dim);
         }
     }
@@ -357,16 +357,16 @@ public class ComputerTerminal : MonoBehaviour
             canvas.Text(fx + 3, top + 2, shown, typing ? White : Text);
         }
         if (Hit(fx, top + 1, fw, 13)) typing = true;
-        if (Button(fx + fw + 4, top + 1, 56, 13, "SUCHEN", Green, White)) { typing = false; RunSearch(); }
+        if (Button(fx + fw + 4, top + 1, 56, 13, Loc.T("SUCHEN", "SEARCH"), Green, White)) { typing = false; RunSearch(); }
 
         // Results.
         int ly = top + 18, lh = bottom - ly - 2, lw = 124;
         canvas.Frame(2, ly, lw, lh, Line);
         int rowH = 12, rows = (lh - 4) / rowH;
         if (!searched)
-            canvas.WrappedText(6, ly + 4, lw - 8, 6, "Suchfeld anklicken, Namen tippen, ENTER.", Dim);
+            canvas.WrappedText(6, ly + 4, lw - 8, 6, Loc.T("Suchfeld anklicken, Namen tippen, ENTER.", "Click the search field, type a name, ENTER."), Dim);
         else if (results.Count == 0)
-            canvas.WrappedText(6, ly + 4, lw - 8, 4, "KEIN EINTRAG GEFUNDEN", Alert);
+            canvas.WrappedText(6, ly + 4, lw - 8, 4, Loc.T("KEIN EINTRAG GEFUNDEN", "NO ENTRY FOUND"), Alert);
         else
         {
             resultScroll = Mathf.Clamp(resultScroll, 0, Mathf.Max(0, results.Count - rows));
@@ -391,25 +391,28 @@ public class ComputerTerminal : MonoBehaviour
         canvas.Frame(rx, ly, rw, lh, Line);
         if (selected == null)
         {
-            canvas.Text(rx + 4, ly + 4, "Eintrag wählen.", Dim);
+            canvas.Text(rx + 4, ly + 4, Loc.T("Eintrag wählen.", "Select an entry."), Dim);
             return;
         }
         int y = ly + 4;
-        canvas.Text(rx + 4, y, "AUSZUG MELDEREGISTER", Dim); y += 16;
-        Field(rx + 4, ref y, "NAME", selected.LastName.ToUpperInvariant());
-        Field(rx + 4, ref y, "VORNAME", selected.FirstName);
-        Field(rx + 4, ref y, "GEBOREN", selected.BirthDate.ToString("dd.MM.yyyy"));
-        Field(rx + 4, ref y, "AUSWEIS", selected.IdNumber);
-        Field(rx + 4, ref y, "GÜLTIG", selected.IdExpiry.ToString("dd.MM.yyyy"), selected.IdExpiry < CitizenRegistry.Today ? Alert : White);
-        Field(rx + 4, ref y, "BEZIRK", selected.District);
-        Field(rx + 4, ref y, "BERUF", selected.Occupation);
+        canvas.Text(rx + 4, y, Loc.T("AUSZUG MELDEREGISTER", "REGISTER EXTRACT"), Dim); y += 16;
+        Field(rx + 4, ref y, Loc.T("NAME", "SURNAME"), selected.LastName.ToUpperInvariant());
+        Field(rx + 4, ref y, Loc.T("VORNAME", "FIRST"), selected.FirstName);
+        Field(rx + 4, ref y, Loc.T("GEBOREN", "BORN"), selected.BirthDate.ToString("dd.MM.yyyy"));
+        Field(rx + 4, ref y, Loc.T("AUSWEIS", "ID NO."), selected.IdNumber);
+        Field(rx + 4, ref y, Loc.T("GÜLTIG", "VALID"), selected.IdExpiry.ToString("dd.MM.yyyy"), selected.IdExpiry < CitizenRegistry.Today ? Alert : White);
+        Field(rx + 4, ref y, Loc.T("BEZIRK", "DISTRICT"), selected.District);
+        Field(rx + 4, ref y, Loc.T("BERUF", "JOB"), selected.Occupation);
         Color32 sc = selected.Status == "AKTIV" ? Text : selected.Status == "GESUCHT" ? Warn : Alert;
         canvas.Text(rx + 4, y, "STATUS", Dim);
-        canvas.Text(rx + 58, y, selected.Status, sc);
+        canvas.Text(rx + 58, y, StatusText(selected.Status), sc);
         y += 14;
         if (!string.IsNullOrEmpty(selected.Note))
             canvas.WrappedText(rx + 4, y, rw - 8, 6, selected.Note, sc);
     }
+
+    static string StatusText(string status) => !Loc.English ? status :
+        status == "AKTIV" ? "ACTIVE" : status == "GESUCHT" ? "WANTED" : status == "VERSTORBEN" ? "DECEASED" : status;
 
     void Field(int x, ref int y, string label, string value) => Field(x, ref y, label, value, White);
 
@@ -459,7 +462,7 @@ public class ComputerTerminal : MonoBehaviour
         canvas.Frame(bx, ly, bw, lh, Line);
         if (openMail == null)
         {
-            canvas.Text(bx + 4, ly + 4, "Mail wählen.", Dim);
+            canvas.Text(bx + 4, ly + 4, Loc.T("Mail wählen.", "Select a mail."), Dim);
             return;
         }
         canvas.Text(bx + 4, ly + 3, openMail.From + "  " + openMail.Time, Dim, 32);
@@ -482,16 +485,16 @@ public class ComputerTerminal : MonoBehaviour
         var card = game.PendingCard;
         if (card == null)
         {
-            canvas.WrappedText(8, top + 8, W - 16, 6, "Kein Fahrgast an der Tür.\n\nAn der Haltestelle anhalten und die Türen öffnen (F).", Dim);
+            canvas.WrappedText(8, top + 8, W - 16, 6, Loc.T("Kein Fahrgast an der Tür.\n\nAn der Haltestelle anhalten und die Türen öffnen (F).", "No passenger at the door.\n\nStop at the bus stop and open the doors (F)."), Dim);
             return;
         }
-        canvas.Text(8, top + 8, "FAHRGAST AN DER TÜR:", Dim);
+        canvas.Text(8, top + 8, Loc.T("FAHRGAST AN DER TÜR:", "PASSENGER AT THE DOOR:"), Dim);
         canvas.Text(8, top + 22, card.FullName.ToUpperInvariant(), White);
         canvas.WrappedText(8, top + 42, W - 16, 4,
-            "Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status. Fragen stellen mit 1-5 und die Antworten prüfen.", Text);
+            Loc.T("Ausweis (links) mit dem REGISTER vergleichen: Name, Geburtsdatum, Ausweisnummer, Gültigkeit, Status. Ansprechen mit T und die Antworten prüfen.", "Compare the ID (left) with the REGISTER: name, date of birth, ID number, validity, status. Talk with T and check the answers."), Text);
 
         int by = bottom - 50;
-        if (Button(12, by, 140, 34, "EINLASSEN  [J]", Green, White)) { game.Decide(true); app = App.None; }
-        if (Button(W - 152, by, 140, 34, "ABWEISEN  [N]", Red, White)) { game.Decide(false); app = App.None; }
+        if (Button(12, by, 140, 34, Loc.T("EINLASSEN  [J]", "LET IN  [J]"), Green, White)) { game.Decide(true); app = App.None; }
+        if (Button(W - 152, by, 140, 34, Loc.T("ABWEISEN  [N]", "TURN AWAY  [N]"), Red, White)) { game.Decide(false); app = App.None; }
     }
 }

@@ -80,19 +80,24 @@ public class CitizenRegistry
         "Hofmann", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler", "Maier", "Huber", "Kaiser",
         "Fuchs", "Peters", "Lang", "Scholz", "Möller", "Weiß", "Jung", "Hahn", "Vogel", "Friedrich", "Keller", "Brandt",
     };
-    // (male, female) job titles
-    static readonly (string m, string f)[] Jobs =
+    // (male, female, english) job titles
+    static readonly (string m, string f, string en, string enF)[] JobTable =
     {
-        ("Förster", "Försterin"), ("Bäcker", "Bäckerin"), ("Krankenpfleger", "Krankenschwester"), ("Lehrer", "Lehrerin"),
-        ("Schreiner", "Schreinerin"), ("Metzger", "Metzgerin"), ("Kellner", "Kellnerin"), ("Buchhalter", "Buchhalterin"),
-        ("Postbote", "Postbotin"), ("Pfarrer", "Pastorin"), ("Mechaniker", "Mechanikerin"), ("Nachtwächter", "Nachtwächterin"),
-        ("Bestatter", "Bestatterin"), ("Landwirt", "Landwirtin"), ("Verkäufer", "Verkäuferin"), ("Elektriker", "Elektrikerin"),
-        ("Arzt", "Ärztin"), ("Holzfäller", "Friseurin"), ("Student", "Studentin"), ("Fernfahrer", "Schneiderin"),
+        ("Förster", "Försterin", "forester", "forester"), ("Bäcker", "Bäckerin", "baker", "baker"),
+        ("Krankenpfleger", "Krankenschwester", "nurse", "nurse"), ("Lehrer", "Lehrerin", "teacher", "teacher"),
+        ("Schreiner", "Schreinerin", "carpenter", "carpenter"), ("Metzger", "Metzgerin", "butcher", "butcher"),
+        ("Kellner", "Kellnerin", "waiter", "waitress"), ("Buchhalter", "Buchhalterin", "accountant", "accountant"),
+        ("Postbote", "Postbotin", "postman", "postwoman"), ("Pfarrer", "Pastorin", "priest", "pastor"),
+        ("Mechaniker", "Mechanikerin", "mechanic", "mechanic"), ("Nachtwächter", "Nachtwächterin", "night watchman", "night watchwoman"),
+        ("Bestatter", "Bestatterin", "undertaker", "undertaker"), ("Landwirt", "Landwirtin", "farmer", "farmer"),
+        ("Verkäufer", "Verkäuferin", "salesman", "saleswoman"), ("Elektriker", "Elektrikerin", "electrician", "electrician"),
+        ("Arzt", "Ärztin", "doctor", "doctor"), ("Holzfäller", "Friseurin", "lumberjack", "hairdresser"),
+        ("Student", "Studentin", "student", "student"), ("Fernfahrer", "Schneiderin", "truck driver", "seamstress"),
     };
-    static readonly string[] Months =
-    {
-        "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember",
-    };
+    static (string m, string f)[] Jobs => JobTable.Select(j => Loc.English ? (j.en, j.enF) : (j.m, j.f)).ToArray();
+    static string[] Months => Loc.English
+        ? new[] { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" }
+        : new[] { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
     public static readonly string[] Destinations =
     {
         "Waldfriedhof", "Forsthaus Eichgrund", "Alte Sägemühle", "Am Moor", "Schwarzer Weiher", "Köhlerhütte",
@@ -103,18 +108,18 @@ public class CitizenRegistry
     {
         "Altstadt", "Nordviertel", "Mühlenfeld", "Am Wasserturm", "Südhang", "Lindenau", "Bahnhofsviertel",
     };
-    static readonly string[] WantedNotes =
+    static string[] WantedNotes => new[]
     {
-        "Fahndung wegen Körperverletzung. Nicht befördern, Leitstelle informieren.",
-        "Flüchtig. Zuletzt gesehen am Bahnhof Nord.",
-        "Mehrfacher Schwarzfahrer, Beförderungsverbot bis 1999.",
+        Loc.T("Fahndung wegen Körperverletzung. Nicht befördern, Leitstelle informieren.", "Wanted for assault. Do not transport, inform dispatch."),
+        Loc.T("Flüchtig. Zuletzt gesehen am Bahnhof Nord.", "On the run. Last seen at the north station."),
+        Loc.T("Mehrfacher Schwarzfahrer, Beförderungsverbot bis 1999.", "Repeated fare dodger, banned from transport until 1999."),
     };
-    static readonly string[] DeceasedNotes =
+    static string[] DeceasedNotes => new[]
     {
-        "Verstorben am 02.03.1996. Grab: Friedhof Friedhofstraße, Reihe 4.",
-        "Verstorben 1997 (Verkehrsunfall, Linie 7).",
-        "Verstorben am 31.10.1995. Todesursache unbekannt.",
-        "Verstorben 1994. Leiche nie gefunden.",
+        Loc.T("Verstorben am 02.03.1996. Grab: Friedhof Friedhofstraße, Reihe 4.", "Died 02.03.1996. Grave: cemetery on Friedhofstraße, row 4."),
+        Loc.T("Verstorben 1997 (Verkehrsunfall, Linie 7).", "Died 1997 (traffic accident, line 7)."),
+        Loc.T("Verstorben am 31.10.1995. Todesursache unbekannt.", "Died 31.10.1995. Cause of death unknown."),
+        Loc.T("Verstorben 1994. Leiche nie gefunden.", "Died 1994. Body never found."),
     };
 
     public readonly List<Citizen> Citizens = new List<Citizen>();
@@ -235,15 +240,15 @@ public class CitizenRegistry
     string JobFor(Gender g, DateTime birth)
     {
         int age = Today.Year - birth.Year;
-        if (age >= 66) return g == Gender.Male ? "Rentner" : "Rentnerin";
+        if (age >= 66) return Loc.English ? "retired" : g == Gender.Male ? "Rentner" : "Rentnerin";
         var j = Pick(Jobs);
         return g == Gender.Male ? j.m : j.f;
     }
 
-    public static string SpokenDate(DateTime d) => $"{d.Day}. {Months[d.Month - 1]} {d.Year}";
+    public static string SpokenDate(DateTime d) => Loc.English ? $"{Months[d.Month - 1]} {d.Day}, {d.Year}" : $"{d.Day}. {Months[d.Month - 1]} {d.Year}";
 
     static string HomePhrase(string district) =>
-        district.StartsWith("Am ") ? district : "In " + district;
+        Loc.English ? "In " + district : district.StartsWith("Am ") ? district : "In " + district;
 
     void WriteAnswers(IdCard card, Citizen source)
     {
@@ -262,24 +267,26 @@ public class CitizenRegistry
             }
         }
 
+        string article = Loc.English && job.Length > 0 && "aeiou".IndexOf(job[0]) >= 0 ? "an " : "a ";
+        if (job == "retired") article = "";
         card.SaidName = card.FullName + ".";
-        card.SaidBirth = "Am " + SpokenDate(birth) + ".";
+        card.SaidBirth = Loc.T("Am ", "On ") + SpokenDate(birth) + ".";
         card.SaidHome = HomePhrase(home) + ".";
-        card.SaidJob = "Ich bin " + job + ".";
-        card.SaidDestination = "Zur Haltestelle " + Pick(Destinations) + ".";
+        card.SaidJob = Loc.T("Ich bin " + job + ".", "I'm " + article + job + ".");
+        card.SaidDestination = Loc.T("Zur Haltestelle ", "To the stop ") + Pick(Destinations) + ".";
 
         switch (card.Truth)
         {
             case Discrepancy.Doppelganger:
-                if (rng.NextDouble() < 0.5) card.SaidJob = "Ich... bin... " + job + ". Ja. " + job + ".";
-                if (rng.NextDouble() < 0.4) card.SaidDestination = "Dahin, wo Sie auch hinfahren.";
+                if (rng.NextDouble() < 0.5) card.SaidJob = Loc.T("Ich... bin... " + job + ". Ja. " + job + ".", "I... am... " + article + job + ". Yes. " + article + job + ".");
+                if (rng.NextDouble() < 0.4) card.SaidDestination = Loc.T("Dahin, wo Sie auch hinfahren.", "Wherever you are going.");
                 break;
             case Discrepancy.Deceased:
-                card.SaidHome = rng.NextDouble() < 0.5 ? "Am Waldfriedhof. Reihe vier." : HomePhrase(home) + ". Früher.";
-                card.SaidDestination = "Nach Hause. Endlich nach Hause.";
+                card.SaidHome = rng.NextDouble() < 0.5 ? Loc.T("Am Waldfriedhof. Reihe vier.", "At the Waldfriedhof. Row four.") : HomePhrase(home) + Loc.T(". Früher.", ". Once.");
+                card.SaidDestination = Loc.T("Nach Hause. Endlich nach Hause.", "Home. Finally home.");
                 break;
             case Discrepancy.Wanted:
-                if (rng.NextDouble() < 0.5) card.SaidDestination = "Weg. Einfach nur weg hier.";
+                if (rng.NextDouble() < 0.5) card.SaidDestination = Loc.T("Weg. Einfach nur weg hier.", "Away. Just away from here.");
                 break;
         }
     }

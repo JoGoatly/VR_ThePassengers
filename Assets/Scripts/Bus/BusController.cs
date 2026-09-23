@@ -83,7 +83,7 @@ public class BusController : MonoBehaviour
     public bool DoorsFullyOpen => doorAmount >= 0.99f;
     public bool DoorsFullyClosed => doorAmount <= 0.01f;
     /// <summary>Why the bus can't drive right now (null = it can).</summary>
-    public string DriveLockReason => throttleLockReason ?? (DoorsFullyClosed ? null : "Türen offen");
+    public string DriveLockReason => throttleLockReason ?? (DoorsFullyClosed ? null : Loc.T("Türen offen", "doors open"));
     public float BrakeInput => brakeInput;
 
     Rigidbody rb;
