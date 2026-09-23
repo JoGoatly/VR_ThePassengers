@@ -145,5 +145,4 @@ public class DashDisplay : MonoBehaviour
         if (!string.IsNullOrEmpty(bus.DriveLockReason) && Mathf.Repeat(Time.time, 1f) < 0.7f)
             canvas.Text(lx + 3, 30, Loc.T("TÜR", "DOOR"), Warn);
     }
-    }
 }
