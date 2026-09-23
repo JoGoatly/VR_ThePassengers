@@ -115,6 +115,37 @@ public class BoardingManager : MonoBehaviour
         SendWelcomeMails();
     }
 
+    bool policeOnTheWay;
+
+    /// <summary>The police were called for the passenger at the door: no decision until they arrive.</summary>
+    public bool PoliceOnTheWay => policeOnTheWay;
+
+    public void PoliceCalled() => policeOnTheWay = true;
+
+    /// <summary>The patrol car stopped behind the bus. Returns true if the passenger was wanted and is taken away.</summary>
+    public bool PoliceArrived(Vector3 carDoor)
+    {
+        policeOnTheWay = false;
+        if (CurrentPhase != Phase.AwaitingDecision || active == null) return false;
+        var card = active.Card;
+        if (card.Truth != Discrepancy.Wanted) return false;   // false alarm: the passenger is still waiting
+
+        var p = active;
+        Correct++;
+        decisions++;
+        Decided?.Invoke(false);
+        Judged?.Invoke(true, card);
+        Schedule(6f, () => Mail.Send(Loc.T("Polizei Revier Nord", "Police, North Precinct"), Loc.T("Festnahme", "Arrest"),
+            Loc.T($"{card.FullName} wurde dank Ihres Anrufs festgenommen. Vielen Dank.", $"{card.FullName} was arrested thanks to your call. Thank you."), ClockText));
+        p.CurrentState = Passenger.State.Leaving;
+        p.SetSpace(null);
+        p.WalkPath(new[] { carDoor }, null, () => { if (p != null) Destroy(p.gameObject); });
+        if (activeStop != null) activeStop.WaitingPassenger = null;
+        active = null;
+        CurrentPhase = Phase.Driving;
+        return true;
+    }
+
     /// <summary>Raised after a decision: was it right, and whose card was it.</summary>
     public event System.Action<bool, IdCard> Judged;
 
@@ -175,7 +206,7 @@ public class BoardingManager : MonoBehaviour
         if (kb == null || GameUI.TerminalTyping || GameUI.DialogueOpen) return;
 
         if (GameKeys.Pressed(GameAction.Interact) && PendingCard != null) GameUI.IdCardHidden = !GameUI.IdCardHidden;
-        if (PendingCard != null)
+        if (PendingCard != null && !policeOnTheWay)
         {
             if (GameKeys.Pressed(GameAction.LetIn)) Decide(true);
             else if (GameKeys.Pressed(GameAction.TurnAway)) Decide(false);
@@ -463,7 +494,8 @@ public class BoardingManager : MonoBehaviour
         var p = active;
         var card = p.Card;
         bool shouldBoard = card.Truth == Discrepancy.None;
-        bool correct = letIn == shouldBoard;
+        // Wanted persons are neither let in nor sent away: the police must be called.
+        bool correct = card.Truth != Discrepancy.Wanted && letIn == shouldBoard;
         if (correct) Correct++; else Wrong++;
         if (card.StoryIndex >= 0) storyDone.Add(card.StoryIndex);
         decisions++;
@@ -551,10 +583,14 @@ public class BoardingManager : MonoBehaviour
         {
             Schedule(4f, () => Mail.Send(Dispatch, Loc.T("NEU: Fahndungsliste im Register", "NEW: Wanted list in the register"),
                 Loc.T("Ab sofort sind im Einwohnerregister auch Personen mit dem Status GESUCHT markiert.\n\n" +
-                "Gesuchte Personen dürfen NICHT befördert werden. Weisen Sie sie ab, auch wenn der Ausweis gültig ist.\n\n" +
+                "Gesuchte Personen dürfen NICHT befördert werden - und auch nicht einfach weggeschickt werden.\n" +
+                "Öffnen Sie Ihr Diensthandy (" + GameKeys.Name(GameAction.Phone) + "), rufen Sie die Polizei (110) und halten Sie die Person an der Tür fest, " +
+                "bis der Streifenwagen da ist. Für jede Festnahme gibt es eine Prämie. Fehlalarme kosten Geld.\n\n" +
                 "Leitstelle Nachtlinie 13",
                 "From now on the register also marks people with the status WANTED.\n\n" +
-                "Wanted persons must NOT be transported. Turn them away, even if their ID is valid.\n\n" +
+                "Wanted persons must NOT be transported - and must not simply be sent away either.\n" +
+                "Open your work phone (" + GameKeys.Name(GameAction.Phone) + "), call the police (110) and keep the person at the door " +
+                "until the patrol car arrives. Every arrest earns a bonus. False alarms cost money.\n\n" +
                 "Dispatch, Night Line 13"), ClockText));
         }
         if (Progress.Day >= 3 && knownRules.Add(Discrepancy.Doppelganger) && Progress.Day == 3)
@@ -611,17 +647,18 @@ public class BoardingManager : MonoBehaviour
 
     void ScheduleFeedback(IdCard card, bool letIn, bool correct)
     {
-        if (correct)
-        {
-            if (!letIn && card.Truth == Discrepancy.Wanted)
-                Schedule(8f, () => Mail.Send(Loc.T("Polizei Revier Nord", "Police, North Precinct"), Loc.T("Danke für Ihre Meldung", "Thank you for your report"),
-                    Loc.T($"Die abgewiesene Person ({card.FullName}) wurde kurz darauf festgenommen. Danke für Ihre Aufmerksamkeit.",
-                          $"The person you turned away ({card.FullName}) was arrested shortly afterwards. Thank you for your attention."), ClockText));
-            return;
-        }
+        if (correct) return;
 
         string subject, body;
-        if (!letIn)
+        if (!letIn && card.Truth == Discrepancy.Wanted)
+        {
+            subject = Loc.T("Gesuchte Person entkommen", "Wanted person escaped");
+            body = Loc.T($"Sie haben {card.FullName} einfach gehen lassen. Die Person steht auf der Fahndungsliste.\n\n" +
+                         "Bei GESUCHTEN Personen rufen Sie über Ihr Diensthandy die Polizei (110) und halten die Person an der Tür fest.",
+                         $"You simply let {card.FullName} go. This person is on the wanted list.\n\n" +
+                         "For WANTED persons call the police (110) on your work phone and keep the person at the door.");
+        }
+        else if (!letIn)
         {
             subject = Loc.T("Beschwerde eines Fahrgasts", "Passenger complaint");
             body = Loc.T($"Frau/Herr {card.LastName} hat sich beschwert, an der Haltestelle ohne Grund abgewiesen worden zu sein. " +
@@ -734,7 +771,7 @@ public class BoardingManager : MonoBehaviour
         string today = CitizenRegistry.Today.ToString("dd.MM.yyyy");
         string rulesDe = " - Name genau wie im Register\n - Geburtsdatum, Ausweisnummer und Ablaufdatum wie im Register\n - Ausweis gültig (nach dem " + today + ")";
         string rulesEn = " - name exactly as in the register\n - date of birth, ID number and expiry date as in the register\n - valid ID (after " + today + ")";
-        if (day >= 2) { rulesDe += "\n - Status GESUCHT: abweisen"; rulesEn += "\n - status WANTED: turn away"; }
+        if (day >= 2) { rulesDe += "\n - Status GESUCHT: Polizei rufen (Handy, 110), nicht abweisen"; rulesEn += "\n - status WANTED: call the police (phone, 110), don't turn away"; }
         if (day >= 3) { rulesDe += "\n - falsche Antworten auf Fragen (Doppelgänger): abweisen"; rulesEn += "\n - wrong answers to questions (doppelganger): turn away"; }
         if (day >= 4) { rulesDe += "\n - Status VERSTORBEN: abweisen"; rulesEn += "\n - status DECEASED: turn away"; }
         if (day >= 3) { rulesDe += "\n - Fahrschein: heutige Nacht, nicht entwertet, Richtung ENDSTATION"; rulesEn += "\n - ticket: tonight, not stamped, direction ENDSTATION"; }
@@ -887,7 +924,8 @@ public class BoardingManager : MonoBehaviour
                 prompt = Loc.T("Fahrgast kommt zur Tür", "Passenger coming to the door");
                 break;
             case Phase.AwaitingDecision:
-                prompt = Loc.T("Ausweis prüfen, Ansprechen ", "Check the ID, talk ") + GameKeys.Tag(GameAction.Talk) + "  -  " + Loc.T("Einlassen ", "Let in ") + GameKeys.Tag(GameAction.LetIn) + "   " + Loc.T("Abweisen ", "Turn away ") + GameKeys.Tag(GameAction.TurnAway);
+                prompt = policeOnTheWay ? Loc.T("Die Polizei ist unterwegs...", "The police are on their way...") :
+                    Loc.T("Ausweis prüfen, Ansprechen ", "Check the ID, talk ") + GameKeys.Tag(GameAction.Talk) + "  -  " + Loc.T("Einlassen ", "Let in ") + GameKeys.Tag(GameAction.LetIn) + "   " + Loc.T("Abweisen ", "Turn away ") + GameKeys.Tag(GameAction.TurnAway);
                 break;
             case Phase.PassengerEntering:
                 prompt = Loc.T("Fahrgast steigt ein", "Passenger getting on");

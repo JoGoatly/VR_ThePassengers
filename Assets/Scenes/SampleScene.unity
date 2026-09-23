@@ -925,6 +925,8 @@ GameObject:
   - component: {fileID: 2100000017}
   - component: {fileID: 2100000018}
   - component: {fileID: 2100000019}
+  - component: {fileID: 2100000020}
+  - component: {fileID: 2100000021}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1346,6 +1348,46 @@ MonoBehaviour:
   bus: {fileID: 1500000004}
   game: {fileID: 2100000003}
   screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+--- !u!114 &2100000020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65f394fabde24644ae38f0c937450306, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  bus: {fileID: 1500000004}
+  road: {fileID: 2000000003}
+  sound: {fileID: 2100000006}
+  bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
+  siren: {fileID: 8300000, guid: 21658bed6a2f49f6bc9ac013baeb47be, type: 3}
+  carDoor: {fileID: 8300000, guid: 085e70a01d0e461991830d5db6d0e80c, type: 3}
+  arrestBonus: 60
+  falseAlarmFine: 30
+  approachSpeed: 18
+--- !u!114 &2100000021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62c0b216615a406bb5ceadcd02dbf114, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 2100000003}
+  police: {fileID: 2100000020}
+  sound: {fileID: 2100000006}
+  smsSound: {fileID: 8300000, guid: 7cbc0ccac0214d4395f4fb1c7213cd59, type: 3}
+  ringSound: {fileID: 8300000, guid: 00869181ba04469e9be179388c66371e, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -188,7 +188,7 @@ public class PlayerOnFoot : MonoBehaviour
             pitch = Mathf.Clamp(pitch - d.y, -85f, 85f);
             cam.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.PhoneOpen)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;

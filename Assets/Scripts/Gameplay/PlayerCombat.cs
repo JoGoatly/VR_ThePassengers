@@ -92,7 +92,7 @@ public class PlayerCombat : MonoBehaviour
         }
 
         cooldown -= Time.deltaTime;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && cooldown <= 0f) Attack();
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && cooldown <= 0f && !GameUI.PhoneOpen) Attack();
 
         // Bat swing hits a moment after the click.
         if (pendingBatHit && Time.time - swingTime > 0.13f)

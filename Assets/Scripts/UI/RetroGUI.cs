@@ -14,6 +14,9 @@ public static class GameUI
     /// <summary>The talk menu (T) is open: mouse cursor is free to pick a question.</summary>
     public static bool DialogueOpen;
 
+    /// <summary>The phone is open (mouse cursor free for it; driving still works).</summary>
+    public static bool PhoneOpen;
+
     /// <summary>A found note is being read.</summary>
     public static bool NoteOpen;
 

@@ -97,7 +97,7 @@ public class BusRadio : MonoBehaviour
         UpdatePointer();
 
         var mouse = Mouse.current;
-        bool click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.AnyOpen;
+        bool click = hover && mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.AnyOpen && !GameUI.PhoneOpen;
         if (click) HandleClick();
         if (GameKeys.Pressed(GameAction.Radio) && !GameUI.MenuOpen && !GameUI.TerminalTyping)
             Tune(current + 1 >= (stations?.Length ?? 0) ? -1 : current + 1);
