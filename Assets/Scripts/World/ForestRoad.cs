@@ -387,10 +387,10 @@ public class ForestRoad : MonoBehaviour
             d.y = 0f;
             float along = Vector3.Dot(d, sp.direction);
             float across = (d - sp.direction * along).magnitude;
-            if (along > -2f && along < sidePathLength && across < 3.5f + margin) return true;
+            if (along > -3f && along < sidePathLength + 2f && across < 5f + margin) return true;
             Vector3 h = pos - sp.house;
             h.y = 0f;
-            if (h.magnitude < 11f + margin) return true;
+            if (h.magnitude < 14f + margin) return true;
         }
         return false;
     }

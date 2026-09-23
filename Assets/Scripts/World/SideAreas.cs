@@ -33,7 +33,7 @@ public class SideAreas : MonoBehaviour
     /// <summary>Places where the player may walk off the road (tracks, clearings, cellars).</summary>
     public static bool IsInside(Vector3 position)
     {
-        return instance != null && instance.road != null && instance.road.InClearing(position, 2f);
+        return instance != null && instance.road != null && instance.road.InClearing(position, 4f);
     }
 
     static SideAreas instance;
@@ -49,6 +49,10 @@ public class SideAreas : MonoBehaviour
         road.StopBuilt += OnStopBuilt;
         Pickup.Collected += OnCollected;
         road.SidePathBuilt += BuildHouse;
+        // Big flat walls and the long track smear with the PSX texture warping - keep them crisp.
+        wood = Crisp(wood);
+        concrete = Crisp(concrete);
+        gravel = Crisp(gravel);
         if (corpses == null || corpses.Length == 0)
         {
             var game = FindAnyObjectByType<BoardingManager>();
@@ -111,16 +115,18 @@ public class SideAreas : MonoBehaviour
         var root = new GameObject("Side Path").transform;
         root.SetParent(path.chunk, true);
         Vector3 r = path.direction;
-        Quaternion toHouse = Quaternion.LookRotation(r);
 
-        // Dirt track and a lantern at the road so the player sees it.
-        float length = Vector3.Distance(path.start, path.house) - 4f;
-        MeshKit.Spawn("Track", root, MeshKit.Box(new Vector3(2.6f, 0.04f, length), 2f), gravel,
-            path.start + r * (length * 0.5f) + Vector3.up * 0.01f, toHouse, false);
-        Vector3 lantern = path.start + r * 0.6f + Quaternion.Euler(0, 90, 0) * r * 1.8f;
+        // Dirt track from the road to the house, and a lantern at the road so the player sees it.
+        BuildTrack(root, path.start - r * 1.2f, path.house - r * 4.2f, r);
+        Vector3 across = Vector3.Cross(Vector3.up, r).normalized;
+        Vector3 lantern = path.start + r * 0.8f + across * 2.4f;
         MeshKit.Spawn("Lantern Post", root, MeshKit.Prism(0.06f, 1.6f, 5, 1f), wood, lantern, Quaternion.identity, true);
         if (glow != null) MeshKit.Spawn("Lantern", root, MeshKit.Box(new Vector3(0.18f, 0.22f, 0.18f), 0.3f), glow, lantern + Vector3.up * 1.7f, Quaternion.identity, false);
-        AddLight(root, lantern + Vector3.up * 1.7f, new Color(1f, 0.6f, 0.25f), 2.2f, 7f, true);
+        AddLight(root, lantern + Vector3.up * 1.7f, new Color(1f, 0.6f, 0.25f), 2.4f, 10f, true);
+        // A second, dimmer lantern at the house door.
+        Vector3 doorLamp = path.house - r * 4.6f + across * 1.1f;
+        if (glow != null) MeshKit.Spawn("Door Lamp", root, MeshKit.Box(new Vector3(0.14f, 0.18f, 0.14f), 0.3f), glow, doorLamp + Vector3.up * 2.2f, Quaternion.identity, false);
+        AddLight(root, doorLamp + Vector3.up * 2.1f, new Color(1f, 0.55f, 0.25f), 1.4f, 7f, true);
 
         // House facing the road.
         Vector3 c = path.house;
@@ -238,6 +244,38 @@ public class SideAreas : MonoBehaviour
         d.hitSound = hit;
         d.vanish = vanish;
         d.Died += pos => Pickup.Spawn(Pickup.Kind.Money, Random.Range(20, 60), 0, pos + Vector3.up * 0.1f, parent, wood, glow);
+    }
+
+    // Track as many small quads (like the road), so it is lit properly and does not vanish
+    // at a distance. Slightly uneven edges look like a real dirt track.
+    void BuildTrack(Transform parent, Vector3 from, Vector3 to, Vector3 dir)
+    {
+        var mb = new MeshKit.Builder();
+        Vector3 across = Vector3.Cross(Vector3.up, dir).normalized;
+        float length = Vector3.Distance(from, to);
+        int segments = Mathf.Max(2, Mathf.CeilToInt(length / 1.5f));
+        float prevL = 1.7f, prevR = 1.7f;
+        for (int i = 0; i < segments; i++)
+        {
+            float t0 = i / (float)segments, t1 = (i + 1) / (float)segments;
+            Vector3 a = Vector3.Lerp(from, to, t0) + Vector3.up * 0.02f, b = Vector3.Lerp(from, to, t1) + Vector3.up * 0.02f;
+            float wl = 1.5f + Random.Range(-0.25f, 0.3f), wr = 1.5f + Random.Range(-0.25f, 0.3f);
+            if (i == 0) { prevL = 2.6f; prevR = 2.6f; }   // wider where it meets the road
+            float v0 = t0 * length / 2f, v1 = t1 * length / 2f;
+            // Left half and right half (two quads across for nicer vertex lighting).
+            mb.Quad(a - across * prevL, b - across * wl, b, a, new Vector2(0, v0), new Vector2(0, v1), new Vector2(0.8f, v1), new Vector2(0.8f, v0));
+            mb.Quad(a, b, b + across * wr, a + across * prevR, new Vector2(0.8f, v0), new Vector2(0.8f, v1), new Vector2(1.6f, v1), new Vector2(1.6f, v0));
+            prevL = wl; prevR = wr;
+        }
+        MeshKit.Spawn("Track", parent, mb.ToMesh("Track"), gravel, Vector3.zero, Quaternion.identity, false);
+    }
+
+    static Material Crisp(Material m)
+    {
+        if (m == null) return null;
+        var copy = new Material(m) { name = m.name + " (crisp)" };
+        if (copy.HasProperty("_AffineTextureWarpingWeight")) copy.SetFloat("_AffineTextureWarpingWeight", 0f);
+        return copy;
     }
 
     // ---------------------------------------------------------------- helpers

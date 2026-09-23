@@ -15,10 +15,10 @@ public class DashDisplay : MonoBehaviour
     public Material screenMaterial;
 
     [Header("Corners in bus model coordinates (front = away from the driver)")]
-    public Vector3 backLeft = new Vector3(-2.098f, 0.503f, -0.455f);
-    public Vector3 frontLeft = new Vector3(-2.172f, 0.536f, -0.455f);
-    public Vector3 frontRight = new Vector3(-2.172f, 0.536f, -0.265f);
-    public Vector3 backRight = new Vector3(-2.098f, 0.503f, -0.265f);
+    public Vector3 backLeft = new Vector3(-2.096f, 0.502f, -0.455f);
+    public Vector3 frontLeft = new Vector3(-2.165f, 0.514f, -0.455f);
+    public Vector3 frontRight = new Vector3(-2.165f, 0.514f, -0.265f);
+    public Vector3 backRight = new Vector3(-2.096f, 0.502f, -0.265f);
 
     const int W = 128, H = 52;
     PixelCanvas canvas;
