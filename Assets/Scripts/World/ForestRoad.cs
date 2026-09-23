@@ -107,6 +107,7 @@ public class ForestRoad : MonoBehaviour
     public event System.Action<DepotSite> DepotBuilt;
     public DepotSite Depot { get; private set; }
     bool depotRequested;
+    float depotRequestedAt;
 
     /// <summary>
     /// Build the depot on the next suitable straight ahead. Bus stops after lastStopAt are
@@ -116,6 +117,7 @@ public class ForestRoad : MonoBehaviour
     {
         if (depotRequested || Depot != null) return;
         depotRequested = true;
+        depotRequestedAt = BusArcLength;
         for (int i = stops.Count - 1; i >= 0; i--)
         {
             var st = stops[i];
@@ -267,7 +269,8 @@ public class ForestRoad : MonoBehaviour
         float busS = BusArcLength;
 
         // Grow the centre line and build chunks up to generateAhead.
-        while (points.Count == 0 || distances[distances.Count - 1] < busS + generateAhead + sampleSpacing * samplesPerChunk)
+        // A little extra ahead, so the depot yard (which reaches into the next chunks) can be planned.
+        while (points.Count == 0 || distances[distances.Count - 1] < busS + generateAhead + sampleSpacing * samplesPerChunk + DepotLength + 20f)
             AddSample();
         while (builtUpTo + samplesPerChunk < firstSampleIndex + points.Count - 1 &&
                distances[builtUpTo - firstSampleIndex] < busS + generateAhead)
@@ -392,7 +395,9 @@ public class ForestRoad : MonoBehaviour
     {
         float s0 = distances[a];
         if (distances[distances.Count - 1] < s0 + DepotLength + 10f) return null;
-        for (int k = a; k < points.Count; k++)
+        // Only on a straight - unless it takes too long, then anywhere.
+        bool relaxed = BusArcLength > depotRequestedAt + 250f;
+        for (int k = a; k < points.Count && !relaxed; k++)
         {
             if (distances[k] > s0 + DepotLength + 10f) break;
             if (onCurve[k]) return null;

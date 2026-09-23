@@ -971,6 +971,7 @@ GameObject:
   - component: {fileID: 2100000024}
   - component: {fileID: 2100000025}
   - component: {fileID: 2100000026}
+  - component: {fileID: 2100000027}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1615,6 +1616,25 @@ MonoBehaviour:
   eyeHeight: 1.62
   mouseSensitivity: 0.12
   sitSound: {fileID: 8300000, guid: cd95c0f5d701442592bd75b7c2494c7e, type: 3}
+--- !u!114 &2100000027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa29d64607f4be596f29b8132e9fd7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 0}
+  game: {fileID: 0}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+  stopDisplayCentre: {x: -2.1, y: 1.085, z: 0.12}
+  stopDisplaySize: {x: 0.36, y: 0.055}
+  infoDisplayCentre: {x: -2.12, y: 1.035, z: -0.4}
+  infoDisplaySize: {x: 0.15, y: 0.07}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

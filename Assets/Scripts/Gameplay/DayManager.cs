@@ -188,8 +188,6 @@ public class DayManager : MonoBehaviour
     {
         if (GameUI.MenuOpen || game == null) return;
         DrawDayTitle();
-        string text = Loc.T($"NACHT {Progress.Day}/{Progress.LastDay}", $"NIGHT {Progress.Day}/{Progress.LastDay}") +
-                      $"   {Mathf.Min(game.Decisions, Quota)}/{Quota}   {Progress.Money} €";
-        RetroGUI.ShadowLabel(new Rect(8, 6, 220, 14), text, new Color(0.85f, 0.8f, 0.7f), true, TextAnchor.UpperLeft);
+        // Night, passengers and money are shown on the small display in the bus (BusDisplays).
     }
 }

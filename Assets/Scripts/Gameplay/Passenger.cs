@@ -43,6 +43,8 @@ public class Passenger : MonoBehaviour
         spine = FindBone("Spine1") ?? FindBone("Spine");
         head = FindBone("Head");
         if (spine != null) spineRest = spine.localRotation;
+        if (leftForeArm != null) leftForeRest = leftForeArm.localRotation;
+        if (rightForeArm != null) rightForeRest = rightForeArm.localRotation;
         if (head != null) headRest = head.localRotation;
         hipsOffset = hips != null ? transform.InverseTransformPoint(hips.position) : new Vector3(0f, 0.95f, 0f);
         leftUpLeg = FindBone("LeftUpLeg"); rightUpLeg = FindBone("RightUpLeg");
@@ -95,6 +97,7 @@ public class Passenger : MonoBehaviour
 
     Vector3 hipsOffset, seatLocal, seatForwardLocal;
     Quaternion spineRest = Quaternion.identity, headRest = Quaternion.identity;
+    Quaternion leftForeRest = Quaternion.identity, rightForeRest = Quaternion.identity;
     float sitBlend;
 
     /// <summary>Sit down on a seat: top of the cushion and forward direction, local to 'inSpace'.</summary>
@@ -209,8 +212,11 @@ public class Passenger : MonoBehaviour
         PoseArm(leftArm, leftArmDown, swing, right);
         PoseArm(rightArm, rightArmDown, -swing, right);
 
+        // Bones only the sitting pose moves: back to rest every frame (no piling up).
         if (spine != null) spine.localRotation = spineRest;
         if (head != null) head.localRotation = headRest;
+        if (leftForeArm != null) leftForeArm.localRotation = leftForeRest;
+        if (rightForeArm != null) rightForeArm.localRotation = rightForeRest;
         if (sitBlend > 0f) PoseSitting(right);
     }
 

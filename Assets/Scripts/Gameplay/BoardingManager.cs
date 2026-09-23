@@ -615,6 +615,22 @@ public class BoardingManager : MonoBehaviour
 
     readonly Dictionary<Passenger, int> seatOf = new Dictionary<Passenger, int>();
 
+    /// <summary>The next stop ahead of the bus and how far it is (null if none).</summary>
+    public BusStop NextStop(out float distance)
+    {
+        distance = float.MaxValue;
+        if (road == null) return null;
+        float busS = road.BusArcLength;
+        BusStop next = null;
+        foreach (var st in road.Stops)
+        {
+            if (st == null) continue;
+            float d = st.arcLength - busS;
+            if (d > -8f && d < distance) { distance = d; next = st; }
+        }
+        return next;
+    }
+
     /// <summary>Everyone riding in the bus right now.</summary>
     public IReadOnlyList<Passenger> Riders => riders;
 
@@ -984,21 +1000,7 @@ public class BoardingManager : MonoBehaviour
         float w = RetroGUI.VirtualWidth;
         var white = new Color(1f, 0.95f, 0.8f);
 
-        // Next stop.
-        if (road != null)
-        {
-            float busS = road.BusArcLength;
-            BusStop next = null;
-            float dist = float.MaxValue;
-            foreach (var st in road.Stops)
-            {
-                if (st == null) continue;
-                float d = st.arcLength - busS;
-                if (d > -8f && d < dist) { dist = d; next = st; }
-            }
-            if (next != null)
-                RetroGUI.ShadowLabel(new Rect(0, 6, w, 14), Loc.T("Nächste Haltestelle: ", "Next stop: ") + $"{next.stopName}  ({Mathf.Max(0f, dist):0} m)", white);
-        }
+        // The next stop is shown on the display at the front of the bus (BusDisplays).
 
         string prompt = null;
         var stopHere = StopAtDoor();
