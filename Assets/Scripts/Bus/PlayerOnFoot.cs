@@ -66,7 +66,12 @@ public class PlayerOnFoot : MonoBehaviour
 
         Walk(kb);
         var usable = Interactable.Nearest(walker.transform.position, walker.transform.forward);
-        if (ePressed && usable != null) usable.Use();
+        if (ePressed && usable != null)
+        {
+            var arms = FirstPersonArms.Instance;
+            if (arms != null && arms.Ready) { if (usable is Pickup) arms.Grab(); else arms.Push(); }
+            usable.Use();
+        }
         else if (ePressed && NearDoor) Enter();
         else if (GameKeys.Pressed(GameAction.Lights) && flashlight != null && !GameUI.MenuOpen) flashlight.enabled = !flashlight.enabled;
     }
@@ -159,6 +164,9 @@ public class PlayerOnFoot : MonoBehaviour
         controller.enabled = true;
         verticalSpeed = 0f;
     }
+
+    /// <summary>The flashlight while walking (null in the bus).</summary>
+    public Light Flashlight => flashlight;
 
     /// <summary>The walking player, or null while in the bus.</summary>
     public Transform Walker => walker != null ? walker.transform : null;

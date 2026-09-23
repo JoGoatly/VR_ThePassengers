@@ -16,7 +16,11 @@ public class Dweller : MonoBehaviour
     public Vector3 home;
     public System.Action<Vector3> Died;
 
+    /// <summary>How many residents are chasing the player right now.</summary>
+    public static int Chasers;
+
     Passenger walker;
+    bool counted;
     SoundManager sound;
     float repathAt, attackAt, staggerUntil, growlAt;
     bool chasing;
@@ -84,6 +88,18 @@ public class Dweller : MonoBehaviour
             repathAt = Time.time + 0.5f;
             walker.WalkPath(new[] { home }, null);
         }
+    }
+
+    void LateUpdate()
+    {
+        bool c = chasing && health > 0;
+        if (c != counted) { Chasers += c ? 1 : -1; counted = c; }
+    }
+
+    void OnDestroy()
+    {
+        if (counted) Chasers--;
+        counted = false;
     }
 
     void Growl()
