@@ -165,6 +165,9 @@ public class PlayerOnFoot : MonoBehaviour
         verticalSpeed = 0f;
     }
 
+    /// <summary>Walking speed right now (m/s), for the arm swing.</summary>
+    public float MoveSpeed { get; private set; }
+
     /// <summary>The flashlight while walking (null in the bus).</summary>
     public Light Flashlight => flashlight;
 
@@ -210,6 +213,7 @@ public class PlayerOnFoot : MonoBehaviour
         if (GameKeys.Held(GameAction.SteerLeft)) input.x -= 1f;
         input = Vector2.ClampMagnitude(input, 1f);
         float speed = kb.leftShiftKey.isPressed ? runSpeed : walkSpeed;
+        MoveSpeed = input.magnitude * speed;
 
         Vector3 move = (walker.transform.forward * input.y + walker.transform.right * input.x) * speed;
         verticalSpeed = controller.isGrounded ? -1f : verticalSpeed - 9.81f * Time.deltaTime;

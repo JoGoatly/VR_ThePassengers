@@ -1465,6 +1465,9 @@ MonoBehaviour:
   viewOffset: {x: 0, y: -0.02, z: 0}
   onFoot: {fileID: 2100000008}
   combat: {fileID: 2100000017}
+  driver: {fileID: 0}
+  walkSwing: 24
+  holdSteeringWheel: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -44,6 +44,14 @@ public class DriverBody : MonoBehaviour
     public float pedalPressAngle = 18f;
     public float pedalPressDistance = 0.04f;
 
+    [Tooltip("Hide the character's own arms: the first person arms (arms pack) hold the wheel instead")]
+    public bool useFirstPersonArms = true;
+
+    /// <summary>Where the hands hold the rim this frame (world space), for the first person arms.</summary>
+    public Vector3 LeftGrip { get; private set; }
+    public Vector3 RightGrip { get; private set; }
+    public bool HasGrips { get; private set; }
+
     /// <summary>World position of the driver's eyes, updated every frame.</summary>
     public Transform EyeAnchor { get; private set; }
 
@@ -148,11 +156,20 @@ public class DriverBody : MonoBehaviour
         if (steeringWheel != null)
         {
             float turn = bus != null ? Mathf.Clamp(bus.SteeringWheelTurn, -maxHandFollow, maxHandFollow) : 0f;
-            SolveArm(leftArm, leftArmHinge, GripPoint(leftGripAngle + turn, busRoot), -right, up);
-            SolveArm(rightArm, rightArmHinge, GripPoint(rightGripAngle + turn, busRoot), right, up);
+            LeftGrip = GripPoint(leftGripAngle + turn, busRoot);
+            RightGrip = GripPoint(rightGripAngle + turn, busRoot);
+            HasGrips = true;
+            SolveArm(leftArm, leftArmHinge, LeftGrip, -right, up);
+            SolveArm(rightArm, rightArmHinge, RightGrip, right, up);
             CurlFingers(leftFingers, leftArm[2]);
             CurlFingers(rightFingers, rightArm[2]);
         }
+
+        // The first person arms take over the wheel: fold the character's own arms away.
+        bool fpArms = useFirstPersonArms && FirstPersonArms.Instance != null && FirstPersonArms.Instance.HoldsWheel;
+        Vector3 armScale = fpArms ? Vector3.one * 0.001f : Vector3.one;
+        leftArm[0].localScale = armScale;
+        rightArm[0].localScale = armScale;
 
         // Feet: left foot resting, right foot on throttle or brake.
         float throttle = bus != null ? bus.ThrottleInput : 0f;
@@ -224,7 +241,7 @@ public class DriverBody : MonoBehaviour
     /// Two-bone IK that keeps the joint's natural bend axis, so elbows and knees
     /// never bend the wrong way. hinge is the bend axis in the upper bone's local space.
     /// </summary>
-    static void SolveTwoBone(Transform upper, Transform lower, Transform end, Vector3 hinge, Vector3 target, Vector3 pole)
+    public static void SolveTwoBone(Transform upper, Transform lower, Transform end, Vector3 hinge, Vector3 target, Vector3 pole)
     {
         Vector3 a = upper.position;
         float lenA = Vector3.Distance(a, lower.position);
@@ -268,7 +285,7 @@ public class DriverBody : MonoBehaviour
     }
 
     // Bend axis for a limb whose lower bone should swing towards bendDirection.
-    static Vector3 HingeInUpperSpace(Transform[] limb, Vector3 bendDirection)
+    public static Vector3 HingeInUpperSpace(Transform[] limb, Vector3 bendDirection)
     {
         Vector3 limbDir = (limb[1].position - limb[0].position).normalized;
         Vector3 hinge = Vector3.Cross(limbDir, bendDirection);
