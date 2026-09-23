@@ -26,7 +26,7 @@ public class ComputerTerminal : MonoBehaviour
 
     public event System.Action Clicked, Typed, ErrorBeep;
 
-    enum App { None, Register, Mail, Control }
+    enum App { None, Register, Mail, Control, Shop }
     App app = App.None;
 
     PixelCanvas canvas;
@@ -246,6 +246,7 @@ public class ComputerTerminal : MonoBehaviour
             case App.Register: Window(Loc.T("REGISTER - EINWOHNERMELDEAMT", "REGISTER - RESIDENTS OFFICE"), top, bottom); DrawRegister(top + 13, bottom); break;
             case App.Mail: Window(Loc.T("POSTFACH", "MAILBOX"), top, bottom); DrawMail(top + 13, bottom); break;
             case App.Control: Window(Loc.T("FAHRGASTKONTROLLE", "PASSENGER CHECK"), top, bottom); DrawControl(top + 13, bottom); break;
+            case App.Shop: Window(Loc.T("LADEN - VBN BETRIEBSBEDARF", "SHOP - VBN SUPPLIES"), top, bottom); DrawShop(top + 13, bottom); break;
         }
 
         DrawTaskbar();
@@ -266,9 +267,10 @@ public class ComputerTerminal : MonoBehaviour
         int unread = game != null ? game.Mail.UnreadCount : 0;
         bool someone = game != null && game.PendingCard != null;
         int y = top + 30;
-        if (Icon(40, y, "REGISTER", 0, false)) Open(App.Register);
-        if (Icon(135, y, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), 1, unread > 0)) Open(App.Mail);
-        if (Icon(230, y, Loc.T("KONTROLLE", "CHECK"), 2, someone)) Open(App.Control);
+        if (Icon(22, y, "REGISTER", 0, false)) Open(App.Register);
+        if (Icon(96, y, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), 1, unread > 0)) Open(App.Mail);
+        if (Icon(170, y, Loc.T("KONTROLLE", "CHECK"), 2, someone)) Open(App.Control);
+        if (Icon(244, y, Loc.T("LADEN", "SHOP"), 3, false)) Open(App.Shop);
 
         canvas.WrappedText(12, bottom - 50, canvas.Width - 24, 4,
             Loc.T("Leitstelle: Halten Sie nicht außerhalb der Haltestellen. Steigen Sie nicht aus. Lassen Sie niemanden ohne Kontrolle einsteigen.", "Dispatch: Do not stop outside the bus stops. Do not leave the bus. Do not let anyone on without a check."), Dim);
@@ -296,6 +298,12 @@ public class ComputerTerminal : MonoBehaviour
                 canvas.Fill(x + 6, y + 16, 20, 22, c);
                 canvas.Fill(x + 10, y + 20, 12, 18, Bg);
                 break;
+            case 3: // shopping bag with a coin
+                canvas.Frame(x + 2, y + 12, 28, 26, c);
+                canvas.Frame(x + 10, y + 4, 12, 9, c);
+                canvas.Frame(x + 11, y + 19, 10, 10, c);
+                canvas.Fill(x + 15, y + 21, 2, 6, c);
+                break;
         }
         canvas.Text(x + 16 - PixelCanvas.TextWidth(label) / 2, y + 48, label, c);
         return Hit(x - 12, y - 4, 56, 70);
@@ -313,15 +321,61 @@ public class ComputerTerminal : MonoBehaviour
         canvas.Fill(0, y, W, TaskBar, Panel);
         int unread = game != null ? game.Mail.UnreadCount : 0;
         bool someone = game != null && game.PendingCard != null;
-        if (Button(2, y + 1, 70, 11, "REGISTER", app == App.Register ? Hi : Panel, Text)) Open(App.Register);
-        if (Button(74, y + 1, 70, 11, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), app == App.Mail ? Hi : (unread > 0 ? new Color32(70, 55, 10, 255) : Panel), Text)) Open(App.Mail);
+        if (Button(2, y + 1, 60, 11, "REGISTER", app == App.Register ? Hi : Panel, Text)) Open(App.Register);
+        if (Button(64, y + 1, 60, 11, unread > 0 ? Loc.T($"POST ({unread})", $"MAIL ({unread})") : Loc.T("POSTFACH", "MAILBOX"), app == App.Mail ? Hi : (unread > 0 ? new Color32(70, 55, 10, 255) : Panel), Text)) Open(App.Mail);
         Color32 ctl = app == App.Control ? Hi : (someone && Mathf.Repeat(blink, 1f) < 0.5f ? new Color32(90, 70, 10, 255) : Panel);
-        if (Button(146, y + 1, 76, 11, Loc.T("KONTROLLE", "CHECK"), ctl, Text)) Open(App.Control);
-        if (game != null)
+        if (Button(126, y + 1, 62, 11, Loc.T("KONTROLLE", "CHECK"), ctl, Text)) Open(App.Control);
+        if (Button(190, y + 1, 46, 11, Loc.T("LADEN", "SHOP"), app == App.Shop ? Hi : Panel, Text)) Open(App.Shop);
+        string money = Progress.Money + " EUR";
+        canvas.Text(W - PixelCanvas.TextWidth(money) - 3, y + 1, money, Warn);
+    }
+
+    // ------------------------------------------------------------------ shop
+
+    int shopHover = -1;
+
+    void DrawShop(int top, int bottom)
+    {
+        int W = canvas.Width;
+        var d = Progress.Data;
+        canvas.Text(6, top + 2, Loc.T($"KONTO: {Progress.Money} EUR", $"ACCOUNT: {Progress.Money} EUR"), Warn);
+        string stock = Loc.T($"MUN {d.ammo}  VERB {d.medkits}", $"AMMO {d.ammo}  KITS {d.medkits}");
+        canvas.Text(W - PixelCanvas.TextWidth(stock) - 6, top + 2, stock, Dim);
+
+        int y = top + 16;
+        int hovered = -1;
+        for (int i = 0; i < Progress.Shop.Length; i++)
         {
-            string score = Loc.T($"OK {game.Correct} F {game.Wrong}", $"OK {game.Correct} X {game.Wrong}");
-            canvas.Text(W - PixelCanvas.TextWidth(score) - 3, y + 1, score, Dim);
+            var item = Progress.Shop[i];
+            bool owned = !item.consumable && Progress.Owns(item.id);
+            bool locked = !string.IsNullOrEmpty(item.requires) && !Progress.Owns(item.requires);
+            if (Inside(4, y, W - 8, 15)) hovered = i;
+            canvas.Fill(4, y, W - 8, 15, hovered == i ? Hi : Panel);
+            canvas.Text(8, y + 2, item.Name, owned ? Dim : locked ? Dim : White, 24);
+            string price = owned ? Loc.T("GEKAUFT", "OWNED") : item.price + " EUR";
+            canvas.Text(W - 108 - PixelCanvas.TextWidth(price), y + 2, price, owned ? Dim : Progress.Money >= item.price ? Text : Alert);
+            if (!owned)
+            {
+                bool can = Progress.CanBuy(item);
+                if (Button(W - 58, y + 1, 50, 13, Loc.T("KAUFEN", "BUY"), can ? Green : Panel, can ? White : Dim))
+                {
+                    if (Progress.Buy(item)) game?.ShowToast(Loc.T("Gekauft: ", "Bought: ") + item.Name);
+                    else ErrorBeep?.Invoke();
+                }
+            }
+            y += 17;
         }
+        if (hovered >= 0) shopHover = hovered;
+        if (shopHover >= 0)
+        {
+            var item = Progress.Shop[shopHover];
+            string info = item.Description;
+            if (!string.IsNullOrEmpty(item.requires) && !Progress.Owns(item.requires))
+                info += Loc.T(" (Benötigt: Pistole)", " (Requires: pistol)");
+            canvas.WrappedText(8, bottom - 36, W - 16, 3, info, Dim);
+        }
+        else canvas.WrappedText(8, bottom - 36, W - 16, 3,
+            Loc.T("Lieferung sofort an den Fahrerplatz. Bezahlung vom Lohnkonto.", "Delivered straight to the driver's seat. Paid from your wage account."), Dim);
     }
 
     void DrawPointer()
