@@ -853,6 +853,7 @@ GameObject:
   - component: {fileID: 2000000002}
   - component: {fileID: 2000000003}
   - component: {fileID: 2000000004}
+  - component: {fileID: 2000000005}
   m_Layer: 0
   m_Name: Forest Road
   m_TagString: Untagged
@@ -1171,6 +1172,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   glowMaterial: {fileID: 2100000, guid: de9f78e33df54443a428116a04f7a259, type: 2}
+--- !u!114 &2000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32945f7c6bd14c18b04741d61185bc76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 2000000003}
+  bus: {fileID: 1500000004}
+  carPrefabs: []
+  modelYaw: 0
+  modelScale: 1
+  bodyMaterial: {fileID: 2100000, guid: 4c306d7390344f099dcbd454dad3a9fb, type: 2}
+  glowMaterial: {fileID: 2100000, guid: 94508f58f43e416097303790049588fe, type: 2}
+  driveSound: {fileID: 8300000, guid: d4546af54e924714aa76de2d8141a2bb, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
