@@ -151,8 +151,15 @@ public class SoundManager : MonoBehaviour
 
     void OnStep(Vector3 pos)
     {
-        if (steps == null || steps.Length == 0) return;
-        PlayAt(steps[Random.Range(0, steps.Length)], pos, 0.5f);
+        // The player's own steps are right below the camera.
+        var cam = Camera.main;
+        bool mine = false;
+        if (cam != null)
+        {
+            Vector3 d = cam.transform.position - pos;
+            mine = new Vector2(d.x, d.z).magnitude < 0.8f && d.y > 0f && d.y < 2.2f;
+        }
+        Footsteps.Play(pos, mine);
     }
 
     void Update()
