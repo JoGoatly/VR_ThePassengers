@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 /// the doors, getting up in the bus - and finally a stop against the clock.
 /// No passengers, no scares. Passed = the first night begins.
 /// </summary>
+[DefaultExecutionOrder(-100)]   // decides before the night systems run
 public class Tutorial : MonoBehaviour
 {
     /// <summary>The driving test is running (night systems wait).</summary>
@@ -31,10 +32,12 @@ public class Tutorial : MonoBehaviour
     bool started;
     AudioSource music;
 
+    bool decided;
+
     void Awake()
     {
-        Active = !Progress.Data.tutorialDone && Progress.Day == 1;
-        BusLights.Daylight = Active;
+        Active = false;
+        BusLights.Daylight = false;
     }
 
     void OnDestroy()
@@ -43,8 +46,12 @@ public class Tutorial : MonoBehaviour
         BusLights.Daylight = false;
     }
 
-    void Start()
+    // Decided when the menu closes (a new game resets the save first).
+    void Begin()
     {
+        decided = true;
+        Active = !Progress.Data.tutorialDone && Progress.Day == 1;
+        BusLights.Daylight = Active;
         if (!Active) { enabled = false; return; }
         if (bus == null) bus = FindAnyObjectByType<BusController>();
         if (game == null) game = FindAnyObjectByType<BoardingManager>();
@@ -64,6 +71,7 @@ public class Tutorial : MonoBehaviour
 
     void Update()
     {
+        if (!decided && !GameUI.MenuOpen) Begin();
         if (!Active || GameUI.MenuOpen || bus == null) return;
         if (!started)
         {
