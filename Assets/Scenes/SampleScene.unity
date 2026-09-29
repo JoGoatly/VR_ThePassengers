@@ -976,6 +976,7 @@ GameObject:
   - component: {fileID: 2100000029}
   - component: {fileID: 2100000030}
   - component: {fileID: 2100000031}
+  - component: {fileID: 2100000032}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1721,6 +1722,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   buySound: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
   errorSound: {fileID: 8300000, guid: fde5270d0d2540b8bd3654c41f586b0c, type: 3}
+--- !u!114 &2100000032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13031bfbafd941d0a26dc7bd90a2d3c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 0}
+  homePosition: {x: 0, y: -2000, z: 0}
+  keyboardSound: {fileID: 8300000, guid: 5c88a3a1b06a4da2b7baf9e73f630e4c, type: 3}
+  knockSound: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
+  staticNoise: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
+  scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
+  doorSound: {fileID: 8300000, guid: cd95c0f5d701442592bd75b7c2494c7e, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

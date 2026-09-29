@@ -42,7 +42,7 @@ public class OffRoadGuard : MonoBehaviour
 
     void Update()
     {
-        if (road == null || bus == null || GameUI.MenuOpen || Time.time < cooldownUntil) return;
+        if (road == null || bus == null || GameUI.MenuOpen || GameUI.AtHome || Time.time < cooldownUntil) return;
 
         if (GameUI.PlayerOutside && onFoot != null && onFoot.Walker != null)
         {
