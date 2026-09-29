@@ -37,6 +37,17 @@ public class BusLights : MonoBehaviour
     /// <summary>Raised when the mode changes (for the switch sound).</summary>
     public event System.Action<Mode> Switched;
 
+    [Header("High beam battery")]
+    [Tooltip("Seconds of high beam from a full battery")]
+    public float highBeamSeconds = 25f;
+    [Tooltip("Seconds to charge from empty to full (while the high beam is off)")]
+    public float rechargeSeconds = 18f;
+
+    /// <summary>0..1 - drains while the high beam is on.</summary>
+    public float HighBeamCharge { get; private set; } = 1f;
+    /// <summary>The battery ran empty: all lights are off until it is full again.</summary>
+    public bool Exhausted { get; private set; }
+
     bool powerCut;
     /// <summary>A blown fuse: every light of the bus is off until it is fixed.</summary>
     public bool PowerCut
@@ -128,19 +139,45 @@ public class BusLights : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb != null && GameKeys.Pressed(GameAction.Lights) && !GameUI.AnyOpen)
+        // L switches between low and high beam.
+        if (kb != null && GameKeys.Pressed(GameAction.Lights) && !GameUI.AnyOpen && !Exhausted)
         {
-            mode = (Mode)(((int)mode + 1) % 3);
+            mode = mode == Mode.HighBeam ? Mode.LowBeam : Mode.HighBeam;
             Apply();
             Switched?.Invoke(mode);
+        }
+
+        // The high beam drains the battery; empty = every light goes out until it is full again.
+        float dt = Time.deltaTime;
+        if (!Exhausted && mode == Mode.HighBeam && !powerCut)
+        {
+            HighBeamCharge -= dt / Mathf.Max(1f, highBeamSeconds);
+            if (HighBeamCharge <= 0f)
+            {
+                HighBeamCharge = 0f;
+                Exhausted = true;
+                mode = Mode.LowBeam;
+                Apply();
+                Switched?.Invoke(Mode.Off);
+            }
+        }
+        else if (HighBeamCharge < 1f)
+        {
+            HighBeamCharge = Mathf.Min(1f, HighBeamCharge + dt / Mathf.Max(1f, rechargeSeconds));
+            if (Exhausted && HighBeamCharge >= 1f)
+            {
+                Exhausted = false;
+                Apply();
+                Switched?.Invoke(mode);
+            }
         }
     }
 
     void Apply()
     {
         if (left == null) return;
-        bool on = mode != Mode.Off && !powerCut;
-        bool high = mode == Mode.HighBeam && !powerCut;
+        bool on = mode != Mode.Off && !powerCut && !Exhausted;
+        bool high = mode == Mode.HighBeam && !powerCut && !Exhausted;
         if (cabin != null) cabin.enabled = !powerCut;
         // Low beam lights the near field in both modes; high beam adds far lights.
         foreach (var l in new[] { left, right })

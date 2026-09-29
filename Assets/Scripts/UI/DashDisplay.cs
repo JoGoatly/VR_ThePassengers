@@ -141,6 +141,20 @@ public class DashDisplay : MonoBehaviour
             };
             canvas.Text(lx + 3, 16, light, lights.mode == BusLights.Mode.HighBeam ? Beam : Dim);
         }
+        // High beam battery.
+        if (lights != null)
+        {
+            int bw = 31;
+            canvas.Frame(lx, 40, bw, 4, Dim);
+            int fill = Mathf.RoundToInt((bw - 2) * lights.HighBeamCharge);
+            Color32 c = lights.Exhausted ? Warn : lights.HighBeamCharge < 0.25f ? new Color32(255, 180, 60, 255) : Beam;
+            if (!lights.Exhausted || Mathf.Repeat(Time.time, 0.8f) < 0.5f) canvas.Fill(lx + 1, 41, fill, 2, c);
+            if (lights.Exhausted)
+            {
+                canvas.Fill(lx, 16, 31, 11, Bg);
+                canvas.Text(lx + 3, 16, Loc.T("LEER", "EMPTY"), Warn);
+            }
+        }
         // Why the bus can't drive: a blinking door lamp.
         if (!string.IsNullOrEmpty(bus.DriveLockReason) && Mathf.Repeat(Time.time, 1f) < 0.7f)
             canvas.Text(lx + 3, 30, Loc.T("TÜR", "DOOR"), Warn);

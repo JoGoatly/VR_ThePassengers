@@ -982,7 +982,7 @@ public class ForestRoad : MonoBehaviour
     {
         // Far enough into the chunk that the flat clearing doesn't reach the chunk before.
         int i = Mathf.Min(b, a + 13);
-        if (distances[i] < nextSidePathAt) return null;
+        if (distances[i] < nextSidePathAt || !Features.Has(Feature.SidePaths)) return null;
         if (depotRequested || NearDepot(distances[i], 60f) || NearRiver(distances[i], 60f) || NearPlace(distances[i], 70f)) return null;
         for (int k = a; k <= b; k++) if (onCurve[k]) return null;
         foreach (var st in stops)

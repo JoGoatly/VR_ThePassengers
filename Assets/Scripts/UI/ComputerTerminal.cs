@@ -315,6 +315,7 @@ public class ComputerTerminal : MonoBehaviour
 
     void Open(App a)
     {
+        if (a == App.Shop && !Features.Has(Feature.Shop)) return;   // from night 2
         app = a;
         typing = a == App.Register && string.IsNullOrEmpty(query);
     }

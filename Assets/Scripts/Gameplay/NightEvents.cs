@@ -231,7 +231,7 @@ public class NightEvents : MonoBehaviour
     public void UseSeatAction()
     {
         if (!active || current != Kind.RadioCheck || games == null) return;
-        games.Play(MiniGames.Kind.RadioCode, Loc.T("Funkcheck - Code wiederholen", "Radio check - repeat the code"), ok =>
+        games.Play(MiniGames.Kind.RadioCode, Loc.T("Funkcheck - Signal einstellen", "Radio check - tune the signal"), ok =>
         {
             if (!ok) return;
             Progress.AddMoney(radioReward);
