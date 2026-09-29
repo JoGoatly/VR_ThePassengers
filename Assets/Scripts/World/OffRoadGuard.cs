@@ -73,7 +73,9 @@ public class OffRoadGuard : MonoBehaviour
             haveSafe = true;
         }
 
-        if (haveSafe && (Mathf.Abs(busLateral) > road.EdgeOffset + driveOffRoad || flippedTime > 1.5f))
+        // Petrol stations and other flat places may be driven onto.
+        bool onPlace = road.InClearing(bus.transform.position);
+        if (haveSafe && ((Mathf.Abs(busLateral) > road.EdgeOffset + driveOffRoad && !onPlace) || flippedTime > 1.5f))
         {
             bus.ResetTo(safePosition + Vector3.up * 0.05f, safeRotation);
             flippedTime = 0f;

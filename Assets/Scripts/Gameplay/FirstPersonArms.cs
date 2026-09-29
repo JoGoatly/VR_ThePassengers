@@ -334,12 +334,15 @@ public class FirstPersonArms : MonoBehaviour
                 flashlightModel.SetParent(RightGrip, false);
                 flashlightModel.localPosition = Vector3.zero;
                 flashlightModel.localRotation = Quaternion.identity;
-                var body = MeshKit.Spawn("Body", flashlightModel, MeshKit.Prism(0.018f, 0.16f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
-                body.transform.localPosition = new Vector3(0f, 0f, -0.06f);
-                body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // prism along +Z
-                var head = MeshKit.Spawn("Head", flashlightModel, MeshKit.Prism(0.026f, 0.04f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
-                head.transform.localPosition = new Vector3(0f, 0f, 0.09f);
-                head.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                if (!FlashlightModel(flashlightModel))
+                {
+                    var body = MeshKit.Spawn("Body", flashlightModel, MeshKit.Prism(0.018f, 0.16f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
+                    body.transform.localPosition = new Vector3(0f, 0f, -0.06f);
+                    body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // prism along +Z
+                    var head = MeshKit.Spawn("Head", flashlightModel, MeshKit.Prism(0.026f, 0.04f, 6, 1f), flashlightMaterial, Vector3.zero, Quaternion.identity, false);
+                    head.transform.localPosition = new Vector3(0f, 0f, 0.09f);
+                    head.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                }
             }
             heldLight = light;
             heldLight.transform.SetParent(flashlightModel, false);
@@ -353,6 +356,30 @@ public class FirstPersonArms : MonoBehaviour
         if (flashlightModel != null) flashlightModel.gameObject.SetActive(heldLight != null);
         // The light always shines where we look, even while the hand moves.
         if (heldLight != null) heldLight.transform.rotation = cam.rotation;
+    }
+
+    [Tooltip("Turn the flashlight model around if the lamp points backwards")]
+    public bool flipFlashlightModel;
+
+    // The flashlight model (Resources/Props/flashlight): about 20 cm long, pointing along +Z.
+    bool FlashlightModel(Transform parent)
+    {
+        var holder = new GameObject("Flashlight Mesh").transform;
+        holder.SetParent(parent, false);
+        var model = PsxConvert.Spawn("Props/flashlight", holder);
+        if (model == null) { Destroy(holder.gameObject); return false; }
+        foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
+        var b = PsxConvert.LocalBounds(model.transform, holder);
+        // Longest side becomes the lamp's axis (+Z).
+        if (b.size.x >= b.size.y && b.size.x >= b.size.z) model.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * model.transform.localRotation;
+        else if (b.size.y >= b.size.z) model.transform.localRotation = Quaternion.Euler(90f, 0f, 0f) * model.transform.localRotation;
+        if (flipFlashlightModel) model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * model.transform.localRotation;
+        b = PsxConvert.LocalBounds(model.transform, holder);
+        float length = Mathf.Max(0.001f, b.size.z);
+        model.transform.localScale *= 0.2f / length;
+        b = PsxConvert.LocalBounds(model.transform, holder);
+        model.transform.localPosition -= b.center - new Vector3(0f, 0f, 0.02f);
+        return true;
     }
 
     void ReturnLightToCamera()

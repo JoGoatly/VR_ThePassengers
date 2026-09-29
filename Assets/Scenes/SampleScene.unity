@@ -975,6 +975,7 @@ GameObject:
   - component: {fileID: 2100000028}
   - component: {fileID: 2100000029}
   - component: {fileID: 2100000030}
+  - component: {fileID: 2100000031}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1706,6 +1707,20 @@ MonoBehaviour:
   menu: {fileID: 0}
   stepSound: {fileID: 8300000, guid: 7c657a631e634b59a2e764295fa2f9b0, type: 3}
   passSound: {fileID: 8300000, guid: 472f5e51f3974e138496ccac6517887f, type: 3}
+--- !u!114 &2100000031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b6e0a9c879d46f79699021ed2308a17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  buySound: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
+  errorSound: {fileID: 8300000, guid: fde5270d0d2540b8bd3654c41f586b0c, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

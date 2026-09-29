@@ -196,6 +196,9 @@ public class ShiftRules : MonoBehaviour
         lastArc = s;
     }
 
+    /// <summary>Coffee and the like.</summary>
+    public void WakeUp(float amount) => Awake = Mathf.Min(1f, Awake + amount);
+
     /// <summary>Fill up at a pump (0..1 of a tank). Returns what was filled.</summary>
     public static float Refuel(float amount)
     {
