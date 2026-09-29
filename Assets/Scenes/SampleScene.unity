@@ -972,6 +972,7 @@ GameObject:
   - component: {fileID: 2100000025}
   - component: {fileID: 2100000026}
   - component: {fileID: 2100000027}
+  - component: {fileID: 2100000028}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1635,6 +1636,34 @@ MonoBehaviour:
   stopDisplaySize: {x: 0.36, y: 0.055}
   infoDisplayCentre: {x: -2.12, y: 1.035, z: -0.4}
   infoDisplaySize: {x: 0.15, y: 0.07}
+--- !u!114 &2100000028
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e2479da67164ce4af1bcf1db8ef552b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  road: {fileID: 0}
+  side: {fileID: 0}
+  game: {fileID: 0}
+  wood: {fileID: 0}
+  concrete: {fileID: 0}
+  metal: {fileID: 0}
+  glow: {fileID: 0}
+  screenMaterial: {fileID: 2100000, guid: f38d1f0dbf1847749e69ce25f79a1366, type: 2}
+  jukeboxSong: {fileID: 8300000, guid: eaa76927bfd042399743afd69c97aa22, type: 3}
+  phoneRing: {fileID: 8300000, guid: 00869181ba04469e9be179388c66371e, type: 3}
+  hum: {fileID: 8300000, guid: 29c482facfc54ac69a921f2aa6852128, type: 3}
+  coins: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
+  click: {fileID: 8300000, guid: 1ace5861b9e44eb5a37f50b683d17da3, type: 3}
+  scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
+  fire: {fileID: 8300000, guid: 5b6a6792c3af494eb54e2a94dde68a1f, type: 3}
+  river: {fileID: 8300000, guid: ab8b1d1a7eae4b8e889cd1947a8be67a, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

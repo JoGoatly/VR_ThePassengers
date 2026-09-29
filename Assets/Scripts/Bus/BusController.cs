@@ -107,6 +107,11 @@ public class BusController : MonoBehaviour
     float throttleInput, brakeInput, steerInput;
     bool handbrakeInput;
 
+    // Following the road up and down: height of the pivot above the ground, half the
+    // distance between the two points where the ground is measured.
+    float groundOffset, probeHalf = 3f;
+    readonly RaycastHit[] probeHits = new RaycastHit[16];
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -118,6 +123,7 @@ public class BusController : MonoBehaviour
         CacheRestPoses();
         SetupGeometry();
         EnsureCollider();
+        MeasureGroundOffset();
     }
 
     void FindParts()
@@ -234,6 +240,32 @@ public class BusController : MonoBehaviour
 
         // Low center of mass, around the floor.
         rb.centerOfMass = new Vector3(box.center.x, min.y + box.size.y * 0.25f, box.center.z);
+    }
+
+    // How high the pivot sits above the bottom of the bus (measured while level).
+    void MeasureGroundOffset()
+    {
+        // Lowest point of the model (the tyres), from the renderers - always valid in Awake.
+        float bottom = float.MaxValue;
+        foreach (var r in GetComponentsInChildren<Renderer>())
+            bottom = Mathf.Min(bottom, r.bounds.min.y);
+        groundOffset = bottom < float.MaxValue ? transform.position.y - bottom + 0.03f : 0.03f;
+        probeHalf = Mathf.Max(1.5f, wheelbase * 0.5f);
+    }
+
+    // The highest road / terrain surface below a point (mesh colliders of the world only).
+    bool Probe(Vector3 at, out float height)
+    {
+        height = 0f;
+        int n = Physics.RaycastNonAlloc(at + Vector3.up * 4f, Vector3.down, probeHits, 12f, ~0, QueryTriggerInteraction.Ignore);
+        bool found = false;
+        for (int i = 0; i < n; i++)
+        {
+            var col = probeHits[i].collider;
+            if (!(col is MeshCollider) || col.transform.IsChildOf(transform)) continue;
+            if (!found || probeHits[i].point.y > height) { height = probeHits[i].point.y; found = true; }
+        }
+        return found;
     }
 
     void Update()
@@ -359,13 +391,34 @@ public class BusController : MonoBehaviour
 
         // Bicycle model: yaw rate = v / L * tan(delta), rotating around the rear axle.
         float yawRate = speed / wheelbase * Mathf.Tan(steerAngle * Mathf.Deg2Rad);
-        Vector3 omega = transform.up * yawRate;
+        Vector3 omega = Vector3.up * yawRate;
+        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
         Vector3 rearAxle = transform.TransformPoint(rearAxleLocal);
-        Vector3 velocity = transform.forward * speed + Vector3.Cross(omega, rb.worldCenterOfMass - rearAxle);
-        velocity.y = rb.linearVelocity.y;
+        Vector3 velocity = flatForward * speed + Vector3.Cross(omega, rb.worldCenterOfMass - rearAxle);
 
-        rb.linearVelocity = velocity;
-        rb.angularVelocity = omega;
+        // Up and down hills: height and pitch from the ground under the front and rear axle.
+        Vector3 at = rb.position;
+        if (Probe(at + flatForward * probeHalf, out float front) && Probe(at - flatForward * probeHalf, out float rear))
+        {
+            rb.useGravity = false;
+            float pitch = Mathf.Atan2(front - rear, probeHalf * 2f) * Mathf.Rad2Deg;
+            float targetY = (front + rear) * 0.5f + groundOffset;
+            velocity.y = Mathf.Clamp((targetY - at.y) / dt * 0.5f, -10f, 10f);
+            float yaw = rb.rotation.eulerAngles.y + yawRate * Mathf.Rad2Deg * dt;
+            float currentPitch = Mathf.DeltaAngle(0f, rb.rotation.eulerAngles.x);
+            float smoothPitch = Mathf.MoveTowards(currentPitch, -pitch, 30f * dt);
+            rb.MoveRotation(Quaternion.Euler(smoothPitch, yaw, 0f));
+            rb.linearVelocity = velocity;
+            rb.angularVelocity = Vector3.zero;
+        }
+        else
+        {
+            // Nothing below (shouldn't happen): fall.
+            rb.useGravity = true;
+            velocity.y = rb.linearVelocity.y;
+            rb.linearVelocity = velocity;
+            rb.angularVelocity = omega;
+        }
     }
 
     void AnimateParts()
