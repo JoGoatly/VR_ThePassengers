@@ -106,7 +106,7 @@ public class RoadsidePlaces : MonoBehaviour
         var kit = Kit(root);
         switch (site.kind)
         {
-            case 0: PetrolStation(kit); break;
+            case 0: if (!PetrolStationModel(kit)) PetrolStation(kit); break;
             case 1: Diner(kit); break;
             case 2: Kiosk(kit); break;
             default: Motel(kit); break;
@@ -114,7 +114,80 @@ public class RoadsidePlaces : MonoBehaviour
         kit.Finish();
     }
 
-    // ---- petrol station
+    // ---- petrol station (model from the Gas_station pack)
+
+    bool PetrolStationModel(PropKit k)
+    {
+        var holder = new GameObject("Petrol Station").transform;
+        holder.SetParent(k.root, false);
+        var model = PsxConvert.Spawn("Gas_station/Models/Gas_station", holder, "Gas_station/Textures");
+        if (model == null) { Destroy(holder.gameObject); return false; }
+        // The demo scenery around it (backdrops, trees, road, ground) is not needed here.
+        foreach (var t in model.GetComponentsInChildren<Transform>(true))
+        {
+            if (t == null || t == model.transform) continue;
+            string n = t.name;
+            if (n.StartsWith("Background") || n.StartsWith("Tree") || n.StartsWith("Bush") || n.StartsWith("Road") || n == "Ground" ||
+                n.StartsWith("AsphaltDamaged") || n.StartsWith("Electric") || n.StartsWith("Cable") || n.StartsWith("Plant"))
+                DestroyImmediate(t.gameObject);
+        }
+        // Pumps towards the road, 3 m from its edge.
+        holder.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        var b = PsxConvert.LocalBounds(model.transform, k.root);
+        holder.localPosition += new Vector3(-b.center.x, -b.min.y + 0.02f, 3f - b.min.z);
+        PsxConvert.AddColliders(model, 0.3f);
+        foreach (var mc in model.GetComponentsInChildren<MeshCollider>())
+            if (mc.name.StartsWith("Door") || mc.name.StartsWith("Glass") || mc.name.StartsWith("Carpet") || mc.name.StartsWith("Lamp")) Destroy(mc);
+        k.Solid(new Vector3(0f, 0f, ForestRoad.PlaceDepth * 0.5f), new Vector3(ForestRoad.PlaceWidth, 0.03f, ForestRoad.PlaceDepth), floor, false);
+
+        // Pumps you can use.
+        var used = new System.Collections.Generic.List<Vector3>();
+        foreach (var t in model.GetComponentsInChildren<Transform>())
+        {
+            if (!t.name.StartsWith("Fuel_pump") && !t.name.StartsWith("Dispenser")) continue;
+            Vector3 p = t.position;
+            if (Mathf.Abs(p.y - k.root.position.y) > 3f || used.Exists(u => (u - p).sqrMagnitude < 6f)) continue;
+            used.Add(p);
+            AddPump(k.root, new Vector3(p.x, k.root.position.y + 1f, p.z));
+        }
+        if (used.Count == 0)
+        {
+            AddPump(k.root, k.root.TransformPoint(new Vector3(-3f, 1f, 8f)));
+            AddPump(k.root, k.root.TransformPoint(new Vector3(3f, 1f, 8f)));
+        }
+
+        // Cash desk: the shop. Lights in the shop and under the roof.
+        Transform desk = null, roof = null;
+        foreach (var t in model.GetComponentsInChildren<Transform>())
+        {
+            if (desk == null && (t.name.StartsWith("Management") || t.name.StartsWith("Checker"))) desk = t;
+            if (roof == null && t.name.StartsWith("The_ceiling")) roof = t;
+        }
+        Vector3 shop = desk != null ? k.root.InverseTransformPoint(desk.position) : new Vector3(0f, 1f, 30f);
+        var buy = k.Interact(new Vector3(shop.x, 1.1f, shop.z), Loc.T("Einkaufen", "Shop"), Loc.T("Kasse", "Checkout"), null, 2.2f);
+        buy.Action = _ => { ShopMenu.Open(Loc.T("TANKSTELLE - SHOP", "PETROL STATION - SHOP"), ShopMenu.PetrolStationItems()); return null; };
+        k.Lamp(new Vector3(shop.x, 3f, shop.z), new Color(0.95f, 0.97f, 1f), 2.4f, 14f, 0.04f);
+        k.Lamp(new Vector3(shop.x - 5f, 3f, shop.z + 3f), new Color(0.95f, 0.97f, 1f), 1.8f, 10f);
+        Vector3 canopy = roof != null ? k.root.InverseTransformPoint(roof.position) : new Vector3(0f, 6f, 9f);
+        k.Lamp(new Vector3(canopy.x - 4f, 5.5f, canopy.z), new Color(0.95f, 0.97f, 1f), 3.5f, 16f);
+        k.Lamp(new Vector3(canopy.x + 4f, 5.5f, canopy.z), new Color(0.95f, 0.97f, 1f), 3.5f, 16f, 0.06f);
+        k.Loop(new Vector3(shop.x, 1.5f, shop.z), hum, 0.08f, 12f);
+        k.Interact(new Vector3(shop.x + 1.5f, 1.2f, shop.z - 1f), Loc.T("Zeitung lesen", "Read the newspaper"), Loc.T("Zeitung", "Newspaper"), Headline(), 1.6f);
+        RandomItem(k.root, k.root.TransformPoint(new Vector3(shop.x - 3f, 0.1f, shop.z + 2f)));
+        return true;
+    }
+
+    void AddPump(Transform root, Vector3 world)
+    {
+        var go = new GameObject("Fuel Pump");
+        go.transform.SetParent(root, true);
+        go.transform.position = world;
+        var pump = go.AddComponent<FuelPump>();
+        pump.radius = 1.9f;
+        pump.pumpLoop = hum;
+    }
+
+    // ---- petrol station (fallback without the model)
 
     void PetrolStation(PropKit k)
     {

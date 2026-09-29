@@ -317,8 +317,10 @@ public class BusController : MonoBehaviour
             if (Speed < 0.3f) { brake = 0f; handbrake = true; }
         }
 
-        throttleInput = throttle;
-        brakeInput = brake;
+        // Pedals move smoothly (no jerky full throttle / full brake).
+        float dt = Time.deltaTime;
+        throttleInput = Mathf.MoveTowards(throttleInput, throttle, dt * (throttle > throttleInput ? 1.8f : 4f));
+        brakeInput = Mathf.MoveTowards(brakeInput, brake, dt * (brake > brakeInput ? 2.5f : 5f));
         steerInput = Mathf.Clamp(steer, -1f, 1f);
         handbrakeInput = handbrake;
         if (toggleDoors && !doorsLocked && (doorsOpen || Mathf.Abs(SpeedKmh) <= maxDoorOpenSpeedKmh))
@@ -363,7 +365,12 @@ public class BusController : MonoBehaviour
             if (throttleInput > 0.01f)
             {
                 if (speed < -0.3f) accel += brakeDeceleration * throttleInput;
-                else if (speed < maxSpeed && !engineDead) accel += acceleration * throttleInput;
+                // Strong pull from standstill, gently less towards top speed.
+                else if (speed < maxSpeed && !engineDead)
+                {
+                    float s01 = Mathf.Clamp01(speed / maxSpeed);
+                    accel += acceleration * throttleInput * (1.15f - 0.75f * s01 * s01);
+                }
             }
             if (brakeInput > 0.01f)
             {
@@ -383,7 +390,9 @@ public class BusController : MonoBehaviour
 
         // Fixed steering lock; at high speed the wheel just turns more slowly.
         float speedFactor = Mathf.Clamp01(Mathf.Abs(speed) / maxSpeed);
-        float targetSteer = Mathf.Clamp(steerInput + steerPull * Mathf.Clamp01(Mathf.Abs(speed) / 3f), -1f, 1f) * maxSteerAngle;
+        // Less steering lock at speed: calm on the straight, tight when manoeuvring.
+        float lockAtSpeed = Mathf.Lerp(1f, 0.42f, speedFactor);
+        float targetSteer = Mathf.Clamp(steerInput + steerPull * Mathf.Clamp01(Mathf.Abs(speed) / 3f), -1f, 1f) * maxSteerAngle * lockAtSpeed;
         float rate = Mathf.Abs(targetSteer) < Mathf.Abs(steerAngle)
             ? steerReturnSpeed
             : Mathf.Lerp(steerSpeed, steerSpeedAtTopSpeed, speedFactor);

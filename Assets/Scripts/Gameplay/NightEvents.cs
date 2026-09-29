@@ -34,6 +34,9 @@ public class NightEvents : MonoBehaviour
 
     Kind current;
     bool active;
+
+    /// <summary>Something is broken right now (the stop timer waits).</summary>
+    public bool Blocking => active;
     readonly List<Kind> tonight = new List<Kind>();
     int nextIndex;
     float nextAllowedAt, deadline;
@@ -88,7 +91,7 @@ public class NightEvents : MonoBehaviour
 
     void Update()
     {
-        if (game == null || bus == null || GameUI.MenuOpen) return;
+        if (game == null || bus == null || GameUI.MenuOpen || Tutorial.Active) return;
         if (!started)
         {
             started = true;
@@ -231,7 +234,7 @@ public class NightEvents : MonoBehaviour
     public void UseSeatAction()
     {
         if (!active || current != Kind.RadioCheck || games == null) return;
-        games.Play(MiniGames.Kind.RadioCode, Loc.T("Funkcheck - Code wiederholen", "Radio check - repeat the code"), ok =>
+        games.Play(MiniGames.Kind.RadioCode, Loc.T("Funkcheck - Signal einstellen", "Radio check - tune the signal"), ok =>
         {
             if (!ok) return;
             Progress.AddMoney(radioReward);

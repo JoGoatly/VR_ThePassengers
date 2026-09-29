@@ -98,8 +98,9 @@ public class PlayerCombat : MonoBehaviour
         if (kb != null)
         {
             if (kb.digit1Key.wasPressedThisFrame) weapon = Weapon.Hands;
-            if (kb.digit2Key.wasPressedThisFrame && Progress.Owns("bat")) weapon = Weapon.Bat;
-            if (kb.digit3Key.wasPressedThisFrame && Progress.Owns("pistol")) weapon = Weapon.Pistol;
+            bool armed = Features.Has(Feature.Weapons);
+            if (armed && kb.digit2Key.wasPressedThisFrame && Progress.Owns("bat")) weapon = Weapon.Bat;
+            if (armed && kb.digit3Key.wasPressedThisFrame && Progress.Owns("pistol")) weapon = Weapon.Pistol;
         }
         if (GameKeys.Pressed(GameAction.Heal) && Progress.Data.medkits > 0 && Health < maxHealth)
         {

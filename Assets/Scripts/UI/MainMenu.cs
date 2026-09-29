@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 [DefaultExecutionOrder(-500)]
 public class MainMenu : MonoBehaviour
 {
-    enum Page { Language, Menu, Settings, Keys, Intro, Playing, Paused, DayTitle, ShiftEnd, Ending }
+    enum Page { Language, Menu, Settings, Keys, Intro, Playing, Paused, DayTitle, ShiftEnd, Ending, GameOver }
 
     [Tooltip("Skip everything and start driving right away (for testing)")]
     public bool skipInEditor;
@@ -45,6 +45,8 @@ public class MainMenu : MonoBehaviour
     void Awake()
     {
         GameSettings.Apply();
+        var ost = Resources.Load<AudioClip>("Music/menu");
+        if (ost != null) menuMusic = ost;
         music = gameObject.AddComponent<AudioSource>();
         music.clip = menuMusic;
         music.loop = true;
@@ -174,6 +176,46 @@ public class MainMenu : MonoBehaviour
         AudioListener.pause = true;
     }
 
+    string gameOverTitle, gameOverText;
+    AudioSource gameOverMusic;
+
+    /// <summary>Game over (fired, fell asleep...): the night can be played again.</summary>
+    public void ShowGameOver(string title, string text)
+    {
+        if (screen == Page.GameOver) return;
+        gameOverTitle = title;
+        gameOverText = text;
+        settingsReturn = Page.Menu;
+        Show(Page.GameOver);
+        SetPaused(true);
+        AudioListener.pause = true;
+        var clip = Resources.Load<AudioClip>("Music/gameover");
+        if (clip != null)
+        {
+            gameOverMusic = new GameObject("Game Over Music").AddComponent<AudioSource>();
+            gameOverMusic.clip = clip;
+            gameOverMusic.loop = true;
+            gameOverMusic.ignoreListenerPause = true;
+            gameOverMusic.volume = 0.6f * GameSettings.Music;
+            gameOverMusic.Play();
+        }
+    }
+
+    void DrawGameOver(float w)
+    {
+        float t = Time.unscaledTime - screenSince;
+        float a = Mathf.Clamp01(t / 1.5f);
+        RetroGUI.Fill(new Rect(0, 0, w, RetroGUI.VirtualHeight), new Color(0f, 0f, 0f, 0.85f * a));
+        Label(new Rect(0, 60, w, 34), gameOverTitle, big, new Color(0.8f, 0.08f, 0.05f, a), TextAnchor.MiddleCenter);
+        Label(new Rect(w / 2 - 200, 110, 400, 120), gameOverText, text, new Color(0.8f, 0.78f, 0.72f, a), TextAnchor.UpperCenter, true);
+        if (t < 2f) return;
+        if (MenuButton(new Rect(w / 2 - 80, 250, 160, 22), Loc.T("NACHT WIEDERHOLEN", "RETRY THE NIGHT"))) NextNight();
+        if (MenuButton(new Rect(w / 2 - 80, 278, 160, 22), Loc.T("HAUPTMENÜ", "MAIN MENU"))) BackToMainMenu();
+    }
+
+    /// <summary>The driving test is passed: on to the first night.</summary>
+    public void AfterTutorial() => NextNight();
+
     void NextNight()
     {
         showDayTitleOnLoad = true;
@@ -213,6 +255,7 @@ public class MainMenu : MonoBehaviour
             case Page.DayTitle: DrawDayTitle(w); break;
             case Page.ShiftEnd: DrawShiftEnd(w); break;
             case Page.Ending: DrawEnding(w); break;
+            case Page.GameOver: DrawGameOver(w); break;
         }
     }
 

@@ -249,6 +249,7 @@ public class PlayerOnFoot : MonoBehaviour
         {
             var usable = walker != null ? Interactable.Nearest(walker.transform.position, walker.transform.forward) : null;
             string text = usable != null ? usable.Prompt + "  " + GameKeys.Tag(GameAction.Interact) :
+                GameUI.AtHome ? Loc.T("Zuhause   -   Taschenlampe ", "Home   -   Flashlight ") + GameKeys.Tag(GameAction.Lights) :
                 NearDoor ? Loc.T("Einsteigen ", "Get in ") + GameKeys.Tag(GameAction.Interact) : Loc.T("Zurück zur Tür des Busses   -   Taschenlampe ", "Back to the bus door   -   Flashlight ") + GameKeys.Tag(GameAction.Lights);
             RetroGUI.ShadowLabel(new Rect(0, 318, w, 14), text, new Color(1f, 0.85f, 0.3f));
         }

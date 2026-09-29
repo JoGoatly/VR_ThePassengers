@@ -145,7 +145,7 @@ public class MiniGames : MonoBehaviour
         GUI.depth = -360;
         var p = Panel;
         RetroGUI.Fill(new Rect(0, 0, RetroGUI.VirtualWidth, RetroGUI.VirtualHeight), new Color(0f, 0f, 0f, 0.45f));
-        RetroGUI.Frame(new Rect(p.x - 3, p.y - 3, p.width + 6, p.height + 6), new Color(0.07f, 0.07f, 0.08f, 0.96f), new Color(0.55f, 0.5f, 0.4f), 2f);
+        RetroGUI.Panel(new Rect(p.x - 3, p.y - 3, p.width + 6, p.height + 6), 1);
         RetroGUI.Label(new Rect(p.x + 8, p.y + 4, p.width - 16, 14), title, Hint, true);
         RetroGUI.Label(new Rect(p.x, p.yMax - 12, p.width - 6, 11), Loc.T("Abbrechen [ESC]", "Stop [ESC]"), new Color(0.6f, 0.6f, 0.6f), false, true, TextAnchor.UpperRight);
         switch (kind.Value)
@@ -208,88 +208,119 @@ public class MiniGames : MonoBehaviour
         GUI.matrix = matrix;
     }
 
-    // ---------------------------------------------------------------- radio code (Simon)
+    // ---------------------------------------------------------------- radio signal (sine wave)
 
-    readonly List<int> sequence = new List<int>();
-    int inputPos, mistakes, lit = -1;
-    bool showing;
-    float showTime, litUntil;
-    static readonly Color[] RadioColors = { new Color(0.8f, 0.15f, 0.12f), new Color(0.15f, 0.7f, 0.2f), new Color(0.15f, 0.35f, 0.85f), new Color(0.9f, 0.8f, 0.15f) };
+    // The radio receives a wave; turn the knobs until your wave lies on top of it.
+    // Knobs: amplitude, frequency and (from night 3) phase.
+    readonly float[] knob = new float[3], target = new float[3];
+    int knobCount, dragKnob = -1;
+    float dragStartY, dragStartValue, stableFor;
+    static readonly string[] KnobNamesDe = { "AMPLITUDE", "FREQUENZ", "PHASE" };
+    static readonly string[] KnobNamesEn = { "AMPLITUDE", "FREQUENCY", "PHASE" };
 
     void SetupRadio()
     {
-        sequence.Clear();
-        for (int i = 0; i < 3 + level; i++) sequence.Add(Random.Range(0, 4));
-        mistakes = 0;
-        StartShowing();
+        knobCount = level >= 2 ? 3 : 2;
+        for (int i = 0; i < 3; i++)
+        {
+            target[i] = Random.Range(0.15f, 0.85f);
+            do knob[i] = Random.value; while (Mathf.Abs(knob[i] - target[i]) < 0.25f);
+        }
+        if (knobCount < 3) knob[2] = target[2];
+        dragKnob = -1;
+        stableFor = 0f;
     }
 
-    void StartShowing()
+    Rect Scope(Rect p) => new Rect(p.x + 20, p.y + 34, p.width - 40, 110);
+    Vector2 Knob(Rect p, int i) => new Vector2(p.x + p.width / 2f + (i - (knobCount - 1) / 2f) * 110f, p.y + 180f);
+
+    static float Wave(float[] v, float x, float time)
     {
-        showing = true;
-        showTime = -0.8f;
-        inputPos = 0;
-        lit = -1;
+        float amp = Mathf.Lerp(0.15f, 1f, v[0]);
+        float freq = Mathf.Lerp(1f, 5f, v[1]);
+        float phase = v[2] * Mathf.PI * 2f;
+        return amp * Mathf.Sin(x * freq * Mathf.PI * 2f + phase + time);
     }
 
-    Rect RadioButton(Rect p, int i) => new Rect(p.x + 110 + (i % 2) * 95, p.y + 45 + (i / 2) * 70, 85, 60);
+    float Match()
+    {
+        float err = 0f;
+        for (int i = 0; i < knobCount; i++) err = Mathf.Max(err, Mathf.Abs(knob[i] - target[i]));
+        return Mathf.Clamp01(1f - err / 0.35f);
+    }
 
     void UpdateRadio()
     {
-        if (showing)
-        {
-            float step = 0.7f;
-            int before = showTime < 0f ? -1 : Mathf.FloorToInt(showTime / step);
-            showTime += Time.deltaTime;
-            int index = showTime < 0f ? -1 : Mathf.FloorToInt(showTime / step);
-            if (index != before && index >= 0 && index < sequence.Count) Beep(sequence[index]);
-            lit = index >= 0 && index < sequence.Count && showTime - index * step < 0.45f ? sequence[index] : -1;
-            if (index >= sequence.Count) { showing = false; lit = -1; }
-            return;
-        }
-        if (Time.time > litUntil) lit = -1;
-        if (!Clicked) return;
         var p = Panel;
-        for (int i = 0; i < 4; i++)
-        {
-            if (!RadioButton(p, i).Contains(MouseV)) continue;
-            Beep(i);
-            lit = i;
-            litUntil = Time.time + 0.2f;
-            if (sequence[inputPos] == i)
-            {
-                inputPos++;
-                if (inputPos >= sequence.Count) Finish(true);
-            }
-            else
-            {
-                mistakes++;
-                Play(fail);
-                if (mistakes >= 3) { Finish(false); return; }
-                Say(Loc.T("Falsch! Noch einmal zuhören...", "Wrong! Listen again..."));
-                StartShowing();
-            }
-            return;
-        }
+        var m = MouseV;
+        if (Clicked)
+            for (int i = 0; i < knobCount; i++)
+                if (Vector2.Distance(m, Knob(p, i)) < 26f) { dragKnob = i; dragStartY = m.y; dragStartValue = knob[i]; Play(click, 0.4f); }
+        if (!Held) dragKnob = -1;
+        if (dragKnob >= 0)
+            knob[dragKnob] = Mathf.Clamp01(dragStartValue + (dragStartY - m.y) / 140f);   // drag up = turn right
+        // Mouse wheel over a knob turns it too.
+        var mouse = Mouse.current;
+        float wheel = mouse != null ? mouse.scroll.ReadValue().y : 0f;
+        if (Mathf.Abs(wheel) > 0.01f)
+            for (int i = 0; i < knobCount; i++)
+                if (Vector2.Distance(m, Knob(p, i)) < 30f) knob[i] = Mathf.Clamp01(knob[i] + Mathf.Sign(wheel) * 0.02f);
+
+        // Close enough for a moment: the signal locks.
+        float err = 0f;
+        for (int i = 0; i < knobCount; i++) err = Mathf.Max(err, Mathf.Abs(knob[i] - target[i]));
+        float tolerance = 0.05f - 0.01f * (level - 1);
+        stableFor = err < tolerance ? stableFor + Time.deltaTime : 0f;
+        if (stableFor > 0.02f && stableFor - Time.deltaTime <= 0.02f) Beep(2);
+        if (stableFor >= 1.2f) Finish(true);
     }
 
     void Beep(int i)
     {
-        if (beeps != null && beeps.Length > 0) Play(beeps[i % beeps.Length], 0.7f);
+        if (beeps != null && beeps.Length > 0) Play(beeps[i % beeps.Length], 0.6f);
     }
 
     void DrawRadio(Rect p)
     {
-        RetroGUI.Fill(new Rect(p.x + 100, p.y + 36, 200, 150), new Color(0.15f, 0.14f, 0.12f));
-        for (int i = 0; i < 4; i++)
+        var scope = Scope(p);
+        RetroGUI.Fill(scope, new Color(0.02f, 0.06f, 0.03f));
+        for (int g = 1; g < 4; g++) RetroGUI.Fill(new Rect(scope.x, scope.y + scope.height * g / 4f, scope.width, 1), new Color(0.1f, 0.25f, 0.12f));
+        for (int g = 1; g < 8; g++) RetroGUI.Fill(new Rect(scope.x + scope.width * g / 8f, scope.y, 1, scope.height), new Color(0.1f, 0.25f, 0.12f));
+        float t = Time.time * 2f;
+        const int samples = 90;
+        Vector2 prevT = Vector2.zero, prevM = Vector2.zero;
+        float noise = level >= 3 ? 0.06f : 0f;
+        for (int k = 0; k <= samples; k++)
         {
-            var c = RadioColors[i];
-            RetroGUI.Fill(RadioButton(p, i), lit == i ? Color.Lerp(c, Color.white, 0.55f) : c * 0.55f);
-            RetroGUI.Label(RadioButton(p, i), (i + 1).ToString(), Color.white, true, false, TextAnchor.MiddleCenter);
+            float x = k / (float)samples;
+            float yt = Wave(target, x, t) + (noise > 0f ? (Mathf.PerlinNoise(x * 20f, t) - 0.5f) * noise * 2f : 0f);
+            float ym = Wave(knob, x, t);
+            Vector2 pt = new Vector2(scope.x + x * scope.width, scope.center.y - yt * scope.height * 0.42f);
+            Vector2 pm = new Vector2(scope.x + x * scope.width, scope.center.y - ym * scope.height * 0.42f);
+            if (k > 0)
+            {
+                Line(prevT, pt, new Color(0.3f, 1f, 0.4f, 0.9f), 2f);
+                Line(prevM, pm, new Color(1f, 0.7f, 0.2f, 0.9f), 2f);
+            }
+            prevT = pt;
+            prevM = pm;
         }
-        string state = showing ? Loc.T("Hör zu...", "Listen...") : Loc.T($"Wiederhole den Code  ({inputPos}/{sequence.Count})", $"Repeat the code  ({inputPos}/{sequence.Count})");
-        RetroGUI.Label(new Rect(p.x + 8, p.y + 20, p.width - 16, 12), state, Ink);
-        Instruction(p, Loc.T($"Klicke die Tasten in der gehörten Reihenfolge. Fehler: {mistakes}/3", $"Click the buttons in the order you heard. Mistakes: {mistakes}/3"));
+        int match = Mathf.RoundToInt(Match() * 100f);
+        RetroGUI.Label(new Rect(p.x + 8, p.y + 20, p.width - 16, 12),
+            stableFor > 0f ? Loc.T("SIGNAL STABIL - halten...", "SIGNAL LOCKED - hold...") : Loc.T($"Übereinstimmung: {match}%", $"Match: {match}%"),
+            stableFor > 0f ? Good : Ink);
+
+        for (int i = 0; i < knobCount; i++)
+        {
+            Vector2 c = Knob(p, i);
+            Disc(c, 22f, new Color(0.12f, 0.12f, 0.13f));
+            Disc(c, 18f, dragKnob == i ? new Color(0.45f, 0.42f, 0.38f) : new Color(0.32f, 0.3f, 0.28f));
+            float a = Mathf.Lerp(-135f, 135f, knob[i]) * Mathf.Deg2Rad;
+            Line(c, c + new Vector2(Mathf.Sin(a), -Mathf.Cos(a)) * 17f, new Color(1f, 0.75f, 0.3f), 3f);
+            RetroGUI.Label(new Rect(c.x - 50, c.y + 24, 100, 11), Loc.T(KnobNamesDe[i], KnobNamesEn[i]), Ink, false, true, TextAnchor.UpperCenter);
+        }
+        Instruction(p, Loc.T("Regler mit der Maus hoch/runter ziehen (oder Mausrad), bis die gelbe Welle auf der grünen liegt.",
+                             "Drag the knobs up/down (or use the wheel) until the yellow wave lies on the green one."));
     }
 
     // ---------------------------------------------------------------- saw

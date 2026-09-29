@@ -973,6 +973,10 @@ GameObject:
   - component: {fileID: 2100000026}
   - component: {fileID: 2100000027}
   - component: {fileID: 2100000028}
+  - component: {fileID: 2100000029}
+  - component: {fileID: 2100000030}
+  - component: {fileID: 2100000031}
+  - component: {fileID: 2100000032}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1664,6 +1668,79 @@ MonoBehaviour:
   scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
   fire: {fileID: 8300000, guid: 5b6a6792c3af494eb54e2a94dde68a1f, type: 3}
   river: {fileID: 8300000, guid: ab8b1d1a7eae4b8e889cd1947a8be67a, type: 3}
+--- !u!114 &2100000029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c1f36709a6a44a4b51ca39931738f9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 0}
+  bus: {fileID: 0}
+  menu: {fileID: 0}
+  expectedSpeed: 11
+  graceSeconds: 30
+  awakeSeconds: 320
+  drinkBoost: 0.45
+  drinkSound: {fileID: 8300000, guid: 7210b0af905f4976ba04c2237cdbfd04, type: 3}
+  heartbeat: {fileID: 8300000, guid: b3d91fe03dcb4134952ccd65c1d523e1, type: 3}
+  warningBeep: {fileID: 8300000, guid: 92807d6d57ca4e3bb4298a79e08920ad, type: 3}
+  tankRange: 4200
+--- !u!114 &2100000030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25ea38f3b98544e7962131b46e88c001, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bus: {fileID: 0}
+  game: {fileID: 0}
+  menu: {fileID: 0}
+  stepSound: {fileID: 8300000, guid: 7c657a631e634b59a2e764295fa2f9b0, type: 3}
+  passSound: {fileID: 8300000, guid: 472f5e51f3974e138496ccac6517887f, type: 3}
+--- !u!114 &2100000031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b6e0a9c879d46f79699021ed2308a17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  buySound: {fileID: 8300000, guid: 52bba7dfbeb54cb8babb0b76ab279793, type: 3}
+  errorSound: {fileID: 8300000, guid: fde5270d0d2540b8bd3654c41f586b0c, type: 3}
+--- !u!114 &2100000032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13031bfbafd941d0a26dc7bd90a2d3c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  game: {fileID: 0}
+  homePosition: {x: 0, y: -2000, z: 0}
+  keyboardSound: {fileID: 8300000, guid: 5c88a3a1b06a4da2b7baf9e73f630e4c, type: 3}
+  knockSound: {fileID: 8300000, guid: 7d2f0c1e9a4b4f6e8c3a5b1d0e9f8a71, type: 3}
+  staticNoise: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
+  scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
+  doorSound: {fileID: 8300000, guid: cd95c0f5d701442592bd75b7c2494c7e, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

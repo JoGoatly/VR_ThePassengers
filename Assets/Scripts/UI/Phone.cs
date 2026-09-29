@@ -94,6 +94,7 @@ public class Phone : MonoBehaviour
 
         var kb = Keyboard.current;
         if (kb == null || GameUI.MenuOpen || GameUI.TerminalTyping || GameUI.NoteOpen || GameUI.PcOpen || GameUI.MinigameOpen) return;
+        if (!Features.Has(Feature.Phone)) return;
         if (GameKeys.Pressed(GameAction.Phone)) SetOpen(!open);
         else if (open && kb.escapeKey.wasPressedThisFrame) SetOpen(false);
     }
@@ -115,6 +116,7 @@ public class Phone : MonoBehaviour
         float w = RetroGUI.VirtualWidth, h = RetroGUI.VirtualHeight;
         if (!open)
         {
+            if (!Features.Has(Feature.Phone)) return;
             int n = UnreadSms + UnreadNews;
             if (n > 0 && Mathf.Repeat(Time.time, 1.2f) < 0.8f)
                 RetroGUI.ShadowLabel(new Rect(w - 160, h - 18, 150, 12), Loc.T($"HANDY ({n}) ", $"PHONE ({n}) ") + GameKeys.Tag(GameAction.Phone),

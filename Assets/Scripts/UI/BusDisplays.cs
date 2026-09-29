@@ -93,6 +93,15 @@ public class BusDisplays : MonoBehaviour
         var next = game.NextStop(out float dist);
         bool halt = game.StopRequested && Mathf.Repeat(Time.time, 1f) < 0.6f;
         string distance = next != null ? $"{Mathf.Max(0f, dist):0} m" : "";
+        // With a time limit the display shows the time left instead of the distance.
+        var rules = ShiftRules.Instance;
+        bool late = false;
+        if (next != null && rules != null && rules.TimeLeft >= 0f)
+        {
+            int secs = Mathf.CeilToInt(rules.TimeLeft);
+            distance = $"{secs / 60}:{secs % 60:00}";
+            late = rules.TimeLeft < 15f;
+        }
         int distW = PixelCanvas.TextWidth(distance) + 4;
         if (halt)
         {
@@ -115,7 +124,7 @@ public class BusDisplays : MonoBehaviour
             c.Text(x, 4, text, Amber);
             c.Fill(room + 2, 0, c.Width - room - 2, c.Height, Off);   // keep the distance readable
         }
-        c.Text(c.Width - distW + 1, 4, distance, AmberDim);
+        c.Text(c.Width - distW + 1, 4, distance, late && Mathf.Repeat(Time.time, 0.6f) < 0.35f ? Red : AmberDim);
     }
 
     void DrawInfo()
@@ -127,5 +136,14 @@ public class BusDisplays : MonoBehaviour
         c.Text(4, 2, Loc.T($"NACHT {Progress.Day}/{Progress.LastDay}", $"NIGHT {Progress.Day}/{Progress.LastDay}"), Green);
         c.Text(4, 13, Loc.T($"FAHRG. {Mathf.Min(game.Decisions, quota)}/{quota}", $"PASS. {Mathf.Min(game.Decisions, quota)}/{quota}"), Green);
         c.Text(4, 24, $"{Progress.Money} EUR", Progress.Money < 0 ? Red : Green);
+        if (Features.Has(Feature.Fatigue))
+        {
+            // Energy drinks and how awake you are.
+            c.Text(c.Width - 22, 24, $"x{Progress.Data.energyDrinks}", Green);
+            float awake = ShiftRules.Instance != null ? ShiftRules.Instance.Awake : 1f;
+            c.Fill(c.Width - 6, 3, 3, c.Height - 6, new Color32(20, 40, 25, 255));
+            int hgt = Mathf.RoundToInt((c.Height - 6) * awake);
+            c.Fill(c.Width - 6, c.Height - 3 - hgt, 3, hgt, awake < 0.3f ? Red : Green);
+        }
     }
 }

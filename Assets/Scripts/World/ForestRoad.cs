@@ -175,7 +175,7 @@ public class ForestRoad : MonoBehaviour
         public Transform chunk;
     }
 
-    public const float PlaceWidth = 42f, PlaceDepth = 34f;
+    public const float PlaceWidth = 42f, PlaceDepth = 44f;
     const float RiverHalfWidth = 7f, ValleyHalfWidth = 24f;
 
     public event System.Action<RiverSite> RiverBuilt;
@@ -183,6 +183,7 @@ public class ForestRoad : MonoBehaviour
     readonly List<float> rivers = new List<float>();
     readonly List<PlaceSite> places = new List<PlaceSite>();
     float nextRiverAt, nextPlaceAt;
+    int placesPlanned;
 
     public event System.Action<SidePath> SidePathBuilt;
     public event System.Action<BusStop> StopBuilt;
@@ -969,7 +970,8 @@ public class ForestRoad : MonoBehaviour
             origin = points[i] + r * EdgeOffset,
             rotation = Quaternion.LookRotation(r),
             arcLength = s,
-            kind = rng.Next(4),
+            // Every other place (and the first one each night) is a petrol station.
+            kind = placesPlanned++ % 2 == 0 ? 0 : 1 + rng.Next(3),
             chunk = chunk,
         };
         places.Add(site);
@@ -982,7 +984,7 @@ public class ForestRoad : MonoBehaviour
     {
         // Far enough into the chunk that the flat clearing doesn't reach the chunk before.
         int i = Mathf.Min(b, a + 13);
-        if (distances[i] < nextSidePathAt) return null;
+        if (distances[i] < nextSidePathAt || !Features.Has(Feature.SidePaths)) return null;
         if (depotRequested || NearDepot(distances[i], 60f) || NearRiver(distances[i], 60f) || NearPlace(distances[i], 70f)) return null;
         for (int k = a; k <= b; k++) if (onCurve[k]) return null;
         foreach (var st in stops)
@@ -1067,6 +1069,58 @@ public class ForestRoad : MonoBehaviour
             MeshKit.Spawn("Guide Posts", parent, posts.ToMesh("Guide Posts"), guidePost, Vector3.zero, Quaternion.identity, false);
     }
 
+    [Header("Bus stop model")]
+    [Tooltip("Turn the bus stop model around if its open side faces the forest")]
+    public bool flipBusStopModel;
+    GameObject busStopTemplate;
+    bool busStopTemplateTried;
+
+    // The shelter from Resources/BusStop (the pack's scene model: only its bus stop is used).
+    bool BusStopModel(Transform root, Vector3 centre, Vector3 awayFromRoad)
+    {
+        if (!busStopTemplateTried)
+        {
+            busStopTemplateTried = true;
+            var scene = PsxConvert.Spawn("BusStop/Models/Stop", transform, "BusStop/Textures");
+            if (scene != null)
+            {
+                Transform stop = null;
+                foreach (var t in scene.GetComponentsInChildren<Transform>(true))
+                    if (t.name.StartsWith("Bus_stop")) { stop = t; break; }
+                if (stop != null)
+                {
+                    busStopTemplate = new GameObject("Bus Stop Template");
+                    busStopTemplate.transform.SetParent(transform, false);
+                    stop.SetParent(busStopTemplate.transform, true);
+                    stop.localPosition = Vector3.zero;
+                    busStopTemplate.SetActive(false);
+                }
+                Destroy(scene);
+            }
+        }
+        if (busStopTemplate == null) return false;
+
+        var holder = new GameObject("Shelter").transform;
+        holder.SetParent(root, false);
+        holder.SetPositionAndRotation(centre, Quaternion.LookRotation(flipBusStopModel ? awayFromRoad : -awayFromRoad));
+        var copy = Instantiate(busStopTemplate, holder);
+        copy.SetActive(true);
+        copy.transform.localPosition = Vector3.zero;
+        copy.transform.localRotation = Quaternion.identity;
+        // Long side along the road, standing on the platform, about 4 m long.
+        var b = PsxConvert.LocalBounds(copy.transform, holder);
+        if (b.size.z > b.size.x)
+        {
+            copy.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            b = PsxConvert.LocalBounds(copy.transform, holder);
+        }
+        float length = Mathf.Max(b.size.x, 0.01f);
+        if (length > 12f || length < 1.5f) { copy.transform.localScale *= 4f / length; b = PsxConvert.LocalBounds(copy.transform, holder); }
+        copy.transform.localPosition -= new Vector3(b.center.x, b.min.y, b.center.z);
+        PsxConvert.AddColliders(copy, 0.4f);
+        return true;
+    }
+
     BusStop BuildBusStop(Transform parent, int i, string specialName = null)
     {
         Vector3 p = points[i], t = tangents[i], r = Right(t);
@@ -1083,12 +1137,15 @@ public class ForestRoad : MonoBehaviour
         Vector3 padCentre = p + r * (HalfRoad + shoulderWidth + 1.6f);
         MeshKit.Spawn("Platform", root, MeshKit.Box(new Vector3(3.2f, padY, 10f), 1f), concrete, padCentre, along, false);
 
-        // Wooden shelter at the back of the platform, open towards the road.
+        // Shelter: the bus stop model from the pack, or a simple wooden one.
         Vector3 back = p + r * (HalfRoad + shoulderWidth + 3.0f) + Vector3.up * padY;
-        MeshKit.Spawn("Shelter Back", root, MeshKit.Box(new Vector3(0.1f, 2.2f, 3.6f), 1f), wood, back, along, true);
-        MeshKit.Spawn("Shelter Roof", root, MeshKit.Box(new Vector3(1.6f, 0.1f, 4f), 1f), wood, back - r * 0.7f + Vector3.up * 2.2f, along, true);
-        MeshKit.Spawn("Shelter Side", root, MeshKit.Box(new Vector3(1.3f, 2.2f, 0.08f), 1f), wood, back - r * 0.6f + t * 1.8f, along, true);
-        MeshKit.Spawn("Bench", root, MeshKit.Box(new Vector3(0.4f, 0.45f, 2.2f), 1f), wood, back - r * 0.35f, along, true);
+        if (!BusStopModel(root, back - r * 0.9f, r))
+        {
+            MeshKit.Spawn("Shelter Back", root, MeshKit.Box(new Vector3(0.1f, 2.2f, 3.6f), 1f), wood, back, along, true);
+            MeshKit.Spawn("Shelter Roof", root, MeshKit.Box(new Vector3(1.6f, 0.1f, 4f), 1f), wood, back - r * 0.7f + Vector3.up * 2.2f, along, true);
+            MeshKit.Spawn("Shelter Side", root, MeshKit.Box(new Vector3(1.3f, 2.2f, 0.08f), 1f), wood, back - r * 0.6f + t * 1.8f, along, true);
+            MeshKit.Spawn("Bench", root, MeshKit.Box(new Vector3(0.4f, 0.45f, 2.2f), 1f), wood, back - r * 0.35f, along, true);
+        }
 
         // "H" sign where the front door should stop.
         Vector3 pole = p + r * (HalfRoad + shoulderWidth + 0.4f) + t * 5f + Vector3.up * padY;

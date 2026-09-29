@@ -29,6 +29,9 @@ public static class GameUI
     /// <summary>A repair minigame or the talk menu in the bus is open (mouse cursor free).</summary>
     public static bool MinigameOpen;
 
+    /// <summary>At home in the trailer park after the shift.</summary>
+    public static bool AtHome;
+
     /// <summary>Frame in which a note / the PC was closed (the same key press must not open it again).</summary>
     public static int ClosedFrame = -1;
     public static bool JustClosed => Time.frameCount - ClosedFrame <= 1;
@@ -75,6 +78,28 @@ public static class RetroGUI
     public static void Fill(Rect virtualRect, Color c)
     {
         GUI.DrawTexture(R(virtualRect.x, virtualRect.y, virtualRect.width, virtualRect.height), Tex(c));
+    }
+
+    static readonly Texture2D[] panels = new Texture2D[8];
+
+    /// <summary>A PSX UI panel (dark textured box from the UI pack, skins 1-6) with a thin border.</summary>
+    public static void Panel(Rect v, int skin = 1, float alpha = 0.95f)
+    {
+        skin = Mathf.Clamp(skin, 1, 6);
+        if (panels[skin] == null)
+        {
+            panels[skin] = Resources.Load<Texture2D>("UI/Panel" + skin);
+            if (panels[skin] != null) panels[skin].filterMode = FilterMode.Point;
+        }
+        Fill(new Rect(v.x - 1, v.y - 1, v.width + 2, v.height + 2), new Color(0f, 0f, 0f, 0.8f * alpha));
+        if (panels[skin] != null)
+        {
+            var old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTexture(R(v.x, v.y, v.width, v.height), panels[skin], ScaleMode.StretchToFill);
+            GUI.color = old;
+        }
+        else Fill(v, new Color(0.05f, 0.04f, 0.05f, alpha));
     }
 
     public static void Frame(Rect v, Color fill, Color border, float thickness = 1f)

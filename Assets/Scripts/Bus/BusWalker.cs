@@ -311,7 +311,7 @@ public class BusWalker : MonoBehaviour
         if (talkMenu && talkTo != null)
         {
             var menu = new Rect(w / 2 - 170, 200, 340, 72);
-            RetroGUI.Frame(menu, fill, border);
+            RetroGUI.Panel(menu, 1);
             string name = talkTo.Card != null ? talkTo.Card.FirstName : "?";
             RetroGUI.Label(new Rect(menu.x + 8, menu.y + 4, menu.width - 16, 12), Loc.T(name + " ansprechen:", "Talk to " + name + ":"), new Color(1f, 0.85f, 0.55f), true, true);
             var qs = TalkQuestions;
@@ -324,7 +324,7 @@ public class BusWalker : MonoBehaviour
         if (talkAnswer != null && talkTo != null)
         {
             var box = new Rect(w / 2 - 170, 226, 340, 54);
-            RetroGUI.Frame(box, fill, border);
+            RetroGUI.Panel(box, 1);
             RetroGUI.Label(new Rect(box.x + 8, box.y + 4, box.width - 16, 12), Loc.T("Du: ", "You: ") + talkQuestion, new Color(0.7f, 0.7f, 0.7f), false, true);
             RetroGUI.Label(new Rect(box.x + 8, box.y + 15, box.width - 16, 12), (talkTo.Card != null ? talkTo.Card.FirstName : "?") + ":", new Color(1f, 0.85f, 0.55f), true, true);
             RetroGUI.Wrapped(new Rect(box.x + 8, box.y + 25, box.width - 16, 26), Time.time < answerAt ? "..." : talkAnswer, Color.white);

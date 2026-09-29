@@ -39,6 +39,18 @@ public class DayManager : MonoBehaviour
     /// <summary>Clocking out at the depot office PC ends the night.</summary>
     public void ClockOut()
     {
+        if (ended || clockedOut) return;
+        clockedOut = true;
+        // Home to the trailer park (report, bed) - except after the last night.
+        if (Progress.Day < Progress.LastDay && Home.Instance != null) { Home.Instance.GoHome(this); return; }
+        FinishNight();
+    }
+
+    bool clockedOut;
+
+    /// <summary>Asleep in bed at home (or clocked out on the last night): the night is over.</summary>
+    public void FinishNight()
+    {
         if (ended) return;
         var onFoot = FindAnyObjectByType<PlayerOnFoot>();
         if (onFoot != null) onFoot.ForceEnter();
@@ -78,11 +90,15 @@ public class DayManager : MonoBehaviour
 
     void Update()
     {
-        if (ended || game == null || bus == null || road == null || GameUI.MenuOpen) return;
+        if (ended || game == null || bus == null || road == null || GameUI.MenuOpen || Tutorial.Active || GameUI.AtHome) return;
         if (titleAt < 0f)
         {
             // The shift begins: show the day big at the top.
             titleAt = Time.time;
+            var news = Features.NewTonight();
+            if (news.Count > 0)
+                game.Mail.Send(Loc.T("Leitstelle", "Dispatch"), Loc.T("Neu ab heute Nacht", "New from tonight"),
+                    Loc.T("Ab heute gilt / gibt es:\n\n- ", "From tonight:\n\n- ") + string.Join("\n- ", news) + Loc.T("\n\nLeitstelle", "\n\nDispatch"), game.ClockText);
             var sm = FindAnyObjectByType<SoundManager>();
             if (sm != null && titleSound != null && Camera.main != null) sm.PlayWorld(titleSound, Camera.main.transform.position, 0.9f, 0f);
         }

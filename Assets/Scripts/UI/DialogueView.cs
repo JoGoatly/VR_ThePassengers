@@ -171,7 +171,7 @@ public class DialogueView : MonoBehaviour
         {
             // Talk menu: click a question.
             var menu = new Rect(232, 196, 340, 84);
-            RetroGUI.Frame(menu, fill, border);
+            RetroGUI.Panel(menu, 1);
             RetroGUI.Label(new Rect(menu.x + 8, menu.y + 4, menu.width - 16, 12), Loc.T(card.FirstName + " ansprechen:", "Talk to " + card.FirstName + ":"), new Color(1f, 0.85f, 0.55f), true, true);
             for (int i = 0; i < Questions.Length; i++)
             {
@@ -191,7 +191,7 @@ public class DialogueView : MonoBehaviour
 
         // One dialogue box, replaced with every line.
         var box = new Rect(232, 226, 340, 54);
-        RetroGUI.Frame(box, fill, border);
+        RetroGUI.Panel(box, 1);
         float y = box.y + 4;
         if (question != null)
         {
