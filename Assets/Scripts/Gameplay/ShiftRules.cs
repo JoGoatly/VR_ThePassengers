@@ -33,7 +33,7 @@ public class ShiftRules : MonoBehaviour
     /// <summary>Seconds left to reach the next stop (negative = no limit right now).</summary>
     public float TimeLeft { get; private set; } = -1f;
     /// <summary>1 = wide awake, 0 = asleep.</summary>
-    public float Awake { get; private set; } = 1f;
+    public float Alertness { get; private set; } = 1f;
     public float Fuel => Progress.Data.fuel;
 
     BusStop target;
@@ -148,9 +148,9 @@ public class ShiftRules : MonoBehaviour
 
     void UpdateFatigue(float dt)
     {
-        if (!Features.Has(Feature.Fatigue)) { Awake = 1f; return; }
+        if (!Features.Has(Feature.Fatigue)) { Alertness = 1f; return; }
         bool resting = GameUI.PlayerOutside || GameUI.InBus;   // moving around keeps you a little fresher
-        Awake = Mathf.Max(0f, Awake - dt / awakeSeconds * (resting ? 0.4f : 1f) * (1f + 0.6f * DayManager.Dread));
+        Alertness = Mathf.Max(0f, Alertness - dt / awakeSeconds * (resting ? 0.4f : 1f) * (1f + 0.6f * DayManager.Dread));
 
         bool canDrink = !GameUI.MenuOpen && !GameUI.MinigameOpen && !GameUI.NoteOpen && !GameUI.PcOpen && !GameUI.TerminalTyping;
         if (canDrink && GameKeys.Pressed(GameAction.Drink))
@@ -159,7 +159,7 @@ public class ShiftRules : MonoBehaviour
             {
                 Progress.Data.energyDrinks--;
                 Progress.Save();
-                Awake = Mathf.Min(1f, Awake + drinkBoost);
+                Alertness = Mathf.Min(1f, Alertness + drinkBoost);
                 Play(drinkSound, 0.9f);
                 game.ShowToast(Loc.T($"Energy-Drink. Hellwach.  (noch {Progress.Data.energyDrinks})", $"Energy drink. Wide awake.  ({Progress.Data.energyDrinks} left)"));
             }
@@ -167,13 +167,13 @@ public class ShiftRules : MonoBehaviour
         }
 
         // Very tired: the bus drifts, the heart pounds.
-        if (Awake < 0.25f && !GameUI.PlayerOutside && !GameUI.InBus)
+        if (Alertness < 0.25f && !GameUI.PlayerOutside && !GameUI.InBus)
         {
-            if (Time.time > nextDriftAt) { nextDriftAt = Time.time + Random.Range(1.5f, 4f); driftTarget = Random.Range(-0.18f, 0.18f) * (1f - Awake / 0.25f); }
+            if (Time.time > nextDriftAt) { nextDriftAt = Time.time + Random.Range(1.5f, 4f); driftTarget = Random.Range(-0.18f, 0.18f) * (1f - Alertness / 0.25f); }
             if (NightEvents.Instance == null || !NightEvents.Instance.Blocking) bus.steerPull = Mathf.MoveTowards(bus.steerPull, driftTarget, dt * 0.3f);
             if (Time.time > nextBeep && heartbeat != null) { nextBeep = Time.time + 1.1f; Play(heartbeat, 0.5f); }
         }
-        if (Awake <= 0f)
+        if (Alertness <= 0f)
             Fail(Loc.T("EINGESCHLAFEN", "FELL ASLEEP"),
                  Loc.T("Deine Augen fallen zu. Nur für einen Moment.\nAls du sie wieder öffnest, steht der Bus im Wald. Alle Sitze sind leer. Auch deiner.",
                        "Your eyes close. Just for a moment.\nWhen you open them again, the bus stands in the forest. Every seat is empty. So is yours."));
@@ -197,7 +197,7 @@ public class ShiftRules : MonoBehaviour
     }
 
     /// <summary>Coffee and the like.</summary>
-    public void WakeUp(float amount) => Awake = Mathf.Min(1f, Awake + amount);
+    public void WakeUp(float amount) => Alertness = Mathf.Min(1f, Alertness + amount);
 
     /// <summary>Fill up at a pump (0..1 of a tank). Returns what was filled.</summary>
     public static float Refuel(float amount)
@@ -213,11 +213,11 @@ public class ShiftRules : MonoBehaviour
     {
         if (!Running) return;
         // Heavy eyelids when tired.
-        if (Awake < 0.3f)
+        if (Alertness < 0.3f)
         {
             float w = RetroGUI.VirtualWidth, h = RetroGUI.VirtualHeight;
-            blinkPhase += Time.deltaTime * (1.2f + (0.3f - Awake) * 6f);
-            float close = Mathf.Clamp01((0.3f - Awake) / 0.3f) * (0.35f + 0.65f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(blinkPhase)), 6f));
+            blinkPhase += Time.deltaTime * (1.2f + (0.3f - Alertness) * 6f);
+            float close = Mathf.Clamp01((0.3f - Alertness) / 0.3f) * (0.35f + 0.65f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(blinkPhase)), 6f));
             RetroGUI.Fill(new Rect(0, 0, w, h * 0.5f * close), Color.black);
             RetroGUI.Fill(new Rect(0, h - h * 0.5f * close, w, h * 0.5f * close), Color.black);
             if (Mathf.Repeat(Time.time, 2f) < 1.4f)
