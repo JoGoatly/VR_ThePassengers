@@ -78,7 +78,7 @@ public class DayManager : MonoBehaviour
 
     void Update()
     {
-        if (ended || game == null || bus == null || road == null || GameUI.MenuOpen) return;
+        if (ended || game == null || bus == null || road == null || GameUI.MenuOpen || Tutorial.Active) return;
         if (titleAt < 0f)
         {
             // The shift begins: show the day big at the top.

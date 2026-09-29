@@ -14,6 +14,9 @@ public class SaveData
     public List<int> notes = new List<int>();     // story notes found
     public List<int> drivers = new List<int>();   // missing drivers found
     public List<string> secrets = new List<string>(); // easter eggs found in the depot
+    public int energyDrinks = 0;
+    public float fuel = 1f;                           // tank, 0..1
+    public bool tutorialDone;
 }
 
 /// <summary>Something that can be bought on the board computer.</summary>

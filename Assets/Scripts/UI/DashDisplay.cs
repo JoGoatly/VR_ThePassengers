@@ -141,6 +141,14 @@ public class DashDisplay : MonoBehaviour
             };
             canvas.Text(lx + 3, 16, light, lights.mode == BusLights.Mode.HighBeam ? Beam : Dim);
         }
+        // Fuel gauge (bottom left).
+        if (Features.Has(Feature.Fuel))
+        {
+            float fuel = Progress.Data.fuel;
+            canvas.Text(3, 33, Loc.T("TANK", "FUEL"), fuel < 0.2f && Mathf.Repeat(Time.time, 0.8f) < 0.5f ? Warn : Dim);
+            canvas.Frame(30, 36, 40, 5, Dim);
+            canvas.Fill(31, 37, Mathf.RoundToInt(38 * fuel), 3, fuel < 0.2f ? Warn : Text);
+        }
         // High beam battery.
         if (lights != null)
         {

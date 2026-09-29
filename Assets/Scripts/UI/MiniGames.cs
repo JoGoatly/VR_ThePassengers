@@ -145,7 +145,7 @@ public class MiniGames : MonoBehaviour
         GUI.depth = -360;
         var p = Panel;
         RetroGUI.Fill(new Rect(0, 0, RetroGUI.VirtualWidth, RetroGUI.VirtualHeight), new Color(0f, 0f, 0f, 0.45f));
-        RetroGUI.Frame(new Rect(p.x - 3, p.y - 3, p.width + 6, p.height + 6), new Color(0.07f, 0.07f, 0.08f, 0.96f), new Color(0.55f, 0.5f, 0.4f), 2f);
+        RetroGUI.Panel(new Rect(p.x - 3, p.y - 3, p.width + 6, p.height + 6), 1);
         RetroGUI.Label(new Rect(p.x + 8, p.y + 4, p.width - 16, 14), title, Hint, true);
         RetroGUI.Label(new Rect(p.x, p.yMax - 12, p.width - 6, 11), Loc.T("Abbrechen [ESC]", "Stop [ESC]"), new Color(0.6f, 0.6f, 0.6f), false, true, TextAnchor.UpperRight);
         switch (kind.Value)

@@ -29,7 +29,7 @@ public class ForestWatchers : MonoBehaviour
 
     void Update()
     {
-        if (road == null || bus == null || figures == null || figures.Length == 0) return;
+        if (road == null || bus == null || figures == null || figures.Length == 0 || Tutorial.Active) return;
         float busS = road.BusArcLength;
 
         if (current == null)

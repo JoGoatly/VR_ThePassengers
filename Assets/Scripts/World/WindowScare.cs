@@ -55,7 +55,7 @@ public class WindowScare : MonoBehaviour
     void Update()
     {
         var cam = Camera.main;
-        if (bus == null || cam == null || figures == null || figures.Length == 0) return;
+        if (bus == null || cam == null || figures == null || figures.Length == 0 || Tutorial.Active) return;
 
         if (current == null)
         {

@@ -48,6 +48,9 @@ public class BusLights : MonoBehaviour
     /// <summary>The battery ran empty: all lights are off until it is full again.</summary>
     public bool Exhausted { get; private set; }
 
+    /// <summary>Daytime (the driving test): no darkness, far view.</summary>
+    public static bool Daylight;
+
     bool powerCut;
     /// <summary>A blown fuse: every light of the bus is off until it is fixed.</summary>
     public bool PowerCut
@@ -131,6 +134,13 @@ public class BusLights : MonoBehaviour
         float high = Progress.Owns("highbeam2") ? fogHigh + 10f : fogHigh;
         float targetFog = (mode == Mode.HighBeam ? high : mode == Mode.LowBeam ? fogLow : fogOff) * (1f - 0.25f * DayManager.Dread);
         float targetDraw = mode == Mode.HighBeam ? drawHigh : mode == Mode.LowBeam ? drawLow : drawOff;
+        if (Daylight)
+        {
+            // Driving test in daylight: far view, the sky is the (light blue) fog colour.
+            targetFog = 120f;
+            targetDraw = 110f;
+            if (fog != null) fog.color.value = new Color(0.62f, 0.74f, 0.86f, 1f);
+        }
         float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
         if (fog != null) fog.distanceMax.value = Mathf.Lerp(fog.distanceMax.value, targetFog, k);
         if (precision != null) precision.drawDistance.value = Mathf.Lerp(precision.drawDistance.value, targetDraw, k);
