@@ -51,6 +51,14 @@ public class BusRadio : MonoBehaviour
 
     void Start()
     {
+        // One more station with music from the soundtrack (before the 66.6 at the end).
+        var ost = Resources.Load<AudioClip>("Music/radio");
+        if (ost != null && stations != null && stations.Length > 0)
+        {
+            var list = new System.Collections.Generic.List<Station>(stations);
+            list.Insert(list.Count - 1, new Station { name = Loc.T("Nachtfunk - Filmmusik", "Night Wave - Film Scores"), frequency = "93.3", clip = ost });
+            stations = list.ToArray();
+        }
         if (bus == null) bus = FindAnyObjectByType<BusController>();
         if (bus == null) return;
         canvas = new PixelCanvas(W, H);

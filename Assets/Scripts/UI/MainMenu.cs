@@ -45,6 +45,8 @@ public class MainMenu : MonoBehaviour
     void Awake()
     {
         GameSettings.Apply();
+        var ost = Resources.Load<AudioClip>("Music/menu");
+        if (ost != null) menuMusic = ost;
         music = gameObject.AddComponent<AudioSource>();
         music.clip = menuMusic;
         music.loop = true;
