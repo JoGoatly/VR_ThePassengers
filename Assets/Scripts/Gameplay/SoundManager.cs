@@ -37,7 +37,8 @@ public class SoundManager : MonoBehaviour
     [Range(0f, 1f)] public float uiVolume = 0.25f;
     public Vector2 forestNoiseInterval = new Vector2(12f, 40f);
 
-    AudioSource engine, road, ambience, droneSource, ui;
+    AudioSource engine, road, ambience, droneSource, ui, chase, nightMusic;
+    AudioClip stinger;
     bool stopWasRequested;
     float lastSpeed;
     float nextForestNoise;
@@ -83,6 +84,13 @@ public class SoundManager : MonoBehaviour
         Passenger.StepTaken += OnStep;
 
         nextForestNoise = Time.time + Random.Range(forestNoiseInterval.x, forestNoiseInterval.y);
+
+        // Soundtrack: a stinger for scares, chase music when someone hunts you, and from
+        // night 5 a quiet, uneasy layer of music under the forest.
+        stinger = Resources.Load<AudioClip>("Music/jumpscare");
+        chase = CreateSource("Chase Music", transform, true, 0f, Resources.Load<AudioClip>("Music/chase"));
+        var layer = Resources.Load<AudioClip>(Progress.Day >= Progress.LastDay ? "Music/lastnight" : "Music/stranger");
+        if (Progress.Day >= 5 && layer != null) nightMusic = CreateSource("Night Music", transform, true, 0f, layer);
     }
 
     void OnDestroy() => Passenger.StepTaken -= OnStep;
@@ -110,6 +118,7 @@ public class SoundManager : MonoBehaviour
     public void PlayScare()
     {
         if (scare != null) ui.PlayOneShot(scare, 3.5f);
+        if (stinger != null) ui.PlayOneShot(stinger, 1.2f);
     }
 
     /// <summary>Any clip at a place in the world.</summary>
@@ -172,6 +181,12 @@ public class SoundManager : MonoBehaviour
         if (ui != null) ui.volume = uiVolume * fx;
         if (ambience != null) ambience.volume = ambienceVolume * fx;
         if (droneSource != null) droneSource.volume = droneVolume * fx;
+        if (chase != null)
+        {
+            bool hunted = Dweller.Chasers > 0 && GameUI.PlayerOutside;
+            chase.volume = Mathf.MoveTowards(chase.volume, hunted ? 0.45f * GameSettings.Music : 0f, Time.deltaTime * (hunted ? 0.8f : 0.3f));
+        }
+        if (nightMusic != null) nightMusic.volume = Mathf.MoveTowards(nightMusic.volume, GameUI.MenuOpen ? 0f : 0.08f * GameSettings.Music, Time.deltaTime * 0.1f);
 
         if (bus != null && engine != null)
         {
