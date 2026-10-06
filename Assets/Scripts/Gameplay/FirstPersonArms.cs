@@ -62,13 +62,16 @@ public class FirstPersonArms : MonoBehaviour
     {
         var cam = Camera.main;
         bool outside = GameUI.PlayerOutside && onFoot != null && onFoot.Walker != null && cam != null;
-        bool inSeat = !GameUI.PlayerOutside && holdSteeringWheel && cam != null && driver != null && driver.isActiveAndEnabled && driver.HasGrips;
+        bool inSeat = !GameUI.PlayerOutside && !GameUI.InBus && holdSteeringWheel && cam != null && driver != null && driver.isActiveAndEnabled && driver.HasGrips && driver.EyeAnchor != null;
         if (!outside && !inSeat) { Remove(); return; }
 
-        if (holder == null || holder.parent != cam.transform || driving != inSeat)
+        // Walking: the arms hang on the camera. Driving: they sit on the driver's shoulders
+        // (in the bus), so looking around does not drag the hands into the picture.
+        Transform anchor = inSeat ? SeatAnchor() : cam.transform;
+        if (holder == null || holder.parent != anchor || driving != inSeat)
         {
             driving = inSeat;
-            Build(cam.transform);
+            Build(anchor, inSeat ? anchor.forward : cam.transform.forward);
         }
         if (anim == null) return;
 
@@ -84,7 +87,25 @@ public class FirstPersonArms : MonoBehaviour
 
     // ---------------------------------------------------------------- building
 
-    void Build(Transform cam)
+    Transform seatAnchor;
+
+    // A point at the driver's eyes that turns with the bus, not with the view.
+    Transform SeatAnchor()
+    {
+        Transform busRoot = driver.transform.parent != null ? driver.transform.parent : driver.transform;
+        var bus = driver.GetComponentInParent<BusController>();
+        if (bus != null) busRoot = bus.transform;
+        if (seatAnchor == null)
+        {
+            seatAnchor = new GameObject("Driver Arms Anchor").transform;
+            seatAnchor.SetParent(busRoot, false);
+        }
+        // Looking slightly down at the wheel, like the default driving view.
+        seatAnchor.SetPositionAndRotation(driver.EyeAnchor.position, busRoot.rotation * Quaternion.Euler(12f, 0f, 0f));
+        return seatAnchor;
+    }
+
+    void Build(Transform cam, Vector3 camForward)
     {
         Remove();
         if (armsModel == null) return;
@@ -139,16 +160,16 @@ public class FirstPersonArms : MonoBehaviour
 
         // Elbow bend axes for the steering wheel IK (elbows bend so the hands go forward).
         if (upperL != null && foreL != null && handL != null)
-            hingeL = DriverBody.HingeInUpperSpace(new[] { upperL, foreL, handL }, cam.forward);
+            hingeL = DriverBody.HingeInUpperSpace(new[] { upperL, foreL, handL }, camForward);
         if (upperR != null && foreR != null && handR != null)
-            hingeR = DriverBody.HingeInUpperSpace(new[] { upperR, foreR, handR }, cam.forward);
+            hingeR = DriverBody.HingeInUpperSpace(new[] { upperR, foreR, handR }, camForward);
 
         // Grip in the right hand, oriented like the camera (things held in it point forward).
         if (handR != null)
         {
             RightGrip = new GameObject("Right Grip").transform;
             RightGrip.SetParent(handR, false);
-            RightGrip.SetPositionAndRotation(handR.position + cam.forward * 0.04f, cam.rotation);
+            RightGrip.SetPositionAndRotation(handR.position + camForward * 0.04f, cam.rotation);
             // The rig's bones are scaled (FBX units): keep held things at their real size.
             Vector3 ls = handR.lossyScale;
             RightGrip.localScale = new Vector3(1f / Mathf.Max(1e-4f, Mathf.Abs(ls.x)), 1f / Mathf.Max(1e-4f, Mathf.Abs(ls.y)), 1f / Mathf.Max(1e-4f, Mathf.Abs(ls.z)));
