@@ -91,6 +91,8 @@ public class BusController : MonoBehaviour
     /// <summary>Why the bus can't drive right now (null = it can).</summary>
     public string DriveLockReason => throttleLockReason ?? (DoorsFullyClosed ? null : Loc.T("Türen offen", "doors open"));
     public float BrakeInput => brakeInput;
+    /// <summary>Height of the bus pivot above the ground it stands on.</summary>
+    public float GroundOffset => groundOffset;
 
     Rigidbody rb;
     float steerAngle;
