@@ -974,7 +974,6 @@ GameObject:
   - component: {fileID: 2100000027}
   - component: {fileID: 2100000028}
   - component: {fileID: 2100000029}
-  - component: {fileID: 2100000030}
   - component: {fileID: 2100000031}
   - component: {fileID: 2100000032}
   m_Layer: 0
@@ -1516,7 +1515,7 @@ MonoBehaviour:
   combat: {fileID: 2100000017}
   driver: {fileID: 0}
   walkSwing: 24
-  holdSteeringWheel: 1
+  holdSteeringWheel: 0
 --- !u!114 &2100000023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1691,23 +1690,6 @@ MonoBehaviour:
   heartbeat: {fileID: 8300000, guid: b3d91fe03dcb4134952ccd65c1d523e1, type: 3}
   warningBeep: {fileID: 8300000, guid: 92807d6d57ca4e3bb4298a79e08920ad, type: 3}
   tankRange: 4200
---- !u!114 &2100000030
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2100000001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25ea38f3b98544e7962131b46e88c001, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  bus: {fileID: 0}
-  game: {fileID: 0}
-  menu: {fileID: 0}
-  stepSound: {fileID: 8300000, guid: 7c657a631e634b59a2e764295fa2f9b0, type: 3}
-  passSound: {fileID: 8300000, guid: 472f5e51f3974e138496ccac6517887f, type: 3}
 --- !u!114 &2100000031
 MonoBehaviour:
   m_ObjectHideFlags: 0

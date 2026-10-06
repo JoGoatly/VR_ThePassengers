@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: Tutorial_Volume_Profile
+  m_EditorClassIdentifier: 
+  components:
+  - {fileID: 3100000000000000001}
+  - {fileID: 3100000000000000002}
+  - {fileID: 3100000000000000003}
+  - {fileID: 3100000000000000004}
+  - {fileID: 3100000000000000005}
+  - {fileID: 3100000000000000006}
+  - {fileID: 3100000000000000007}
+--- !u!114 &3100000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96575ff06efbe184aa6c6f9f90b4aab9, type: 3}
+  m_Name: FogVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  fogFalloffMode:
+    m_OverrideState: 1
+    m_Value: 1
+  blendMode:
+    m_OverrideState: 1
+    m_Value: 0
+  color:
+    m_OverrideState: 1
+    m_Value: {r: 0.62, g: 0.74, b: 0.86, a: 1}
+  distanceMin:
+    m_OverrideState: 1
+    m_Value: 120
+  distanceMax:
+    m_OverrideState: 1
+    m_Value: 420
+  fogFalloffCurve:
+    m_OverrideState: 1
+    m_Value: 0.3
+--- !u!114 &3100000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdadb30f615c5d5499a6de3fe4216ef6, type: 3}
+  m_Name: SkyVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  skyMode:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &3100000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bffa9ddd307306479a0e3689eb72441, type: 3}
+  m_Name: PrecisionVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  affineTextureWarping:
+    m_OverrideState: 1
+    m_Value: 0.35
+  drawDistanceFalloffMode:
+    m_OverrideState: 1
+    m_Value: 1
+  drawDistance:
+    m_OverrideState: 1
+    m_Value: 400
+--- !u!114 &3100000000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac4315c5d81c1274fb8120ba49e62c21, type: 3}
+  m_Name: LightingVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  lightingIsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  dynamicLightingMultiplier:
+    m_OverrideState: 1
+    m_Value: 1
+  dynamicLightsMaxPerObjectCount:
+    m_OverrideState: 1
+    m_Value: 8
+--- !u!114 &3100000000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74f7b4b43d392da4aa0edc7aa47211ca, type: 3}
+  m_Name: QualityOverrideVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  isPSXQualityEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &3100000000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb00c03fccc953a4387732e1392ffcf8, type: 3}
+  m_Name: CameraVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  targetRasterizationResolutionWidth:
+    m_OverrideState: 1
+    m_Value: 640
+  targetRasterizationResolutionHeight:
+    m_OverrideState: 1
+    m_Value: 360
+--- !u!114 &3100000000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bd3a97acc7ef644da680b9eb611919e, type: 3}
+  m_Name: CathodeRayTubeVolume
+  m_EditorClassIdentifier: 
+  active: 1
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 0
