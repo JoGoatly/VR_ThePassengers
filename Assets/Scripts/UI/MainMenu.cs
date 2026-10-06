@@ -20,6 +20,7 @@ public class MainMenu : MonoBehaviour
 
     static bool languageChosen;
     static bool showDayTitleOnLoad;   // set when the next night starts after a shift
+    static bool showIntroOnLoad;      // set when the driving test is passed: newspaper, then night 1
     int lastWage;
     bool goodEnding;
 
@@ -61,8 +62,9 @@ public class MainMenu : MonoBehaviour
             screen = Page.Playing;
             return;
         }
-        Show(showDayTitleOnLoad ? Page.DayTitle : languageChosen ? Page.Menu : Page.Language);
+        Show(showIntroOnLoad ? Page.Intro : showDayTitleOnLoad ? Page.DayTitle : languageChosen ? Page.Menu : Page.Language);
         showDayTitleOnLoad = false;
+        showIntroOnLoad = false;
         SetPaused(true);
     }
 
@@ -214,7 +216,11 @@ public class MainMenu : MonoBehaviour
     }
 
     /// <summary>The driving test is passed: on to the first night.</summary>
-    public void AfterTutorial() => NextNight();
+    public void AfterTutorial()
+    {
+        showIntroOnLoad = true;
+        BackToMainMenu();
+    }
 
     void NextNight()
     {
@@ -321,7 +327,7 @@ public class MainMenu : MonoBehaviour
             if (MenuButton(new Rect(bx, y, 160, 22), Loc.T($"WEITER (NACHT {Progress.Day})", $"CONTINUE (NIGHT {Progress.Day})"))) Show(Page.DayTitle);
             y += 30;
         }
-        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("NEUES SPIEL", "NEW GAME"))) { Progress.NewGame(); Show(Page.Intro); }
+        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("NEUES SPIEL", "NEW GAME"))) { Progress.NewGame(); StartGame(); }   // the driving test first, the newspaper after it
         if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("EINSTELLUNGEN", "SETTINGS"))) { settingsReturn = Page.Menu; Show(Page.Settings); }
         if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("SPRACHE", "LANGUAGE"))) Show(Page.Language);
         if (MenuButton(new Rect(bx, y + 90, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();

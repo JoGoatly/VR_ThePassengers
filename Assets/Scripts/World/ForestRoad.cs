@@ -265,7 +265,11 @@ public class ForestRoad : MonoBehaviour
         UpdateRoad();
     }
 
-    void Update() => UpdateRoad();
+    void Update()
+    {
+        if (Tutorial.Active) return;    // the driving test is on the practice ground
+        UpdateRoad();
+    }
 
     // ---------------------------------------------------------------- public API
 
@@ -1076,7 +1080,7 @@ public class ForestRoad : MonoBehaviour
     bool busStopTemplateTried;
 
     // The shelter from Resources/BusStop (the pack's scene model: only its bus stop is used).
-    bool BusStopModel(Transform root, Vector3 centre, Vector3 awayFromRoad)
+    public bool BusStopModel(Transform root, Vector3 centre, Vector3 awayFromRoad)
     {
         if (!busStopTemplateTried)
         {

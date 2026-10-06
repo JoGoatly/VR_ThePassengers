@@ -2,10 +2,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// The driving test before the first night, in daylight: an examiner explains the controls
-/// step by step - driving, braking, steering, lights, stopping precisely at a bus stop,
-/// the doors, getting up in the bus - and finally a stop against the clock.
-/// No passengers, no scares. Passed = the first night begins.
+/// The driving test before the first night, in daylight on its own map: a fenced practice
+/// ground (TrainingYard) with a painted circuit, a cone slalom and two bus stops - no forest.
+/// An examiner explains the controls step by step - driving, braking, the slalom, lights,
+/// stopping precisely at a bus stop, the doors, getting up in the bus - and finally a stop
+/// against the clock. Passed = the newspaper intro, then the first night.
 /// </summary>
 [DefaultExecutionOrder(-100)]   // decides before the night systems run
 public class Tutorial : MonoBehaviour
@@ -18,12 +19,17 @@ public class Tutorial : MonoBehaviour
     public MainMenu menu;
     public AudioClip stepSound, passSound;
 
+    [Tooltip("Where the practice ground is built (far away from the forest)")]
+    public Vector3 yardPosition = new Vector3(0f, -1000f, 0f);
+    public float timedLimit = 80f;
+
     enum Step { Welcome, Throttle, Brake, Steer, Lights, StopAtStop, OpenDoors, CloseDoors, StandUp, SitDown, Timed, Passed }
 
     Step step;
-    float stepStart, topSpeed, startArc, timedDeadline;
+    float stepStart, topSpeed, timedDeadline;
     int lightPresses;
-    BusStop stopTarget;
+    TrainingYard yard;
+    TrainingYard.Stop stopTarget;
     string feedback;
     float feedbackUntil;
     ForestRoad road;
@@ -67,6 +73,12 @@ public class Tutorial : MonoBehaviour
         RenderSettings.ambientLight = new Color(0.55f, 0.58f, 0.62f);
         var stars = FindAnyObjectByType<StarSky>();
         if (stars != null) stars.gameObject.SetActive(false);
+
+        // Own map: the practice ground instead of the forest.
+        if (road != null)
+            foreach (Transform child in road.transform) child.gameObject.SetActive(false);
+        yard = TrainingYard.Build(road, bus, yardPosition);
+        if (bus != null) bus.ResetTo(yard.StartPosition + Vector3.up * bus.GroundOffset, yard.StartRotation);
     }
 
     void Update()
@@ -105,21 +117,30 @@ public class Tutorial : MonoBehaviour
                 if (speed < 3f) Next(Step.Steer);
                 break;
             case Step.Steer:
-                if (road.BusArcLength - startArc > 160f) Next(Step.Lights);
+                if (yard.SlalomDone)
+                {
+                    if (yard.MissedGates > 1)
+                    {
+                        Say(Loc.T($"{yard.MissedGates} Tore verpasst. Noch eine Runde - nochmal durch den Slalom!", $"{yard.MissedGates} gates missed. One more lap - the slalom again!"));
+                        yard.ResetSlalom();
+                    }
+                    else
+                    {
+                        Say(yard.MissedGates == 0 ? Loc.T("Sauber durch den Slalom!", "Clean through the slalom!") : Loc.T("Ein Tor verpasst - geht noch.", "One gate missed - acceptable."));
+                        yard.TrackGates = false;
+                        Next(Step.Lights);
+                    }
+                }
                 break;
             case Step.Lights:
                 if (lightPresses >= 2) Next(Step.StopAtStop);
                 break;
             case Step.StopAtStop:
-            {
-                var next = game.NextStop(out float dist);
-                if (next != null && next != stopTarget) stopTarget = next;
-                if (stopTarget != null && Mathf.Abs(bus.Speed) < 0.3f && Mathf.Abs(dist) < 22f) Next(Step.OpenDoors);
+                if (Mathf.Abs(bus.Speed) < 0.3f && !bus.doorsOpen && NearTarget()) Next(Step.OpenDoors);
                 break;
-            }
             case Step.OpenDoors:
-                if (Mathf.Abs(bus.Speed) > 1f) { Say(Loc.T("Erst die Türen öffnen, dann weiterfahren!", "Open the doors first, then drive on!")); Next(Step.StopAtStop); break; }
-                if (bus.DoorsFullyOpen) { if (RateStop()) Next(Step.CloseDoors); else Next(Step.StopAtStop); }
+                if (Mathf.Abs(bus.Speed) > 1f) { Next(Step.StopAtStop); break; }
+                if (bus.DoorsFullyOpen) Next(RateStop() ? Step.CloseDoors : Step.StopAtStop);
                 break;
             case Step.CloseDoors:
                 if (bus.DoorsFullyClosed) Next(Step.StandUp);
@@ -131,28 +152,17 @@ public class Tutorial : MonoBehaviour
                 if (!GameUI.InBus && !GameUI.PlayerOutside) Next(Step.Timed);
                 break;
             case Step.Timed:
-            {
-                var next = game.NextStop(out float dist);
-                if (stopTarget == null || (next != null && next != stopTarget && since < 1f)) { stopTarget = next; timedDeadline = Time.time + Mathf.Max(30f, dist / 10f + 15f); }
-                if (stopTarget != null && next == stopTarget && Mathf.Abs(bus.Speed) < 0.3f && Mathf.Abs(dist) < 22f && bus.DoorsFullyOpen)
+                if (Mathf.Abs(bus.Speed) < 0.3f && bus.DoorsFullyOpen && NearTarget())
                 {
                     RateStop();
                     Next(Step.Passed);
                 }
-                else if (next != stopTarget && since > 2f)
-                {
-                    Say(Loc.T("Vorbeigefahren! Die nächste Haltestelle, neue Zeit.", "Drove past! The next stop, new time."));
-                    stopTarget = next;
-                    timedDeadline = Time.time + Mathf.Max(30f, dist / 10f + 15f);
-                }
                 else if (Time.time > timedDeadline)
                 {
-                    Say(Loc.T("Zu langsam! Noch einmal - nächste Haltestelle.", "Too slow! Once more - next stop."));
-                    stopTarget = null;
-                    stepStart = Time.time;
+                    Say(Loc.T("Zu langsam! Nachts wären Sie jetzt gefeuert. Noch einmal - die Zeit läuft.", "Too slow! At night you'd be fired now. Once more - the clock is running."));
+                    timedDeadline = Time.time + timedLimit;
                 }
                 break;
-            }
             case Step.Passed:
                 if (since > 6f) Finish();
                 break;
@@ -163,24 +173,33 @@ public class Tutorial : MonoBehaviour
     {
         step = s;
         stepStart = Time.time;
-        if (s == Step.Steer && road != null) startArc = road.BusArcLength;
+        if (s == Step.Steer && yard != null) { yard.ResetSlalom(); yard.TrackGates = true; }
         if (s == Step.Lights) lightPresses = 0;
-        if (s == Step.StopAtStop || s == Step.Timed) stopTarget = null;
+        if (s == Step.StopAtStop && yard != null) stopTarget = yard.StopA;
+        if (s == Step.Timed && yard != null) { stopTarget = yard.StopB; timedDeadline = Time.time + timedLimit; }
         Play(s == Step.Passed ? passSound : stepSound);
+    }
+
+    // The bus stands at the target stop (roughly - how well is rated when the doors open).
+    bool NearTarget()
+    {
+        if (stopTarget == null) return false;
+        TrainingYard.Measure(stopTarget, bus.transform.TransformPoint(game.DoorLocal), out float along, out float across);
+        return Mathf.Abs(along) < 14f && across < 7f;
     }
 
     // How well the bus stands at the stop. Returns false if it has to be done again.
     bool RateStop()
     {
         if (stopTarget == null) return true;
-        Vector3 door = bus.transform.TransformPoint(game.DoorLocal);
-        Vector3 d = stopTarget.waitPoint.position - door;
-        d.y = 0f;
-        float along = Mathf.Abs(Vector3.Dot(d, stopTarget.roadDirection));
-        float across = Vector3.ProjectOnPlane(d, stopTarget.roadDirection).magnitude;
-        if (along < 1.2f && across < 2.9f) { Say(Loc.T("Perfekt! Die Tür steht genau am Schild.", "Perfect! The door is right at the sign.")); return true; }
-        if (along < 3f && across < 3.8f) { Say(Loc.T("Gut. Nächstes Mal noch etwas genauer.", "Good. A bit more precise next time.")); return true; }
-        Say(Loc.T($"Zu weit weg ({along:0.0} m). Nochmal an der nächsten Haltestelle - Tür ans Schild!", $"Too far away ({along:0.0} m). Again at the next stop - door at the sign!"));
+        TrainingYard.Measure(stopTarget, bus.transform.TransformPoint(game.DoorLocal), out float along, out float across);
+        along = Mathf.Abs(along);
+        if (along < 1.2f && across < 2.3f) { Say(Loc.T("Perfekt! Die Tür steht genau am Schild.", "Perfect! The door is right at the sign.")); return true; }
+        if (along < 3f && across < 3.4f) { Say(Loc.T("Gut. Nächstes Mal noch etwas genauer.", "Good. A bit more precise next time.")); return true; }
+        if (across >= 3.4f)
+            Say(Loc.T($"Zu weit vom Bordstein ({across:0.0} m). Türen zu und näher ran!", $"Too far from the kerb ({across:0.0} m). Close the doors and get closer!"));
+        else
+            Say(Loc.T($"Die Tür ist {along:0.0} m vom Schild weg. Türen zu und nochmal genau ans Schild!", $"The door is {along:0.0} m from the sign. Close the doors and line up with the sign again!"));
         return false;
     }
 
@@ -213,19 +232,20 @@ public class Tutorial : MonoBehaviour
                                   $"Good day. I'm your examiner. Before you drive night line 13, show me that you can drive a bus.\nLook around with the mouse. Continue {K(GameAction.Continue)}"),
             Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie über 20 km/h.", $"Accelerate: hold {K(GameAction.Forward)}. Go faster than 20 km/h."),
             Step.Brake => Loc.T($"Und jetzt bremsen: {K(GameAction.Backward)}. Bis der Bus fast steht.", $"Now brake: {K(GameAction.Backward)}. Until the bus almost stands still."),
-            Step.Steer => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Bleiben Sie auf der rechten Spur - fahren Sie 160 m.", $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Stay in the right lane - drive 160 m."),
+            Step.Steer => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie der Spur um die Kurve und fahren Sie Slalom durch die GRÜNEN Kegel-Tore. Tor {Mathf.Min(yard.NextGate + 1, yard.GateCount)}/{yard.GateCount}",
+                                $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the lane round the bend and slalom through the GREEN cone gates. Gate {Mathf.Min(yard.NextGate + 1, yard.GateCount)}/{yard.GateCount}"),
             Step.Lights => Loc.T($"Licht: {K(GameAction.Lights)} wechselt zwischen Abblend- und Fernlicht. Das Fernlicht leert einen Akku (Balken am Tacho) - ist er leer, geht ALLES Licht aus, bis er wieder voll ist. Zweimal umschalten.",
                                  $"Lights: {K(GameAction.Lights)} switches between low and high beam. The high beam drains a battery (bar on the speedometer) - when it's empty ALL lights go out until it's full again. Switch twice."),
-            Step.StopAtStop => Loc.T("Halten Sie an der nächsten Haltestelle. Die vordere Tür soll genau am Haltestellenschild stehen, nah am Bordstein, gerade.",
-                                     "Stop at the next bus stop. The front door should be right at the bus stop sign, close to the kerb, straight."),
+            Step.StopAtStop => Loc.T("Halten Sie an Haltestelle A (gelbes Feld). Die vordere Tür soll genau am H-Schild stehen, nah am Bordstein, gerade.",
+                                     "Stop at bus stop A (yellow box). The front door should be right at the H sign, close to the kerb, straight."),
             Step.OpenDoors => Loc.T($"Türen öffnen: {K(GameAction.Doors)}. Wie genau Sie halten, bringt Ihnen später Geld - oder kostet welches.", $"Open the doors: {K(GameAction.Doors)}. How precisely you stop will earn you money later - or cost you."),
             Step.CloseDoors => Loc.T($"Türen schließen: {K(GameAction.Doors)}. Mit offenen Türen fährt der Bus nicht.", $"Close the doors: {K(GameAction.Doors)}. The bus won't move with open doors."),
             Step.StandUp => Loc.T($"Im Stand können Sie aufstehen: {K(GameAction.Interact)}. Im Bus herumlaufen, mit Fahrgästen reden, an der Tür aussteigen.", $"When standing still you can get up: {K(GameAction.Interact)}. Walk around the bus, talk to passengers, get out at the door."),
             Step.SitDown => Loc.T($"Gehen Sie zurück zum Fahrersitz und setzen Sie sich: {K(GameAction.Interact)}.", $"Go back to the driver's seat and sit down: {K(GameAction.Interact)}."),
-            Step.Timed => Loc.T("Letzte Aufgabe: Nachts haben Sie für jede Haltestelle ein Zeitlimit - zu spät heißt gefeuert. Erreichen Sie die nächste Haltestelle rechtzeitig und öffnen Sie die Türen.",
-                                "Last task: at night you have a time limit for every stop - too late means fired. Reach the next stop in time and open the doors."),
-            _ => Loc.T("Bestanden. Glückwunsch. Ihre erste Schicht beginnt heute Nacht, 23:40 Uhr.\nViel Glück. Sie werden es brauchen.",
-                       "Passed. Congratulations. Your first shift starts tonight, 11:40 PM.\nGood luck. You'll need it."),
+            Step.Timed => Loc.T("Letzte Aufgabe: Nachts haben Sie für jede Haltestelle ein Zeitlimit - zu spät heißt gefeuert. Fahren Sie eine Runde zu Haltestelle B und öffnen Sie dort rechtzeitig die Türen.",
+                                "Last task: at night you have a time limit for every stop - too late means fired. Drive a lap to bus stop B and open the doors there in time."),
+            _ => Loc.T($"Bestanden. Glückwunsch. Umgefahrene Kegel: {yard.ConesHit}.\nIhre erste Schicht beginnt heute Nacht, 23:40 Uhr. Viel Glück. Sie werden es brauchen.",
+                       $"Passed. Congratulations. Cones knocked over: {yard.ConesHit}.\nYour first shift starts tonight, 11:40 PM. Good luck. You'll need it."),
         };
     }
 
@@ -238,7 +258,7 @@ public class Tutorial : MonoBehaviour
         RetroGUI.Label(new Rect(box.x + 10, box.y + 5, 200, 12), Loc.T("PRÜFER", "EXAMINER"), new Color(1f, 0.85f, 0.5f), true, true);
         RetroGUI.Label(new Rect(box.xMax - 150, box.y + 5, 140, 12), Loc.T($"Fahrprüfung {(int)step}/{(int)Step.Passed}", $"Driving test {(int)step}/{(int)Step.Passed}"), new Color(0.7f, 0.7f, 0.7f), false, true, TextAnchor.UpperRight);
         RetroGUI.Wrapped(new Rect(box.x + 10, box.y + 17, box.width - 20, box.height - 20), Instruction(), Color.white);
-        if (step == Step.Timed && stopTarget != null)
+        if (step == Step.Timed)
         {
             int left = Mathf.Max(0, Mathf.CeilToInt(timedDeadline - Time.time));
             RetroGUI.ShadowLabel(new Rect(0, 30, w, 14), Loc.T($"Zeit: {left / 60}:{left % 60:00}", $"Time: {left / 60}:{left % 60:00}"), left < 10 ? new Color(1f, 0.3f, 0.2f) : new Color(1f, 0.85f, 0.4f));

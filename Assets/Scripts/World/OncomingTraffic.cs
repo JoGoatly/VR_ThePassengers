@@ -68,7 +68,7 @@ public class OncomingTraffic : MonoBehaviour
 
     void Update()
     {
-        if (road == null || bus == null) return;
+        if (road == null || bus == null || Tutorial.Active) return;
         float busS = road.BusArcLength;
 
         if (Time.time >= nextCarAt)
