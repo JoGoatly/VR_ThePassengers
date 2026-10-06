@@ -137,9 +137,13 @@ public class BusLights : MonoBehaviour
         if (Daylight)
         {
             // Driving test in daylight: far view, the sky is the (light blue) fog colour.
-            targetFog = 120f;
-            targetDraw = 110f;
-            if (fog != null) fog.color.value = new Color(0.62f, 0.74f, 0.86f, 1f);
+            targetFog = 420f;
+            targetDraw = 400f;
+            if (fog != null)
+            {
+                fog.color.value = new Color(0.62f, 0.74f, 0.86f, 1f);
+                fog.distanceMin.value = 120f;   // clear air near by, only haze far away
+            }
         }
         float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
         if (fog != null) fog.distanceMax.value = Mathf.Lerp(fog.distanceMax.value, targetFog, k);

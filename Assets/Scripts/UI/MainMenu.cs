@@ -21,6 +21,10 @@ public class MainMenu : MonoBehaviour
     static bool languageChosen;
     static bool showDayTitleOnLoad;   // set when the next night starts after a shift
     static bool showIntroOnLoad;      // set when the driving test is passed: newspaper, then night 1
+    static bool playOnLoad;           // the driving test scene starts right away
+
+    public const string MainScene = "SampleScene";
+    public const string TutorialScene = "Tutorial";
     int lastWage;
     bool goodEnding;
 
@@ -57,9 +61,11 @@ public class MainMenu : MonoBehaviour
         music.volume = 0f;
         if (menuMusic != null) music.Play();
 
-        if (skipInEditor && Application.isEditor)
+        if (playOnLoad || (skipInEditor && Application.isEditor))
         {
+            playOnLoad = false;
             screen = Page.Playing;
+            SetPaused(false);
             return;
         }
         Show(showIntroOnLoad ? Page.Intro : showDayTitleOnLoad ? Page.DayTitle : languageChosen ? Page.Menu : Page.Language);
@@ -148,6 +154,13 @@ public class MainMenu : MonoBehaviour
 
     void StartGame()
     {
+        // Night 1 without the driving test: the test (own scene) comes first.
+        if (Progress.Day == 1 && !Progress.Data.tutorialDone && SceneManager.GetActiveScene().name != TutorialScene)
+        {
+            playOnLoad = true;
+            LoadScene(TutorialScene);
+            return;
+        }
         Show(Page.Playing);
         SetPaused(false);
     }
@@ -235,7 +248,17 @@ public class MainMenu : MonoBehaviour
         GameUI.MenuOpen = false;
         GameUI.DialogueOpen = false;
         GameUI.TerminalTyping = false;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        LoadScene(MainScene);
+    }
+
+    static void LoadScene(string scene)
+    {
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
+        GameUI.MenuOpen = false;
+        GameUI.InBus = false;
+        GameUI.PlayerOutside = false;
+        SceneManager.LoadScene(scene);
     }
 
     // ------------------------------------------------------------------ drawing
