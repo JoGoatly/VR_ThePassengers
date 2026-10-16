@@ -21,8 +21,7 @@ public class FirstPersonArms : MonoBehaviour
     public Vector3 viewOffset = new Vector3(0f, -0.02f, 0f);
     [Tooltip("Arm swing while walking (degrees at running speed)")]
     public float walkSwing = 24f;
-    [Tooltip("The first person arms also hold the steering wheel (off: the driver's own arms do)")]
-    public bool holdSteeringWheel = false;
+    public bool holdSteeringWheel = true;
     [Tooltip("Where the right hand holds the flashlight / bat / pistol (camera space, wrist position)")]
     public Vector3 holdPosition = new Vector3(0.19f, -0.21f, 0.33f);
 

@@ -112,7 +112,7 @@ public class BoardingManager : MonoBehaviour
         started = true;
         Registry = new CitizenRegistry(seed + Progress.Day * 101);
         UnlockRules();
-        if (!Tutorial.Active) SendWelcomeMails();
+        SendWelcomeMails();
     }
 
     bool policeOnTheWay;
