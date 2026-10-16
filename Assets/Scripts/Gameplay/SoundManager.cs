@@ -179,8 +179,10 @@ public class SoundManager : MonoBehaviour
         if (requested && !stopWasRequested && stopRequest != null && ui != null) ui.PlayOneShot(stopRequest, 0.7f);
         stopWasRequested = requested;
         if (ui != null) ui.volume = uiVolume * fx;
-        if (ambience != null) ambience.volume = ambienceVolume * fx;
-        if (droneSource != null) droneSource.volume = droneVolume * fx;
+        // The driving test is in daylight on the practice ground: no dark forest drone.
+        float day = Tutorial.Active ? 0.25f : 1f;
+        if (ambience != null) ambience.volume = ambienceVolume * fx * day;
+        if (droneSource != null) droneSource.volume = Tutorial.Active ? 0f : droneVolume * fx;
         if (chase != null)
         {
             bool hunted = Dweller.Chasers > 0 && GameUI.PlayerOutside;
