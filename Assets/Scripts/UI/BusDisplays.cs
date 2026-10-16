@@ -140,7 +140,7 @@ public class BusDisplays : MonoBehaviour
         {
             // Energy drinks and how awake you are.
             c.Text(c.Width - 22, 24, $"x{Progress.Data.energyDrinks}", Green);
-            float awake = ShiftRules.Instance != null ? ShiftRules.Instance.Awake : 1f;
+            float awake = ShiftRules.Instance != null ? ShiftRules.Instance.Alertness : 1f;
             c.Fill(c.Width - 6, 3, 3, c.Height - 6, new Color32(20, 40, 25, 255));
             int hgt = Mathf.RoundToInt((c.Height - 6) * awake);
             c.Fill(c.Width - 6, c.Height - 3 - hgt, 3, hgt, awake < 0.3f ? Red : Green);
