@@ -883,7 +883,8 @@ public class ForestRoad : MonoBehaviour
                 Vector3 p = points[k] + r * o;
                 float lateral = Mathf.Abs(o);
                 float y = TerrainY(p, distances[k], lateral, points[k].y);
-                if (lateral < e - 0.01f) y = Mathf.Min(y, points[k].y - 0.3f);   // under the road
+                if (lateral < e - 0.01f) y = Mathf.Min(y, points[k].y - 0.3f);        // under the road
+                else if (lateral < e + 0.01f) y = Mathf.Min(y, points[k].y - 0.18f);  // a shallow ditch at the edge: no flicker against the shoulder
                 p.y = y;
                 grid[i, c] = p;
             }
