@@ -50,6 +50,7 @@ public static class Footsteps
         if (mat.Contains("wood") || mat.Contains("carpet") || mat.Contains("plank")) return Surface.Wood;
         if (mat.Contains("metal") || mat.Contains("chrome")) return Surface.Metal;
         if (mat.Contains("gravel")) return Surface.Gravel;
+        if (mat.Contains("grass")) return Surface.Grass;
         if (mat.Contains("stone") || mat.Contains("brick")) return Surface.Stone;
         if (mat.Contains("concrete") || mat.Contains("tile") || mat.Contains("paint") || mat.Contains("asphalt") || mat.Contains("floor")) return Surface.Concrete;
         if (name.Contains("Terrain"))

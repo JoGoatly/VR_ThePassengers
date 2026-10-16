@@ -59,7 +59,6 @@ public class Depot : MonoBehaviour
 
     void PrepareMaterials()
     {
-        if (asphalt == null && road != null) asphalt = road.road;
         if (side != null)
         {
             if (wood == null) wood = side.wood;
@@ -70,6 +69,8 @@ public class Depot : MonoBehaviour
         if (concrete == null && road != null) concrete = road.concrete;
         if (metal == null && road != null) metal = road.metal;
         if (wood == null && road != null) wood = road.wood;
+        // Plain concrete yard (the road texture has lane markings).
+        if (asphalt == null) asphalt = Tinted(concrete, new Color(0.52f, 0.52f, 0.5f), "Depot Concrete");
         paint = Tinted(concrete, new Color(0.62f, 0.66f, 0.6f), "Depot Paint");
         darkMetal = Tinted(metal, new Color(0.35f, 0.36f, 0.38f), "Depot Dark Metal");
         whiteTile = Tinted(concrete, new Color(0.85f, 0.87f, 0.85f), "Depot Tiles");
