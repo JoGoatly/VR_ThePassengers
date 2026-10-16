@@ -48,7 +48,7 @@ public class Tutorial : MonoBehaviour
     void Awake()
     {
         Active = false;
-        BusLights.Daylight = false;
+        BusLights.Daylight = true;   // this component only lives in the driving test scene: daylight, no fog from the first frame
     }
 
     void OnDestroy()

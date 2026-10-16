@@ -972,13 +972,10 @@ GameObject:
   - component: {fileID: 2100000025}
   - component: {fileID: 2100000026}
   - component: {fileID: 2100000027}
-<<<<<<< HEAD
   - component: {fileID: 2100000028}
   - component: {fileID: 2100000029}
   - component: {fileID: 2100000031}
   - component: {fileID: 2100000032}
-=======
->>>>>>> parent of b45ffd2 (Merge pull request #32 from JoGoatly/claude/optimistic-ramanujan-9c02b6)
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1642,7 +1639,6 @@ MonoBehaviour:
   stopDisplaySize: {x: 0.36, y: 0.055}
   infoDisplayCentre: {x: -2.12, y: 1.035, z: -0.4}
   infoDisplaySize: {x: 0.15, y: 0.07}
-<<<<<<< HEAD
 --- !u!114 &2100000028
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1727,8 +1723,6 @@ MonoBehaviour:
   staticNoise: {fileID: 8300000, guid: 94599595b00c4138a1ec7f0bfd298373, type: 3}
   scare: {fileID: 8300000, guid: 2b5eac2a062f4cc18696c1ce1bc124d7, type: 3}
   doorSound: {fileID: 8300000, guid: cd95c0f5d701442592bd75b7c2494c7e, type: 3}
-=======
->>>>>>> parent of b45ffd2 (Merge pull request #32 from JoGoatly/claude/optimistic-ramanujan-9c02b6)
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

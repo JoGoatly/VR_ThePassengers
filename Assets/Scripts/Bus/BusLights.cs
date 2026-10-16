@@ -136,15 +136,16 @@ public class BusLights : MonoBehaviour
         float targetDraw = mode == Mode.HighBeam ? drawHigh : mode == Mode.LowBeam ? drawLow : drawOff;
         if (Daylight)
         {
-            // Driving test in daylight: far view, the sky is the (light blue) fog colour.
-            targetFog = 420f;
-            targetDraw = 400f;
+            // Driving test in daylight: no fog at all, the sky is the (light blue) fog colour.
             if (fog != null)
             {
-                fog.color.value = new Color(0.62f, 0.74f, 0.86f, 1f);
-                fog.distanceMin.value = 120f;   // clear air near by, only haze far away
+                fog.isEnabled.Override(false);
+                fog.color.Override(new Color(0.62f, 0.74f, 0.86f, 1f));
             }
+            if (precision != null) precision.drawDistance.Override(1000f);
+            return;
         }
+        if (fog != null && !fog.isEnabled.value) fog.isEnabled.Override(true);
         float k = 1f - Mathf.Exp(-3f * Time.deltaTime);
         if (fog != null) fog.distanceMax.value = Mathf.Lerp(fog.distanceMax.value, targetFog, k);
         if (precision != null) precision.drawDistance.value = Mathf.Lerp(precision.drawDistance.value, targetDraw, k);

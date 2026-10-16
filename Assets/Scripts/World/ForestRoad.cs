@@ -30,6 +30,22 @@ public class ForestRoad : MonoBehaviour
         "Köhlerhütte", "Wolfsschlucht", "Kreuzweg", "Hünengrab", "Birkenhain", "Steinbruch", "Totenweg",
     };
 
+    [Header("Hills and rivers")]
+    [Tooltip("How far the road goes up and down (metres)")]
+    public float hillHeight = 7f;
+    public float hillLength = 420f;
+    [Tooltip("Hills of the forest floor beside the road (metres)")]
+    public float terrainHills = 9f;
+    public Vector2 riverSpacing = new Vector2(750f, 1300f);
+    public float firstRiver = 650f;
+    public float riverDepth = 6.5f;
+    [Tooltip("Water surface of the rivers (empty = dark unlit copy of the lamp glow)")]
+    public Material water;
+
+    [Header("Roadside places (petrol station, diner, kiosk, motel)")]
+    public Vector2 placeSpacing = new Vector2(480f, 850f);
+    public float firstPlace = 330f;
+
     [Header("Forest")]
     public int seed = 666;
     [Tooltip("Trees per chunk and side")]
@@ -139,7 +155,6 @@ public class ForestRoad : MonoBehaviour
 
     bool NearDepot(float s, float margin) => Depot != null && Mathf.Abs(s - Depot.arcLength) < DepotLength * 0.5f + margin;
 
-<<<<<<< HEAD
     /// <summary>A river crossing under a bridge.</summary>
     public class RiverSite
     {
@@ -170,8 +185,6 @@ public class ForestRoad : MonoBehaviour
     float nextRiverAt, nextPlaceAt;
     int placesPlanned;
 
-=======
->>>>>>> parent of b45ffd2 (Merge pull request #32 from JoGoatly/claude/optimistic-ramanujan-9c02b6)
     public event System.Action<SidePath> SidePathBuilt;
     public event System.Action<BusStop> StopBuilt;
     public IReadOnlyList<SidePath> SidePaths => sidePaths;
@@ -204,7 +217,6 @@ public class ForestRoad : MonoBehaviour
 
     Transform bus;
     int nearestHint;
-    Transform ground;
     Mesh trunkMesh, coneMesh, postMesh;
 
     // A tree model broken into one piece per material, pivot at the bottom centre.
@@ -239,6 +251,8 @@ public class ForestRoad : MonoBehaviour
         segmentTurnRate = 0f;
         nextStopAt = 60f + firstStopDistance;
         nextSidePathAt = 60f + firstSidePath;
+        nextRiverAt = 60f + firstRiver;
+        nextPlaceAt = 60f + firstPlace;
 
         trunkMesh = MeshKit.Prism(0.22f, 3f, 5, 1f);
         coneMesh = MeshKit.Cone(1f, 1f, 7);
@@ -248,7 +262,6 @@ public class ForestRoad : MonoBehaviour
         var bc = FindAnyObjectByType<BusController>();
         bus = bc != null ? bc.transform : null;
 
-        BuildGround();
         UpdateRoad();
     }
 
@@ -337,7 +350,7 @@ public class ForestRoad : MonoBehaviour
             nearestHint = Mathf.Max(0, nearestHint - keepFrom);
         }
 
-        FollowGround();
+        rivers.RemoveAll(r => r < busS - keepBehind - 60f);
     }
 
     void AddSample()
@@ -351,10 +364,20 @@ public class ForestRoad : MonoBehaviour
         if (segmentLeft <= 0f) NextSegment();
 
         float s = points.Count == 0 ? 0f : distances[distances.Count - 1] + sampleSpacing;
+        // Up and down hills; the tangent follows the slope.
+        genPos.y = transform.position.y + RoadHeightAt(s);
+        float slope = (RoadHeightAt(s + 1f) - RoadHeightAt(s - 1f)) * 0.5f;
         points.Add(genPos);
-        tangents.Add(new Vector3(Mathf.Sin(genHeading), 0f, Mathf.Cos(genHeading)));
+        tangents.Add(new Vector3(Mathf.Sin(genHeading), slope, Mathf.Cos(genHeading)).normalized);
         distances.Add(s);
         onCurve.Add(segmentTurnRate != 0f);
+
+        // Now and then a river crosses under the road (on a straight).
+        if (s >= nextRiverAt && segmentTurnRate == 0f && segmentLeft > 25f)
+        {
+            rivers.Add(s + 20f);
+            nextRiverAt = s + Range(riverSpacing);
+        }
     }
 
     void NextSegment()
@@ -374,6 +397,119 @@ public class ForestRoad : MonoBehaviour
         }
     }
 
+    // Height of the road: flat at the start, then long gentle hills.
+    float RoadHeightAt(float s)
+    {
+        float fade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(140f, 380f, s));
+        float h = (Mathf.PerlinNoise(s / hillLength, 3.7f) - 0.5f) * 2f * hillHeight
+                + (Mathf.PerlinNoise(s / (hillLength * 0.35f), 9.1f) - 0.5f) * 2f * hillHeight * 0.25f;
+        return h * fade;
+    }
+
+    bool NearRiver(float s, float margin)
+    {
+        foreach (var r in rivers) if (Mathf.Abs(s - r) < margin) return true;
+        return false;
+    }
+
+    bool NearPlace(float s, float margin)
+    {
+        foreach (var pl in places) if (pl.chunk != null && Mathf.Abs(s - pl.arcLength) < margin) return true;
+        return false;
+    }
+
+    // 1 in the river bed, 0 outside the valley.
+    float Valley(float s)
+    {
+        float v = 0f;
+        foreach (var r in rivers)
+        {
+            float d = Mathf.Abs(s - r);
+            if (d < ValleyHalfWidth) v = Mathf.Max(v, 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(RiverHalfWidth, ValleyHalfWidth, d)));
+        }
+        return v;
+    }
+
+    // Rolling forest floor beside the road.
+    float Hills(Vector3 p)
+    {
+        return (Mathf.PerlinNoise(p.x * 0.017f + 37f, p.z * 0.017f + 11f) - 0.5f) * 2f * terrainHills
+             + (Mathf.PerlinNoise(p.x * 0.07f + 5f, p.z * 0.07f + 3f) - 0.5f) * 1.6f;
+    }
+
+    // Ground height at a point beside the road: level with the road near it, hills further
+    // away, flat at houses / the depot / roadside places, a valley at rivers.
+    float TerrainY(Vector3 p, float s, float lateral, float roadY)
+    {
+        float y = roadY - 0.04f;
+        float bank = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(9f, 34f, lateral));
+        if (bank > 0f) y += Hills(p) * bank;
+        float w = FlatWeight(p, out float flatY);
+        if (w > 0f) y = Mathf.Lerp(y, flatY - 0.03f, w);
+        float v = Valley(s);
+        if (v > 0f) y = Mathf.Lerp(y, roadY - riverDepth, v);
+        return y;
+    }
+
+    /// <summary>Height of the ground at a world position (near the road).</summary>
+    public float GroundHeight(Vector3 world)
+    {
+        if (points.Count == 0) return world.y;
+        int best = 0;
+        float bestD = float.MaxValue;
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vector3 d = points[i] - world;
+            d.y = 0f;
+            float dd = d.sqrMagnitude;
+            if (dd < bestD) { bestD = dd; best = i; }
+        }
+        float lateral = Vector3.Dot(world - points[best], Right(tangents[best]));
+        return TerrainY(world, distances[best], Mathf.Abs(lateral), points[best].y);
+    }
+
+    // How much a point belongs to a flat place (1 inside, fading out over 10 m) and its height.
+    float FlatWeight(Vector3 p, out float height)
+    {
+        float best = 0f;
+        height = 0f;
+        foreach (var sp in sidePaths)
+        {
+            if (sp.chunk == null) continue;
+            Vector3 d = p - sp.start;
+            d.y = 0f;
+            float along = Vector3.Dot(d, sp.direction);
+            float across = (d - sp.direction * along).magnitude;
+            float dx = Mathf.Max(0f, Mathf.Max(-3f - along, along - (sidePathLength + 2f)));
+            float dy = Mathf.Max(0f, across - 5f);
+            Consider(Mathf.Min(Mathf.Sqrt(dx * dx + dy * dy), Mathf.Max(0f, Flat(p - sp.house).magnitude - 14f)), sp.start.y, ref best, ref height);
+        }
+        if (Depot != null && Depot.chunk != null)
+        {
+            Vector3 l = Quaternion.Inverse(Depot.rotation) * (p - Depot.origin);
+            float dx = Mathf.Max(0f, Mathf.Abs(l.x) - (DepotLength * 0.5f + 3f));
+            float dz = Mathf.Max(0f, Mathf.Max(-EdgeOffset - l.z, l.z - (DepotDepth + 3f)));
+            Consider(Mathf.Sqrt(dx * dx + dz * dz), Depot.origin.y, ref best, ref height);
+        }
+        foreach (var pl in places)
+        {
+            if (pl.chunk == null) continue;
+            Vector3 l = Quaternion.Inverse(pl.rotation) * (p - pl.origin);
+            float dx = Mathf.Max(0f, Mathf.Abs(l.x) - PlaceWidth * 0.5f);
+            float dz = Mathf.Max(0f, Mathf.Max(-EdgeOffset - l.z, l.z - PlaceDepth));
+            Consider(Mathf.Sqrt(dx * dx + dz * dz), pl.origin.y, ref best, ref height);
+        }
+        return best;
+    }
+
+    static void Consider(float outside, float y, ref float best, ref float height)
+    {
+        float w = 1f - Mathf.SmoothStep(0f, 1f, outside / 10f);
+        if (w > best) { best = w; height = y; }
+    }
+
+    static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
+
     float Range(Vector2 r) => r.x + (float)rng.NextDouble() * (r.y - r.x);
     float Range(float a, float b) => a + (float)rng.NextDouble() * (b - a);
 
@@ -390,23 +526,30 @@ public class ForestRoad : MonoBehaviour
         var roadMb = new MeshKit.Builder();
         for (int k = 0; k < 4; k++)
             Strip(roadMb, a, b, -HalfRoad + k * HalfRoad * 0.5f, -HalfRoad + (k + 1) * HalfRoad * 0.5f, 0.02f, 2f * HalfRoad, 8f, (k * 0.25f));
-        MeshKit.Spawn("Road", chunk.transform, roadMb.ToMesh("Road"), road, Vector3.zero, Quaternion.identity, false);
+        var roadGo = MeshKit.Spawn("Road", chunk.transform, roadMb.ToMesh("Road"), road, Vector3.zero, Quaternion.identity, false);
+        roadGo.AddComponent<MeshCollider>().sharedMesh = roadGo.GetComponent<MeshFilter>().sharedMesh;
 
         var shoulderMb = new MeshKit.Builder();
         Strip(shoulderMb, a, b, -HalfRoad - shoulderWidth, -HalfRoad, 0.015f, 2f, 2f, 0f);
         Strip(shoulderMb, a, b, HalfRoad, HalfRoad + shoulderWidth, 0.015f, 2f, 2f, 0f);
-        MeshKit.Spawn("Shoulder", chunk.transform, shoulderMb.ToMesh("Shoulder"), shoulder, Vector3.zero, Quaternion.identity, false);
+        var shoulderGo = MeshKit.Spawn("Shoulder", chunk.transform, shoulderMb.ToMesh("Shoulder"), shoulder, Vector3.zero, Quaternion.identity, false);
+        shoulderGo.AddComponent<MeshCollider>().sharedMesh = shoulderGo.GetComponent<MeshFilter>().sharedMesh;
 
         DepotSite depot = depotRequested && Depot == null ? PlanDepot(chunk.transform, a) : null;
         SidePath path = PlanSidePath(chunk.transform, a, b);
+        PlaceSite place = PlanPlace(chunk.transform, a, b);
+        BuildTerrain(chunk.transform, a, b);
         BuildForest(chunk.transform, a, b);
+        var bridges = new List<RiverSite>();
+        foreach (var r in rivers)
+            if (r >= distances[a] && r < distances[b]) bridges.Add(BuildBridge(chunk.transform, a + Mathf.RoundToInt((r - distances[a]) / sampleSpacing)));
         BuildGuidePosts(chunk.transform, a, b);
 
         // Bus stop(s) in this chunk.
         for (int i = a; i < b; i++)
         {
             if (distances[i] < nextStopAt) continue;
-            if (depotRequested || NearDepot(distances[i], 25f)) continue;
+            if (depotRequested || NearDepot(distances[i], 25f) || NearRiver(distances[i], 45f) || NearPlace(distances[i], 40f)) continue;
             if (onCurve[i] || (i + 6 < onCurve.Count && onCurve[i + 6]) || (i >= 6 && onCurve[i - 6])) { nextStopAt += sampleSpacing; continue; }
             BuildBusStop(chunk.transform, i);
             nextStopAt = distances[i] + Range(stopSpacing);
@@ -415,10 +558,12 @@ public class ForestRoad : MonoBehaviour
         chunks.Enqueue((chunk, distances[b]));
         builtUpTo = to;
         if (path != null) SidePathBuilt?.Invoke(path);
+        if (place != null) PlaceBuilt?.Invoke(place);
+        foreach (var br in bridges) RiverBuilt?.Invoke(br);
         if (depot != null)
         {
             // The depot's own bus stop, before the gate.
-            int k = Mathf.Clamp(a + Mathf.RoundToInt(10f / sampleSpacing), a, points.Count - 1);
+            int k = Mathf.Clamp(a + Mathf.RoundToInt(24f / sampleSpacing), a, points.Count - 1);
             var stop = BuildBusStop(chunk.transform, k, Loc.T("Betriebshof", "Depot"));
             stop.Visited = true;
             depot.arcLength = stop.arcLength;
@@ -431,26 +576,30 @@ public class ForestRoad : MonoBehaviour
     DepotSite PlanDepot(Transform chunk, int a)
     {
         float s0 = distances[a];
-        if (distances[distances.Count - 1] < s0 + DepotLength + 10f) return null;
+        // The yard starts 14 m into this chunk, so its flat ground never reaches back into
+        // the chunk before (already built).
+        const float lead = 14f;
+        if (distances[distances.Count - 1] < s0 + lead + DepotLength + 20f) return null;
         // Only on a straight - unless it takes too long, then anywhere.
         bool relaxed = BusArcLength > depotRequestedAt + 250f;
         for (int k = a; k < points.Count && !relaxed; k++)
         {
-            if (distances[k] > s0 + DepotLength + 10f) break;
+            if (distances[k] > s0 + lead + DepotLength + 20f) break;
             if (onCurve[k]) return null;
         }
         foreach (var st in stops)
             if (st != null && st.arcLength > s0 - 25f) return null;
         foreach (var sp in sidePaths)
             if (sp.chunk != null && sp.arcLength > s0 - 30f) return null;
+        if (NearRiver(s0 + DepotLength * 0.5f, DepotLength * 0.5f + 40f) || NearPlace(s0 + DepotLength * 0.5f, DepotLength * 0.5f + 30f)) return null;
         if (Mathf.Abs(nextStopAt - s0) < 20f) nextStopAt = s0 + DepotLength + 30f;
 
         Vector3 t = tangents[a], r = Right(t);
         Depot = new DepotSite
         {
-            origin = points[a] + t * (DepotLength * 0.5f) + r * EdgeOffset,
+            origin = points[Mathf.Min(points.Count - 1, a + Mathf.RoundToInt((lead + DepotLength * 0.5f) / sampleSpacing))] + r * EdgeOffset,
             rotation = Quaternion.LookRotation(r),
-            arcLength = s0 + DepotLength * 0.5f,
+            arcLength = s0 + lead + DepotLength * 0.5f,
             chunk = chunk,
         };
         depotRequested = false;
@@ -495,6 +644,8 @@ public class ForestRoad : MonoBehaviour
                 float offset = Mathf.Max(edge + 2.5f + t * t * forestDepth, edge + 1f + crown);
                 Vector3 pos = points[i] + tangents[i] * along + Right(tangents[i]) * offset * side;
                 if (TooCloseToRoad(pos, i, edge + 1f + crown * 0.8f) || InClearing(pos)) continue;
+                if (Valley(distances[i]) > 0.8f) continue;   // not in the river
+                pos.y = TerrainY(pos, distances[i], offset, points[i].y);
 
                 var m = Matrix4x4.TRS(pos, Quaternion.Euler(0f, Range(0f, 360f), 0f), new Vector3(scale * width, scale, scale * width));
                 if (tree.prefab != null) PlaceTreeCopy(tree, parent, m);
@@ -679,6 +830,8 @@ public class ForestRoad : MonoBehaviour
                 float offset = edge + 2.5f + t * t * forestDepth;
                 Vector3 pos = points[i] + tangents[i] * along + Right(tangents[i]) * offset * side;
                 if (TooCloseToRoad(pos, i, edge + 2f) || InClearing(pos)) continue;
+                if (Valley(distances[i]) > 0.8f) continue;
+                pos.y = TerrainY(pos, distances[i], offset, points[i].y);
 
                 float h = Range(7f, 15f);
                 float w = h * Range(0.22f, 0.3f);
@@ -706,7 +859,6 @@ public class ForestRoad : MonoBehaviour
         MeshKit.Spawn("Crowns", parent, crowns.ToMesh("Crowns"), needles, Vector3.zero, Quaternion.identity, false);
     }
 
-<<<<<<< HEAD
     // ---------------------------------------------------------------- terrain
 
     // The forest floor of a chunk: a grid along the road, 80 m to both sides, with a collider.
@@ -838,14 +990,6 @@ public class ForestRoad : MonoBehaviour
         int i = Mathf.Min(b, a + 13);
         if (distances[i] < nextSidePathAt || !Features.Has(Feature.SidePaths)) return null;
         if (depotRequested || NearDepot(distances[i], 60f) || NearRiver(distances[i], 60f) || NearPlace(distances[i], 70f)) return null;
-=======
-    // A dirt track on a straight piece of road, away from bus stops.
-    SidePath PlanSidePath(Transform chunk, int a, int b)
-    {
-        int i = (a + b) / 2;
-        if (distances[i] < nextSidePathAt) return null;
-        if (depotRequested || NearDepot(distances[i], 60f)) return null;
->>>>>>> parent of b45ffd2 (Merge pull request #32 from JoGoatly/claude/optimistic-ramanujan-9c02b6)
         for (int k = a; k <= b; k++) if (onCurve[k]) return null;
         foreach (var st in stops)
             if (st != null && Mathf.Abs(st.arcLength - distances[i]) < 60f) return null;
@@ -870,6 +1014,12 @@ public class ForestRoad : MonoBehaviour
     /// <summary>Is this point on a dirt track or in a house clearing (no trees there)?</summary>
     public bool InClearing(Vector3 pos, float margin = 0f)
     {
+        foreach (var pl in places)
+        {
+            if (pl.chunk == null) continue;
+            Vector3 l = Quaternion.Inverse(pl.rotation) * (pos - pl.origin);
+            if (Mathf.Abs(l.x) < PlaceWidth * 0.5f + margin && l.z > -EdgeOffset - margin && l.z < PlaceDepth + margin) return true;
+        }
         if (Depot != null && Depot.chunk != null)
         {
             Vector3 local = Quaternion.Inverse(Depot.rotation) * (pos - Depot.origin);
@@ -1042,37 +1192,4 @@ public class ForestRoad : MonoBehaviour
 
     // ---------------------------------------------------------------- ground
 
-    void BuildGround()
-    {
-        // 300 x 300 m, 3 m grid so vertex-lit headlights still look OK.
-        const float size = 300f, cell = 3f;
-        int n = Mathf.RoundToInt(size / cell);
-        var mb = new MeshKit.Builder();
-        float half = size * 0.5f;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            float x0 = -half + x * cell, z0 = -half + z * cell;
-            var a = new Vector3(x0, 0, z0);
-            var b = new Vector3(x0, 0, z0 + cell);
-            var c = new Vector3(x0 + cell, 0, z0 + cell);
-            var d = new Vector3(x0 + cell, 0, z0);
-            mb.Quad(a, b, c, d, new Vector2(x0, z0) / 4f, new Vector2(x0, z0 + cell) / 4f,
-                    new Vector2(x0 + cell, z0 + cell) / 4f, new Vector2(x0 + cell, z0) / 4f);
-        }
-        var go = MeshKit.Spawn("Forest Floor", transform, mb.ToMesh("Forest Floor"), forestFloor, Vector3.zero, Quaternion.identity, false);
-        var col = go.AddComponent<BoxCollider>();
-        col.center = new Vector3(0f, -0.5f, 0f);
-        col.size = new Vector3(size, 1f, size);
-        ground = go.transform;
-    }
-
-    void FollowGround()
-    {
-        if (ground == null || bus == null) return;
-        // Snap to the texture tile so the floor texture doesn't swim.
-        const float snap = 12f;
-        Vector3 p = bus.position;
-        ground.position = new Vector3(Mathf.Round(p.x / snap) * snap, 0f, Mathf.Round(p.z / snap) * snap);
-    }
 }
