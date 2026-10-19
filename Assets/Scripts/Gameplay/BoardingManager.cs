@@ -547,6 +547,10 @@ public class BoardingManager : MonoBehaviour
         if (letIn && card.Truth != Discrepancy.Duplicate && prefabOf.TryGetValue(card, out var model))
             boardedTonight.Add((card, model));
 
+        // Let the wrong one in: a moment later they are right in your face.
+        if (letIn && !correct && prefabOf.TryGetValue(card, out var scareModel))
+            Schedule(Random.Range(1.6f, 3f), () => Jumpscare.Play(scareModel));
+
         if (letIn)
         {
             CurrentPhase = Phase.PassengerEntering;

@@ -926,12 +926,18 @@ public class ForestRoad : MonoBehaviour
         }
 
         // Water: a grid (so the far ends don't vanish) across the whole valley.
+        // Soft blue and see-through (the transparent PSX glass material).
         Material waterMat = water;
-        if (waterMat == null && lampGlow != null)
+        if (waterMat == null)
         {
-            waterMat = new Material(lampGlow) { name = "River Water" };
-            if (waterMat.HasProperty("_MainColor")) waterMat.SetColor("_MainColor", new Color(0.04f, 0.07f, 0.1f));
-            water = waterMat;
+            var glass = Resources.Load<Material>("PSX/PsxGlass");
+            if (glass != null)
+            {
+                waterMat = new Material(glass) { name = "River Water" };
+                if (waterMat.HasProperty("_MainColor")) waterMat.SetColor("_MainColor", new Color(0.35f, 0.6f, 0.85f, 0.45f));
+                if (waterMat.HasProperty("_AffineTextureWarpingWeight")) waterMat.SetFloat("_AffineTextureWarpingWeight", 0f);
+                water = waterMat;
+            }
         }
         var mb = new MeshKit.Builder();
         const float span = 90f, cell = 6f;
