@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 /// placed at the driver's eye position.
 ///
 /// Mouse / right stick: look around (limited like a real head); aim at the terminal and click to use it
-/// Mouse wheel: zoom in/out, hold right mouse button: full zoom
+/// Mouse wheel / touchpad: zoom in/out, hold right mouse button: full zoom (CameraZoom)
 /// V / right stick click: look straight ahead again
 /// Esc: release the mouse cursor, click to capture it again
 /// </summary>
@@ -57,7 +57,7 @@ public class DriverCamera : MonoBehaviour
     Vector3 busAcceleration;
     Vector3 sway;
     Camera cam;
-    float zoomTarget, zoom;
+    CameraZoom zoomer;
 
     void Start()
     {
@@ -65,7 +65,16 @@ public class DriverCamera : MonoBehaviour
         restPosition = transform.localPosition;
         restRotation = transform.localRotation;
         cam = GetComponent<Camera>();
-        if (cam != null) normalFov = cam.fieldOfView;
+        if (cam != null)
+        {
+            normalFov = cam.fieldOfView;
+            zoomer = cam.GetComponent<CameraZoom>();
+            if (zoomer == null) zoomer = cam.gameObject.AddComponent<CameraZoom>();
+            zoomer.normalFov = normalFov;
+            zoomer.zoomedFov = zoomedFov;
+            zoomer.zoomStep = zoomStep;
+            zoomer.zoomSpeed = zoomSpeed;
+        }
         if (!GameUI.MenuOpen) LockCursor(true);
     }
 
@@ -96,17 +105,8 @@ public class DriverCamera : MonoBehaviour
         if (kb != null && kb.escapeKey.wasPressedThisFrame && !GameUI.TerminalTyping) LockCursor(false);
         if (mouse != null && mouse.leftButton.wasPressedThisFrame && !GameUI.DialogueOpen && !GameUI.PhoneOpen && !GameUI.MinigameOpen) LockCursor(true);
 
-        // Zoom: wheel steps, right mouse button = full zoom while held.
-        if (mouse != null)
-        {
-            float wheel = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(wheel) > 0.01f && !GameUI.PhoneOpen) zoomTarget = Mathf.Clamp01(zoomTarget + Mathf.Sign(wheel) * zoomStep);
-        }
-        float wanted = mouse != null && mouse.rightButton.isPressed ? 1f : zoomTarget;
-        zoom = Mathf.Lerp(zoom, wanted, 1f - Mathf.Exp(-zoomSpeed * Time.deltaTime));
-        float fov = Mathf.Lerp(normalFov, zoomedFov, zoom);
-        if (cam != null) cam.fieldOfView = fov;
-        float lookScale = fov / normalFov;   // slower looking when zoomed in
+        // Zoom (mouse wheel / touchpad / right mouse button) is done by CameraZoom - also while walking.
+        float lookScale = zoomer != null ? zoomer.LookScale : 1f;   // slower looking when zoomed in
 
         if (focusTarget != null)
         {

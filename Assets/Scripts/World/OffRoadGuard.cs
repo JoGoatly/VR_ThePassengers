@@ -40,9 +40,24 @@ public class OffRoadGuard : MonoBehaviour
         return Vector3.Dot(world - p, Vector3.Cross(Vector3.up, t).normalized);
     }
 
+    bool NearDepot(Vector3 pos)
+    {
+        var d = road.Depot;
+        if (d == null) return false;
+        Vector3 l = Quaternion.Inverse(d.rotation) * (pos - d.origin);
+        return Mathf.Abs(l.x) < ForestRoad.DepotLength * 0.5f + 30f && l.z > -road.EdgeOffset - 25f && l.z < ForestRoad.DepotDepth + 30f;
+    }
+
     void Update()
     {
         if (road == null || bus == null || GameUI.MenuOpen || GameUI.AtHome || Tutorial.Active || Time.time < cooldownUntil) return;
+
+        // The depot (yard, hall, office) may be explored freely, with the bus too.
+        if (NearDepot(bus.transform.position) || (GameUI.PlayerOutside && onFoot != null && onFoot.Walker != null && NearDepot(onFoot.Walker.position)))
+        {
+            haveSafe = false;
+            return;
+        }
 
         if (GameUI.PlayerOutside && onFoot != null && onFoot.Walker != null)
         {

@@ -451,6 +451,45 @@ public class NightEvents : MonoBehaviour
         string text = (blink ? "! " : "  ") + objective;
         if (deadline > 0f) text += $"  ({Mathf.Max(0, Mathf.CeilToInt(deadline - Time.time))} s)";
         RetroGUI.ShadowLabel(new Rect(8, 22, RetroGUI.VirtualWidth - 16, 14), text, new Color(1f, 0.55f, 0.35f), true, TextAnchor.UpperLeft);
+        if (current == Kind.RadioCheck) DrawChecklist(RadioChecklist(), 38);
+    }
+
+    // What to do for the radio check, ticked off live (a tick goes away again if it no longer holds).
+    List<(string text, bool done)> RadioChecklist()
+    {
+        bool standing = Mathf.Abs(bus.Speed) < 0.3f;
+        bool inSeat = !GameUI.PlayerOutside && !GameUI.InBus;
+        bool panel = MiniGames.Running;
+        string e = GameKeys.Tag(GameAction.Interact);
+        return new List<(string, bool)>
+        {
+            (Loc.T("Bus anhalten (ganz stehen bleiben)", "Stop the bus (come to a full stop)"), standing),
+            (Loc.T("Im Fahrersitz sitzen bleiben", "Stay in the driver's seat"), inSeat),
+            (Loc.T($"Funkgerät öffnen: {e} drücken", $"Open the radio: press {e}"), standing && inSeat && panel),
+            (Loc.T("Regler mit der Maus ziehen (oder Mausrad), bis die Wellen übereinanderliegen", "Drag the knobs with the mouse (or scroll) until the waves line up"), false),
+        };
+    }
+
+    static void DrawChecklist(List<(string text, bool done)> items, float y)
+    {
+        // A tick only counts while everything above it is done, too.
+        bool allBefore = true;
+        foreach (var (text, done) in items)
+        {
+            bool ok = done && allBefore;
+            allBefore &= ok;
+            var box = new Rect(12, y + 2, 8, 8);
+            RetroGUI.Frame(box, new Color(0f, 0f, 0f, 0.55f), ok ? new Color(0.5f, 1f, 0.5f) : new Color(0.85f, 0.8f, 0.7f));
+            if (ok)
+            {
+                // A small tick.
+                RetroGUI.Fill(new Rect(box.x + 1, box.y + 4, 2, 2), new Color(0.5f, 1f, 0.5f));
+                RetroGUI.Fill(new Rect(box.x + 3, box.y + 5, 2, 2), new Color(0.5f, 1f, 0.5f));
+                RetroGUI.Fill(new Rect(box.x + 5, box.y + 1, 2, 5), new Color(0.5f, 1f, 0.5f));
+            }
+            RetroGUI.ShadowLabel(new Rect(24, y, RetroGUI.VirtualWidth - 32, 12), text, ok ? new Color(0.55f, 0.9f, 0.55f) : new Color(0.95f, 0.9f, 0.8f), false, TextAnchor.UpperLeft);
+            y += 13;
+        }
     }
 
     void Play(AudioClip clip, Vector3 position, float volume)
