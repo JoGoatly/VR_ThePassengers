@@ -125,6 +125,7 @@ public class BusController : MonoBehaviour
         CacheRestPoses();
         SetupGeometry();
         EnsureCollider();
+        if (GetComponent<BusMirrors>() == null) gameObject.AddComponent<BusMirrors>();
         MeasureGroundOffset();
     }
 

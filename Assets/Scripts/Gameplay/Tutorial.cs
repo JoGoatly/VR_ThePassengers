@@ -24,13 +24,16 @@ public class Tutorial : MonoBehaviour
     public CourseRoute route;
     public CourseStop stopA, stopB;
     public AudioClip stepSound, passSound;
+    [Tooltip("Acceleration factor on the practice ground (1 = like at night)")]
+    public float learnerAcceleration = 0.45f;
+    public float learnerSpeedLimit = 35f;
     [Tooltip("Seconds for the last task (to stop B)")]
     public float timedLimit = 90f;
 
-    enum Step { Welcome, Throttle, Brake, Route, Slalom, Lights, StopAtStop, OpenDoors, CloseDoors, StandUp, SitDown, Timed, Passed }
+    enum Step { Welcome, Throttle, Brake, Slalom, Lights, StopAtStop, OpenDoors, CloseDoors, StandUp, SitDown, Timed, Passed }
 
     Step step;
-    float stepStart, timedDeadline, routeStartDistance;
+    float stepStart, timedDeadline;
     int lightPresses, nextGate, missedGates;
     CourseStop stopTarget;
     CourseGate[] gates;
@@ -42,7 +45,6 @@ public class Tutorial : MonoBehaviour
     SoundManager sound;
     bool started, decided;
     AudioSource music;
-    Vector3 routeStart;
     readonly Dictionary<CourseGate, float> lastSide = new Dictionary<CourseGate, float>();
     GuideArrow arrows;
 
@@ -79,6 +81,12 @@ public class Tutorial : MonoBehaviour
         sound = FindAnyObjectByType<SoundManager>();
         if (lights != null) lights.Switched += _ => lightPresses++;
         HighlightGate();
+        // Learner mode: gentle acceleration and a speed limit on the practice ground.
+        if (bus != null)
+        {
+            bus.acceleration *= learnerAcceleration;
+            bus.speedLimitKmh = learnerSpeedLimit;
+        }
     }
 
     void Update()
@@ -116,11 +124,8 @@ public class Tutorial : MonoBehaviour
                 if (speed > 20f) Next(Step.Brake);
                 break;
             case Step.Brake:
-                if (speed < 3f) Next(Step.Route);
-                break;
-            case Step.Route:
-                // Follow the lane for a while (the examiner announces the turns).
-                if (Vector3.Distance(bus.transform.position, routeStart) > routeStartDistance) Next(gates.Length > 0 ? Step.Slalom : Step.Lights);
+                // Steering is learned right away on the way to the slalom (follow the arrows).
+                if (speed < 3f) Next(gates.Length > 0 ? Step.Slalom : Step.Lights);
                 break;
             case Step.Slalom:
                 if (nextGate >= gates.Length)
@@ -180,7 +185,6 @@ public class Tutorial : MonoBehaviour
     {
         step = s;
         stepStart = Time.time;
-        if (s == Step.Route) { routeStart = bus.transform.position; routeStartDistance = 60f; }
         if (s == Step.Slalom) { nextGate = 0; missedGates = 0; lastSide.Clear(); }
         if (s == Step.Lights) lightPresses = 0;
         if (stopTarget != null) stopTarget.SetTarget(false);
@@ -340,10 +344,8 @@ public class Tutorial : MonoBehaviour
                                   $"Good day. Brandt, your examiner. Before you drive night line 13, show me here on the practice ground that you can drive a bus.\nLook around with the mouse. Let's go: accelerate with {K(GameAction.Forward)}."),
             Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie über 20 km/h.", $"Accelerate: hold {K(GameAction.Forward)}. Go faster than 20 km/h."),
             Step.Brake => Loc.T($"Und jetzt bremsen: {K(GameAction.Backward)}. Bis der Bus fast steht.", $"Now brake: {K(GameAction.Backward)}. Until the bus almost stands still."),
-            Step.Route => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie den grünen Pfeilen.",
-                                $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the green arrows."),
-            Step.Slalom => Loc.T($"Slalom: Fahren Sie durch die GRÜN leuchtenden Kegel-Tore. Tor {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}",
-                                 $"Slalom: drive through the GREEN glowing cone gates. Gate {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}"),
+            Step.Slalom => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie den grünen Pfeilen und fahren Sie durch die GRÜN leuchtenden Kegel-Tore. Tor {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}",
+                                 $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the green arrows and drive through the GREEN glowing cone gates. Gate {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}"),
             Step.Lights => Loc.T($"Licht: {K(GameAction.Lights)} wechselt zwischen Abblend- und Fernlicht. Das Fernlicht leert einen Akku (Balken am Tacho) - ist er leer, geht ALLES Licht aus, bis er wieder voll ist. Zweimal umschalten.",
                                  $"Lights: {K(GameAction.Lights)} switches between low and high beam. The high beam drains a battery (bar on the speedometer) - when it's empty ALL lights go out until it's full again. Switch twice."),
             Step.StopAtStop => Loc.T("Halten Sie an Haltestelle A (gelbes Feld, das Licht darüber). Die vordere Tür soll genau am H-Schild stehen, nah am Bordstein, gerade.",
