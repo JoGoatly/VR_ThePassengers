@@ -44,6 +44,7 @@ public class Tutorial : MonoBehaviour
     AudioSource music;
     Vector3 routeStart;
     readonly Dictionary<CourseGate, float> lastSide = new Dictionary<CourseGate, float>();
+    GuideArrow arrows;
 
     void Awake()
     {
@@ -108,7 +109,8 @@ public class Tutorial : MonoBehaviour
         switch (step)
         {
             case Step.Welcome:
-                if (since > 8f || GameKeys.Pressed(GameAction.Continue)) Next(Step.Throttle);
+                // Not F (that's the doors): giving gas starts the test, or it starts by itself.
+                if (since > 10f || (since > 1f && GameKeys.Held(GameAction.Forward))) Next(Step.Throttle);
                 break;
             case Step.Throttle:
                 if (speed > 20f) Next(Step.Brake);
@@ -203,16 +205,18 @@ public class Tutorial : MonoBehaviour
         for (int i = 0; i < gates.Length; i++) gates[i].Highlight(step == Step.Slalom && i == nextGate);
     }
 
-    // A gate counts when the bus crosses its line between the cones (in the gate's direction).
+    // A gate counts when the bus crosses its line (in the gate's direction): between the cones =
+    // passed, beside them = missed. Either way the next gate is up, so the test never gets stuck.
     void TrackGates()
     {
         if (step != Step.Slalom || gates == null || nextGate >= gates.Length) return;
         var g = gates[nextGate];
         Vector3 p = bus.transform.position;
-        float side = g.Side(p);
-        if (lastSide.TryGetValue(g, out float before) && before < 0f && side >= 0f && g.Across(p) < g.HalfWidth + 3f)
+        float side = g.Side(p), across = g.Across(p);
+        if (lastSide.TryGetValue(g, out float before) && before < 0f && side >= 0f && across < 25f)
         {
-            if (g.Across(p) > g.HalfWidth) { missedGates++; Say(Loc.T("Tor verpasst!", "Gate missed!")); }
+            if (across > g.HalfWidth) { missedGates++; Say(Loc.T("Tor verpasst!", "Gate missed!")); }
+            else Say(Loc.T($"Tor {nextGate + 1} - gut!", $"Gate {nextGate + 1} - good!"));
             nextGate++;
             HighlightGate();
             if (nextGate < gates.Length && examiner != null) examiner.PointAt(gates[nextGate].Centre, 2f);
@@ -222,18 +226,58 @@ public class Tutorial : MonoBehaviour
 
     // ---------------------------------------------------------------- route hints
 
+    // Arrows over the lane show where to drive: along the route, to the next gate, to the stop.
     void UpdateHint()
     {
         hint = null;
-        if (route == null || route.Count < 3 || step == Step.Welcome || step == Step.Passed || GameUI.InBus) return;
-        route.NextTurn(bus.transform.position, out float dist, out int turn);
-        if (turn == 0 || dist > 45f || dist < 6f) return;
-        hint = turn > 0 ? Loc.T("Gleich RECHTS abbiegen.", "Turn RIGHT ahead.") : Loc.T("Gleich LINKS abbiegen.", "Turn LEFT ahead.");
-        if (Time.time > nextHintAt && examiner != null)
+        if (arrows == null) arrows = GuideArrow.Create(new Color(0.35f, 1f, 0.45f));
+        bool show = route != null && route.Count >= 3 && step != Step.Welcome && step != Step.Passed
+                    && !GameUI.InBus && !GameUI.PlayerOutside
+                    && step != Step.OpenDoors && step != Step.CloseDoors && step != Step.StandUp && step != Step.SitDown;
+        if (!show) { arrows.Hide(); return; }
+
+        Vector3 bp = bus.transform.position;
+        Vector3? target = null;
+        if (step == Step.Slalom && gates != null && nextGate < gates.Length) target = gates[nextGate].Centre;
+        else if (stopTarget != null) target = stopTarget.SignPoint - stopTarget.transform.right * 2.5f;   // the lane next to the sign
+
+        var pts = new Vector3[3];
+        var dirs = new Vector3[3];
+        int n = 0;
+        if (target.HasValue)
+        {
+            Vector3 to = target.Value - bp; to.y = 0f;
+            float dist = to.magnitude;
+            if (dist < 35f && Vector3.Dot(to, bus.transform.forward) > 0f)
+            {
+                // Close: straight to the target, the last arrow on it.
+                if (dist < 4f) { arrows.Hide(); return; }
+                for (; n < 3; n++)
+                {
+                    float f = Mathf.Lerp(0.45f, 1f, n / 2f);
+                    pts[2 - n] = bp + to * f;
+                    dirs[2 - n] = to;
+                }
+                for (int i = 0; i < 3; i++) pts[i].y = target.Value.y;
+                arrows.Show(pts, dirs);
+                return;
+            }
+        }
+        // Along the route, 10 / 17 / 24 m ahead (the arrows turn into the corners by themselves).
+        for (; n < 3; n++)
+        {
+            route.PointAhead(bp, 24f - n * 7f, out pts[n], out dirs[n]);
+            pts[n].y = bp.y - 0.4f;
+        }
+        arrows.Show(pts, dirs);
+
+        // The examiner points into the turns, too.
+        route.NextTurn(bp, out float dt, out int turn);
+        if (turn != 0 && dt < 40f && dt > 6f && Time.time > nextHintAt && examiner != null)
         {
             nextHintAt = Time.time + 8f;
             examiner.Talk(1.5f);
-            examiner.PointAt(bus.transform.position + (bus.transform.forward * 25f + bus.transform.right * 15f * turn), 2.5f);
+            examiner.PointAt(bp + (bus.transform.forward * 25f + bus.transform.right * 15f * turn), 2.5f);
         }
     }
 
@@ -277,6 +321,7 @@ public class Tutorial : MonoBehaviour
 
     void Finish()
     {
+        if (arrows != null) arrows.Hide();
         Active = false;
         BusLights.Daylight = false;
         Progress.Data.tutorialDone = true;
@@ -291,12 +336,12 @@ public class Tutorial : MonoBehaviour
         string K(GameAction a) => GameKeys.Tag(a);
         return step switch
         {
-            Step.Welcome => Loc.T($"Guten Tag. Brandt, Ihr Prüfer. Bevor Sie die Nachtlinie 13 fahren, zeigen Sie mir hier auf dem Übungsplatz, dass Sie einen Bus fahren können.\nUmsehen mit der Maus. Weiter {K(GameAction.Continue)}",
-                                  $"Good day. Brandt, your examiner. Before you drive night line 13, show me here on the practice ground that you can drive a bus.\nLook around with the mouse. Continue {K(GameAction.Continue)}"),
+            Step.Welcome => Loc.T($"Guten Tag. Brandt, Ihr Prüfer. Bevor Sie die Nachtlinie 13 fahren, zeigen Sie mir hier auf dem Übungsplatz, dass Sie einen Bus fahren können.\nUmsehen mit der Maus. Los geht's: Gas geben mit {K(GameAction.Forward)}.",
+                                  $"Good day. Brandt, your examiner. Before you drive night line 13, show me here on the practice ground that you can drive a bus.\nLook around with the mouse. Let's go: accelerate with {K(GameAction.Forward)}."),
             Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie über 20 km/h.", $"Accelerate: hold {K(GameAction.Forward)}. Go faster than 20 km/h."),
             Step.Brake => Loc.T($"Und jetzt bremsen: {K(GameAction.Backward)}. Bis der Bus fast steht.", $"Now brake: {K(GameAction.Backward)}. Until the bus almost stands still."),
-            Step.Route => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie der Spur zwischen den weißen Linien - ich sage Ihnen, wo es langgeht.",
-                                $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the lane between the white lines - I'll tell you where to go."),
+            Step.Route => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie den grünen Pfeilen.",
+                                $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the green arrows."),
             Step.Slalom => Loc.T($"Slalom: Fahren Sie durch die GRÜN leuchtenden Kegel-Tore. Tor {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}",
                                  $"Slalom: drive through the GREEN glowing cone gates. Gate {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}"),
             Step.Lights => Loc.T($"Licht: {K(GameAction.Lights)} wechselt zwischen Abblend- und Fernlicht. Das Fernlicht leert einen Akku (Balken am Tacho) - ist er leer, geht ALLES Licht aus, bis er wieder voll ist. Zweimal umschalten.",

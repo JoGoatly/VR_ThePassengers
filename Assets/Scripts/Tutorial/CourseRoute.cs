@@ -43,6 +43,35 @@ public class CourseRoute : MonoBehaviour
         turn = Mathf.Abs(angle) < 20f ? 0 : angle > 0f ? 1 : -1;
     }
 
+    /// <summary>A point 'ahead' metres further along the route from where p is, and the driving direction there.</summary>
+    public void PointAhead(Vector3 p, float ahead, out Vector3 point, out Vector3 direction)
+    {
+        int i = Segment(p);
+        Vector3 a = Point(i), b = Point(i + 1);
+        Vector3 ab = b - a; ab.y = 0f;
+        Vector3 ap = p - a; ap.y = 0f;
+        float t = Mathf.Clamp01(Vector3.Dot(ap, ab) / Mathf.Max(0.01f, ab.sqrMagnitude));
+        point = a + ab * t;
+        direction = ab.normalized;
+        float left = ahead;
+        for (int guard = 0; guard < Count + 1; guard++)
+        {
+            Vector3 end = Point(i + 1);
+            Vector3 seg = end - point; seg.y = 0f;
+            float len = seg.magnitude;
+            if (len >= left || len < 0.001f)
+            {
+                if (len > 0.001f) { direction = seg / len; point += direction * left; }
+                return;
+            }
+            left -= len;
+            point = end;
+            i++;
+            Vector3 next = Point(i + 1) - point; next.y = 0f;
+            if (next.sqrMagnitude > 0.001f) direction = next.normalized;
+        }
+    }
+
     void OnDrawGizmos()
     {
         if (Count < 2) return;
