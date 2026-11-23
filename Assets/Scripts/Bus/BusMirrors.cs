@@ -38,17 +38,28 @@ public class BusMirrors : MonoBehaviour
                 float y = eye.y + 0.05f;
                 float frontZ = shape.Valid ? shape.EndZ(true, y - 0.3f, y + 0.3f, (max.x - min.x) * 0.5f) : max.z;
                 float z = frontZ - 0.35f;
-                float bodyX = shape.Valid ? shape.SideX(side, z, y, 0.5f) : (side < 0 ? min.x : max.x);
-                var pos = new Vector3(bodyX + side * 0.17f, y, z);
+                // Where the body really is at this height: a ray from outside towards the middle.
+                float bodyX = side < 0 ? min.x : max.x;
+                if (shape.Valid && shape.Raycast(new Vector3(side * (Mathf.Max(-min.x, max.x) + 1f), y, z), new Vector3(-side, 0f, 0f), 4f, out float d))
+                    bodyX = side * (Mathf.Max(-min.x, max.x) + 1f) - side * d;
+                var pos = new Vector3(bodyX + side * 0.15f, y, z);
                 // Looking back along the bus side, a little outwards.
                 var look = new Vector3(side * 0.07f, -0.04f, -1f).normalized;
-                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), new Vector3(-side * 0.17f, 0f, 0f));
+                // The bracket reaches from the mirror a little into the body.
+                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), new Vector3(-side * 0.2f, 0f, 0f));
             }
         }
         if (interiorMirror)
         {
             var pos = new Vector3(eye.x + 0.75f, eye.y + 0.38f, Mathf.Min(max.z - 0.5f, eye.z + 0.65f));
-            Build("Mirror Inside", pos, eye, new Vector3(0f, -0.06f, -1f).normalized, new Vector2(0.42f, 0.12f), new Vector3(0f, 0.12f, 0f));
+            // Hangs from the ceiling: find it above and keep the mirror close below it.
+            float up = 0.12f;
+            if (shape.Valid && shape.Raycast(pos, Vector3.up, 2f, out float toCeiling))
+            {
+                if (toCeiling > 0.25f) { pos.y += toCeiling - 0.25f; toCeiling = 0.25f; }
+                up = toCeiling + 0.03f;
+            }
+            Build("Mirror Inside", pos, eye, new Vector3(0f, -0.06f, -1f).normalized, new Vector2(0.42f, 0.12f), new Vector3(0f, up, 0f));
         }
     }
 
