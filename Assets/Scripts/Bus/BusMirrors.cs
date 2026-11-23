@@ -34,32 +34,30 @@ public class BusMirrors : MonoBehaviour
         {
             for (int side = -1; side <= 1; side += 2)
             {
-                // Just outside the body, on a short bracket.
                 float y = eye.y + 0.05f;
                 float frontZ = shape.Valid ? shape.EndZ(true, y - 0.3f, y + 0.3f, (max.x - min.x) * 0.5f) : max.z;
-                float z = frontZ - 0.35f;
-                // Where the body really is at this height: a ray from outside towards the middle.
+                // The body side a little behind the front, at this height (ray from outside).
+                float bodyZ = frontZ - 0.25f;
+                float far = Mathf.Max(-min.x, max.x) + 1f;
                 float bodyX = side < 0 ? min.x : max.x;
-                if (shape.Valid && shape.Raycast(new Vector3(side * (Mathf.Max(-min.x, max.x) + 1f), y, z), new Vector3(-side, 0f, 0f), 4f, out float d))
-                    bodyX = side * (Mathf.Max(-min.x, max.x) + 1f) - side * d;
-                var pos = new Vector3(bodyX + side * 0.15f, y, z);
+                if (shape.Valid && shape.Raycast(new Vector3(side * far, y, bodyZ), new Vector3(-side, 0f, 0f), 4f, out float d))
+                    bodyX = side * far - side * d;
+                // The mirror stands out at the front corner, a bracket goes back to the body.
+                var pos = new Vector3(bodyX + side * 0.16f, y, frontZ + 0.05f);
+                var anchor = new Vector3(bodyX - side * 0.04f, y, bodyZ);
                 // Looking back along the bus side, a little outwards.
                 var look = new Vector3(side * 0.07f, -0.04f, -1f).normalized;
-                // The bracket reaches from the mirror a little into the body.
-                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), new Vector3(-side * 0.2f, 0f, 0f));
+                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), anchor - pos);
             }
         }
         if (interiorMirror)
         {
             var pos = new Vector3(eye.x + 0.75f, eye.y + 0.38f, Mathf.Min(max.z - 0.5f, eye.z + 0.65f));
-            // Hangs from the ceiling: find it above and keep the mirror close below it.
-            float up = 0.12f;
-            if (shape.Valid && shape.Raycast(pos, Vector3.up, 2f, out float toCeiling))
-            {
-                if (toCeiling > 0.25f) { pos.y += toCeiling - 0.25f; toCeiling = 0.25f; }
-                up = toCeiling + 0.03f;
-            }
-            Build("Mirror Inside", pos, eye, new Vector3(0f, -0.06f, -1f).normalized, new Vector2(0.42f, 0.12f), new Vector3(0f, up, 0f));
+            // Mounted on the windscreen: a rod forward to the glass (or up to the ceiling).
+            Vector3 arm = new Vector3(0f, 0.15f, 0f);
+            if (shape.Valid && shape.Raycast(pos, Vector3.forward, 1.5f, out float toGlass)) arm = new Vector3(0f, 0f, toGlass + 0.02f);
+            else if (shape.Valid && shape.Raycast(pos, Vector3.up, 1.2f, out float toCeiling)) arm = new Vector3(0f, toCeiling + 0.03f, 0f);
+            Build("Mirror Inside", pos, eye, new Vector3(0f, -0.06f, -1f).normalized, new Vector2(0.42f, 0.12f), arm);
         }
     }
 
