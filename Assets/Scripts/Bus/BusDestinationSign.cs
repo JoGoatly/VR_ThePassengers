@@ -9,8 +9,10 @@ public class BusDestinationSign : MonoBehaviour
 {
     public Color32 ledColor = new Color32(255, 176, 40, 255);
     public float switchSeconds = 4f;
-    [Tooltip("Height of the front display (m)")]
-    public float height = 0.28f;
+    [Tooltip("Area of the bus texture (UV) where the front destination display is painted")]
+    public Rect frontDisplayUV = new Rect(0.034f, 0.147f, 0.088f, 0.014f);
+    [Tooltip("Area of the bus texture (UV) of the window above the rear (rear display)")]
+    public Rect backDisplayUV = new Rect(0.853f, 0.0995f, 0.118f, 0.035f);
 
     PixelCanvas canvas;
     Material material;
@@ -20,15 +22,6 @@ public class BusDestinationSign : MonoBehaviour
 
     void Start()
     {
-        // The real body: the sign sits on the front face, just below the roof edge.
-        var shape = BusShape.Measure(transform);
-        if (!shape.Valid) return;
-        Vector3 min = shape.min, max = shape.max;
-        float halfWidth = (max.x - min.x) * 0.3f;
-        float signY = max.y - height * 0.5f - 0.12f;
-        float frontZ = shape.EndZ(true, signY - height, signY + height, halfWidth);
-        float backZ = shape.EndZ(false, max.y - 0.5f, max.y - 0.05f, halfWidth);
-
         canvas = new PixelCanvas(128, 16);
         var glow = Resources.Load<Material>("PSX/PsxGlow");
         material = new Material(glow != null ? glow : Resources.Load<Material>("PSX/PsxLit")) { name = "Destination Sign" };
@@ -36,24 +29,33 @@ public class BusDestinationSign : MonoBehaviour
         if (material.HasProperty("_MainColor")) material.SetColor("_MainColor", Color.white);
         if (material.HasProperty("_AffineTextureWarpingWeight")) material.SetFloat("_AffineTextureWarpingWeight", 0f);
 
-        float width = (max.x - min.x) * 0.62f;
-        Spawn("Destination Sign Front", new Vector3((min.x + max.x) * 0.5f, signY, frontZ + 0.02f), width, height, true);
-        Spawn("Destination Sign Back", new Vector3((min.x + max.x) * 0.5f, max.y - 0.2f, backZ - 0.02f), width * 0.45f, height * 0.7f, false);
+        // Right on the displays painted on the bus model (where that part of its texture is),
+        // the text reading the same way as the painted one.
+        if (BusShape.FindTextureArea(transform, frontDisplayUV, true, out var c, out var reading, out var up, out var size))
+            Place("Destination Sign Front", c, reading, up, size);
+        else
+            canvas = null;   // no display found: better nothing than a sign floating somewhere
+        if (canvas != null && BusShape.FindTextureArea(transform, backDisplayUV, false, out c, out reading, out up, out size))
+            Place("Destination Sign Back", c, reading, up, size);
     }
 
-    // A glowing quad facing forward (+Z) or backward, text readable from outside.
-    void Spawn(string name, Vector3 localCentre, float w, float h, bool front)
+    // A glowing quad over the painted display, facing outwards, the text upright and readable
+    // from outside (however the painted text is turned in the texture).
+    void Place(string name, Vector3 localCentre, Vector3 reading, Vector3 paintedUp, Vector2 size)
     {
+        Vector3 forward = Vector3.Cross(reading, paintedUp).normalized;
+        if (Vector3.Dot(forward, new Vector3(0f, 0f, localCentre.z)) < 0f) forward = -forward;   // outwards
+        Vector3 up = Vector3.ProjectOnPlane(Vector3.up, forward).normalized;
+        if (up.sqrMagnitude < 0.5f) up = paintedUp;
+        // Wider than high: if the painted text runs up/down the width and height swap.
+        if (Mathf.Abs(Vector3.Dot(reading, up)) > 0.7f) size = new Vector2(size.y, size.x);
         var mb = new MeshKit.Builder();
-        float x = w * 0.5f, y = h * 0.5f;
-        if (front)
-            mb.Quad(new Vector3(x, -y, 0f), new Vector3(x, y, 0f), new Vector3(-x, y, 0f), new Vector3(-x, -y, 0f),
-                    new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
-        else
-            mb.Quad(new Vector3(-x, -y, 0f), new Vector3(-x, y, 0f), new Vector3(x, y, 0f), new Vector3(x, -y, 0f),
-                    new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
+        float x = size.x * 0.5f, y = size.y * 0.5f;
+        mb.Quad(new Vector3(x, -y, 0f), new Vector3(x, y, 0f), new Vector3(-x, y, 0f), new Vector3(-x, -y, 0f),
+                new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
         var go = MeshKit.Spawn(name, transform, mb.ToMesh(name), material, transform.position, transform.rotation, false);
-        go.transform.localPosition = localCentre;
+        go.transform.localPosition = localCentre + forward.normalized * 0.012f;
+        go.transform.localRotation = Quaternion.LookRotation(forward, up);
         go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
     }
 
