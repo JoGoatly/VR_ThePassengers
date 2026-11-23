@@ -20,24 +20,14 @@ public class BusDestinationSign : MonoBehaviour
 
     void Start()
     {
-        // Size of the bus body (without the driver and the camera).
-        var cam = Camera.main;
-        var driver = GetComponentInChildren<DriverBody>();
-        Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
-        foreach (var r in GetComponentsInChildren<Renderer>())
-        {
-            if (driver != null && r.transform.IsChildOf(driver.transform)) continue;
-            if (cam != null && r.transform.IsChildOf(cam.transform)) continue;
-            var b = r.bounds;
-            for (int i = 0; i < 8; i++)
-            {
-                var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
-                var local = transform.InverseTransformPoint(corner);
-                min = Vector3.Min(min, local);
-                max = Vector3.Max(max, local);
-            }
-        }
-        if (float.IsInfinity(min.x)) return;
+        // The real body: the sign sits on the front face, just below the roof edge.
+        var shape = BusShape.Measure(transform);
+        if (!shape.Valid) return;
+        Vector3 min = shape.min, max = shape.max;
+        float halfWidth = (max.x - min.x) * 0.3f;
+        float signY = max.y - height * 0.5f - 0.12f;
+        float frontZ = shape.EndZ(true, signY - height, signY + height, halfWidth);
+        float backZ = shape.EndZ(false, max.y - 0.5f, max.y - 0.05f, halfWidth);
 
         canvas = new PixelCanvas(128, 16);
         var glow = Resources.Load<Material>("PSX/PsxGlow");
@@ -47,8 +37,8 @@ public class BusDestinationSign : MonoBehaviour
         if (material.HasProperty("_AffineTextureWarpingWeight")) material.SetFloat("_AffineTextureWarpingWeight", 0f);
 
         float width = (max.x - min.x) * 0.62f;
-        Spawn("Destination Sign Front", new Vector3((min.x + max.x) * 0.5f, max.y - height * 0.5f - 0.12f, max.z + 0.015f), width, height, true);
-        Spawn("Destination Sign Back", new Vector3((min.x + max.x) * 0.5f, max.y - 0.2f, min.z - 0.015f), width * 0.45f, height * 0.7f, false);
+        Spawn("Destination Sign Front", new Vector3((min.x + max.x) * 0.5f, signY, frontZ + 0.02f), width, height, true);
+        Spawn("Destination Sign Back", new Vector3((min.x + max.x) * 0.5f, max.y - 0.2f, backZ - 0.02f), width * 0.45f, height * 0.7f, false);
     }
 
     // A glowing quad facing forward (+Z) or backward, text readable from outside.
