@@ -49,31 +49,56 @@ public static class Story
                    en = "Timetable of line 13, in red pen:\nEvery stop is crossed out. All but one: \"Endstation\"." },
     };
 
-    // What the title card says before each night.
+    // What the title card says before each night. (Small things that don't quite fit -
+    // the player is the skinwalker in the dead driver's skin from the first night on.)
     public static string DayIntro(int day) => day switch
     {
-        1 => Loc.T("Ihre erste Schicht.", "Your first shift."),
-        2 => Loc.T("Die Leitstelle hat Ihren Lohn überwiesen. Im Postfach wartet eine neue Anweisung.",
-                   "Dispatch has paid your wages. A new instruction is waiting in your mailbox."),
-        3 => Loc.T("Ein Fahrgast von gestern wurde heute als vermisst gemeldet.",
-                   "One of yesterday's passengers was reported missing today."),
-        4 => Loc.T("Horst ist heute nicht zur Arbeit erschienen.", "Horst did not show up for work today."),
-        5 => Loc.T("Die Strecke kommt Ihnen länger vor als gestern. Oder bilden Sie sich das ein?",
-                   "The route feels longer than yesterday. Or are you imagining it?"),
-        6 => Loc.T("Heute Morgen lag ein Ausweis in Ihrem Briefkasten. Ihr Name. Ihr Foto. Status: VERSTORBEN.",
-                   "This morning there was an ID card in your letterbox. Your name. Your photo. Status: DECEASED."),
-        _ => Loc.T("Die letzte Nacht.", "The last night."),
+        1 => Loc.T("Ihre erste Schicht. Der Fahrlehrer hat Ihnen zum Abschied nicht die Hand gegeben.",
+                   "Your first shift. The driving instructor did not shake your hand when you left."),
+        2 => Loc.T("Die Leitstelle hat Ihren Lohn überwiesen. Auf ein Konto, das Sie nicht eröffnet haben.",
+                   "Dispatch has paid your wages. Into an account you never opened."),
+        3 => Loc.T("Ein Fahrgast von gestern wurde heute als vermisst gemeldet. Sie haben trotzdem gut geschlafen. Satt.",
+                   "One of yesterday's passengers was reported missing today. You slept well anyway. Full."),
+        4 => Loc.T("Horst ist heute nicht zur Arbeit erschienen. Ihr Spiegelbild hat heute einen Moment zu spät geblinzelt.",
+                   "Horst did not show up for work today. Your reflection blinked a moment too late today."),
+        5 => Loc.T("Ihre Haut juckt. Sie sitzt nicht mehr richtig. Wie ein Mantel, der jemand anderem gehört.",
+                   "Your skin itches. It does not fit right anymore. Like a coat that belongs to someone else."),
+        6 => Loc.T("Heute Morgen lag ein Ausweis in Ihrem Briefkasten. Ihr Name. Ihr Foto. Status: VERSTORBEN. Seit dem 19.12.",
+                   "This morning there was an ID card in your letterbox. Your name. Your photo. Status: DECEASED. Since 19 Dec."),
+        _ => Loc.T("Die letzte Nacht. Sie fühlen sich heute so... lebendig. So warm.",
+                   "The last night. You feel so... alive today. So warm."),
     };
 
+    // The last night is the 19th: the night the driver was eaten. Whatever happened before,
+    // it ends with the thing in the forest putting on his skin - and on the 20th it applies.
     public static string Ending(bool allDriversFound) => allDriversFound
         ? Loc.T("Sie halten am Depot nicht an.\n\nSie fahren einfach weiter, so wie Jens Keller es geschrieben hat. Der Wald wird dünner. " +
-                "Hinter Ihnen steigt niemand mehr aus, weil niemand mehr da ist.\n\nIm Morgengrauen erreichen Sie eine Stadt, die auf keinem Plan steht. " +
-                "Sie stellen den Bus ab und gehen zu Fuß weiter.\n\nDie Nachtlinie 13 wird am folgenden Montag eingestellt.",
+                "Dann steht etwas auf der Straße. Groß. Dünn. Es hat Ihr Gesicht noch nicht.\n\nNoch nicht.\n\n" +
+                "20. Dezember 1998, 9:00 Uhr. Fahrschule Brandt.\n\"Guten Tag. Danke, dass Sie sich für die Stelle beworben haben. Setzen Sie sich.\"\n" +
+                "Der Bewerber lächelt. Ein bisschen zu breit.",
                 "You do not stop at the depot.\n\nYou just keep driving, the way Jens Keller wrote it. The forest thins out. " +
-                "Behind you nobody gets off anymore, because nobody is there anymore.\n\nAt dawn you reach a town that is on no map. " +
-                "You park the bus and walk on.\n\nNight line 13 is discontinued the following Monday.")
-        : Loc.T("Um 6:00 Uhr halten Sie am Depot. Die Türen öffnen sich.\n\nEin letzter Fahrgast steigt ein. Er zeigt Ihnen seinen Ausweis. " +
-                "Es ist Ihr Name. Es ist Ihr Gesicht.\n\nSCHWARZWÄLDER BOTE, Montag:\n\"Fünfter Fahrer der Nachtlinie 13 vermisst.\"",
-                "At 6:00 AM you stop at the depot. The doors open.\n\nOne last passenger gets on. He shows you his ID. " +
-                "It is your name. It is your face.\n\nBLACK FOREST HERALD, Monday:\n\"Fifth driver of night line 13 missing.\"");
+                "Then something stands on the road. Tall. Thin. It does not have your face yet.\n\nNot yet.\n\n" +
+                "December 20, 1998, 9:00 AM. Brandt driving school.\n\"Good day. Thank you for applying for the job. Have a seat.\"\n" +
+                "The applicant smiles. A little too wide.")
+        : Loc.T("Um 6:00 Uhr halten Sie am Depot. Die Türen öffnen sich.\n\nEin letzter Fahrgast steigt ein. Er zeigt Ihnen keinen Ausweis. " +
+                "Er braucht keinen.\n\nEr braucht Ihren.\n\n" +
+                "20. Dezember 1998, 9:00 Uhr. Fahrschule Brandt.\n\"Guten Tag. Danke, dass Sie sich für die Stelle beworben haben. Setzen Sie sich.\"\n" +
+                "Der Bewerber lächelt. Ein bisschen zu breit.",
+                "At 6:00 AM you stop at the depot. The doors open.\n\nOne last passenger gets on. He does not show you an ID. " +
+                "He does not need one.\n\nHe needs yours.\n\n" +
+                "December 20, 1998, 9:00 AM. Brandt driving school.\n\"Good day. Thank you for applying for the job. Have a seat.\"\n" +
+                "The applicant smiles. A little too wide.");
+
+    // What the driving instructor wrote about the applicant (in his office, in the driving test).
+    public static readonly Note[] InstructorNotes =
+    {
+        new Note { de = "Notizen zum Bewerber, Nachtlinie 13 (20.12., 9:00):\n- Kam zu Fuß. Aus dem Wald.\n- Hände eiskalt. Hat beim Händedruck zu lange festgehalten.\n- Riecht wie eine Leiche.\n- Blinzelt nicht. Ich habe gezählt.",
+                   en = "Notes on the applicant, night line 13 (20 Dec, 9:00):\n- Came on foot. Out of the forest.\n- Hands ice cold. Held on too long when shaking hands.\n- Smells like a corpse.\n- Does not blink. I counted." },
+        new Note { de = "Fax der Verkehrsbetriebe, 20.12., 6:14 Uhr:\n\"Fahrer der Nachtlinie 13 nach der Schicht vom 19.12. nicht zurückgekehrt. Bus leer am Waldfriedhof. Bitte umgehend Ersatz prüfen.\"",
+                   en = "Fax from the transport company, 20 Dec, 6:14 AM:\n\"Driver of night line 13 did not return from the shift of 19 Dec. Bus empty at the Forest Cemetery. Please test a replacement immediately.\"" },
+        new Note { de = "Bewerbungsunterlagen. Das Passfoto ist alt und verblasst.\nDer Mann auf dem Foto sieht dem Bewerber ähnlich. Sehr ähnlich.\nAm Rand, mit Bleistift: \"Ist das nicht der Fahrer, der vermisst wird?\" - wieder ausradiert.",
+                   en = "Application papers. The passport photo is old and faded.\nThe man in the photo looks like the applicant. Very much like him.\nIn the margin, in pencil: \"Isn't that the driver who went missing?\" - erased again." },
+        new Note { de = "Wandkalender, Dezember 1998.\nDer 19. ist rot eingekreist: \"Vollmond\".\nAm 20.: \"Neuer Fahrer, 9 Uhr. Er stand schon um 5 vor der Tür.\"",
+                   en = "Wall calendar, December 1998.\nThe 19th is circled in red: \"Full moon\".\nOn the 20th: \"New driver, 9 AM. He was already standing at the door at 5.\"" },
+    };
 }

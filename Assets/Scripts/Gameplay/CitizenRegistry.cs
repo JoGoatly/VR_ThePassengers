@@ -75,7 +75,18 @@ public class IdCard
 public class CitizenRegistry
 {
     /// <summary>Tonight's date (the evening the shift starts). Night 1 is Friday, 13 November 1998.</summary>
-    public static DateTime Today => new DateTime(1998, 11, 13).AddDays(Progress.Day - 1);
+    // The nights run from Sunday 20 December 1998 on. The last one is Saturday the 19th -
+    // the night before the first. (Whoever reads the dates closely understands who has been
+    // driving the bus all along.)
+    public static DateTime Today => Progress.Day >= Progress.LastDay ? new DateTime(1998, 12, 19) : new DateTime(1998, 12, 20).AddDays(Progress.Day - 1);
+
+    /// <summary>"Sonntag, 20. Dezember 1998" / "Sunday, December 20, 1998".</summary>
+    public static string LongDate(DateTime d)
+    {
+        string[] de = { "Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag" };
+        string[] mde = { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
+        return Loc.T($"{de[(int)d.DayOfWeek]}, {d.Day}. {mde[d.Month - 1]} {d.Year}", d.ToString("dddd, MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture));
+    }
 
     public const string BusDirection = "ENDSTATION";
 

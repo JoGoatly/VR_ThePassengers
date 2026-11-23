@@ -92,8 +92,9 @@ public class Tutorial : MonoBehaviour
 
     void Update()
     {
-        if (!decided && !GameUI.MenuOpen) Begin();
-        if (!Active || GameUI.MenuOpen || bus == null) return;
+        if (!decided && !GameUI.MenuOpen && !OfficeIntro.Running && GameUI.ClosedFrame != Time.frameCount) Begin();
+        if (OfficeIntro.Running) return;
+        if (!Active || GameUI.MenuOpen || bus == null || OfficeIntro.Running) return;
         if (!started)
         {
             started = true;

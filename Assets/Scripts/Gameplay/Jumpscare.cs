@@ -8,7 +8,8 @@ public class Jumpscare : MonoBehaviour
 {
     public static bool Running { get; private set; }
 
-    const float Duration = 0.85f;
+    float duration = 0.85f;
+    bool skinwalker;
 
     Transform model, head, leftArm, rightArm, cam;
     float start;
@@ -22,6 +23,17 @@ public class Jumpscare : MonoBehaviour
         go.AddComponent<Jumpscare>().Begin(characterPrefab, Camera.main.transform);
     }
 
+    /// <summary>The skinwalker: too tall, too thin, grey, with shining eyes - it takes its time.</summary>
+    public static void PlaySkinwalker(GameObject characterPrefab)
+    {
+        if (Running || characterPrefab == null || Camera.main == null) return;
+        var go = new GameObject("Skinwalker");
+        var j = go.AddComponent<Jumpscare>();
+        j.skinwalker = true;
+        j.duration = 1.8f;
+        j.Begin(characterPrefab, Camera.main.transform);
+    }
+
     void Begin(GameObject prefab, Transform camera)
     {
         Running = true;
@@ -33,6 +45,14 @@ public class Jumpscare : MonoBehaviour
         foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
         foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>()) smr.updateWhenOffscreen = true;
         PsxConvert.Apply(model.gameObject);
+        if (skinwalker)
+        {
+            // Stretched, ashen, eyes that catch the light.
+            model.localScale = new Vector3(0.85f, 1.3f, 0.85f);
+            foreach (var r in model.GetComponentsInChildren<Renderer>())
+                foreach (var m in r.materials)
+                    if (m.HasProperty("_MainColor")) m.SetColor("_MainColor", new Color(0.32f, 0.3f, 0.28f));
+        }
         head = Bone("Head");
         leftArm = Bone("LeftArm");
         rightArm = Bone("RightArm");
@@ -43,6 +63,20 @@ public class Jumpscare : MonoBehaviour
         Vector3 headLocal = head != null ? transform.InverseTransformPoint(head.position) : new Vector3(0f, 1.6f, 0f);
         basePos = new Vector3(-headLocal.x, -headLocal.y + 0.02f, 0.42f - headLocal.z);
         model.localPosition = basePos;
+        if (skinwalker && head != null)
+        {
+            var glow = Resources.Load<Material>("PSX/PsxGlow");
+            if (glow != null)
+            {
+                var eyeMat = new Material(glow);
+                if (eyeMat.HasProperty("_MainColor")) eyeMat.SetColor("_MainColor", new Color(1f, 0.95f, 0.7f));
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    var eye = MeshKit.Spawn("Eye", head, MeshKit.Box(new Vector3(0.025f, 0.012f, 0.01f), 1f), eyeMat, head.position, head.rotation, false);
+                    eye.transform.position = head.position + head.up * 0.08f + model.forward * 0.1f + model.right * 0.035f * s;
+                }
+            }
+        }
 
         // Lit red from below, the rest dark.
         var light = new GameObject("Scare Light").AddComponent<Light>();
@@ -60,9 +94,9 @@ public class Jumpscare : MonoBehaviour
     void LateUpdate()
     {
         float t = Time.time - start;
-        if (t > Duration || cam == null) { Destroy(gameObject); return; }
+        if (t > duration || cam == null) { Destroy(gameObject); return; }
         // Lunges in, shakes, arms reaching for you.
-        float lunge = Mathf.Clamp01(t / 0.12f);
+        float lunge = skinwalker ? Mathf.Clamp01((t - 0.9f) / 0.15f) : Mathf.Clamp01(t / 0.12f);   // the skinwalker stands still first
         Vector3 shake = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f) * 0.025f;
         model.localPosition = basePos + new Vector3(0f, 0f, (1f - lunge) * 0.6f) + shake;
         if (head != null) head.localRotation *= Quaternion.Euler(Random.Range(-12f, 12f), Random.Range(-15f, 15f), Random.Range(-20f, 20f));
