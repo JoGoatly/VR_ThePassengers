@@ -15,7 +15,7 @@ public class BusDestinationSign : MonoBehaviour
     public Rect backDisplayUV = new Rect(0.853f, 0.0995f, 0.118f, 0.035f);
 
     PixelCanvas canvas;
-    Material material;
+    Material material, housing;
     int shown = -1;
     float nextSwitch;
     string[] texts;
@@ -57,6 +57,18 @@ public class BusDestinationSign : MonoBehaviour
         go.transform.localPosition = localCentre + forward.normalized * 0.012f;
         go.transform.localRotation = Quaternion.LookRotation(forward, up);
         go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        // A dark housing from the glass back into the body: no gap to look through.
+        if (housing == null)
+        {
+            housing = new Material(Resources.Load<Material>("PSX/PsxLit")) { name = "Destination Sign Housing" };
+            if (housing.HasProperty("_MainColor")) housing.SetColor("_MainColor", new Color(0.05f, 0.035f, 0.02f));
+        }
+        const float depth = 0.05f;
+        var box = MeshKit.Spawn(name + " Housing", go.transform, MeshKit.Box(new Vector3(size.x + 0.02f, size.y + 0.02f, depth), 1f), housing, go.transform.position, go.transform.rotation, false);
+        box.transform.localPosition = new Vector3(0f, -(size.y + 0.02f) * 0.5f, -depth * 0.5f - 0.002f);   // box pivot: bottom centre
+        box.transform.localRotation = Quaternion.identity;
+        box.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
     }
 
     void Update()
