@@ -355,8 +355,13 @@ public class BusController : MonoBehaviour
         float maxSpeed = Mathf.Max(1f, Mathf.Min(maxSpeedKmh, speedLimitKmh)) / 3.6f;
         float maxReverse = maxReverseSpeedKmh / 3.6f;
 
-        // Use the real velocity so collisions slow the bus down.
-        float speed = Vector3.Dot(rb.linearVelocity, transform.forward);
+        // The bus keeps its own speed. The real velocity may only lower it (a collision slows the
+        // bus down) - never raise it: in tight turns the sideways motion leaked into the forward
+        // direction every step and the bus shot up to 80 km/h within a second.
+        Vector3 flatFwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        float measured = Vector3.Dot(rb.linearVelocity, flatFwd);
+        float speed = Speed;
+        if (Mathf.Abs(measured) < Mathf.Abs(speed)) speed = measured;
 
         float accel = 0f;
         if (handbrakeInput)
