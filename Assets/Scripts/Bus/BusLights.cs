@@ -19,9 +19,11 @@ public class BusLights : MonoBehaviour
     public Color headlightColor = new Color(1f, 0.93f, 0.78f);
     // HPSXRP lights fall off with 1/distance² and the colour is gamma-linearised (intensity^2.2),
     // so a headlight needs a high intensity to still light the road 15-30 m ahead.
-    public float lowRange = 38f, lowAngle = 75f, lowIntensity = 12f, lowPitch = 10f;
+    public float lowRange = 38f, lowAngle = 75f, lowIntensity = 12f, lowPitch = 12f;
     [Tooltip("The low beam's light sits this far above/ahead of the lamp (unseen): from up there the road right in front of the bus is not blown out while the road further away still gets light")]
-    public Vector3 lowLightOffset = new Vector3(0f, 1.8f, 0.25f);
+    public Vector3 lowLightOffset = new Vector3(0f, 1.2f, 0.2f);
+    [Header("Near light (soft pools right in front of the lamps)")]
+    public float nearRange = 9f, nearAngle = 115f, nearIntensity = 2.4f, nearPitch = 40f;
     [Tooltip("Headlight strength in daylight (the driving test)")]
     public float daylightFactor = 0.35f;
     [Header("High beam")]
@@ -63,13 +65,15 @@ public class BusLights : MonoBehaviour
         set { powerCut = value; Apply(); }
     }
 
-    Light left, right, farLeft, farRight, tail, cabin;
+    Light left, right, farLeft, farRight, nearLeft, nearRight, tail, cabin;
     FogVolume fog;
     PrecisionVolume precision;
     GameObject glowLeft, glowRight;
 
     void Awake()
     {
+        nearLeft = CreateSpot("Near Light L", headlightLeft + new Vector3(0f, 0.15f, 0.25f));
+        nearRight = CreateSpot("Near Light R", headlightRight + new Vector3(0f, 0.15f, 0.25f));
         left = CreateSpot("Headlight L", headlightLeft + lowLightOffset);
         right = CreateSpot("Headlight R", headlightRight + lowLightOffset);
         farLeft = CreateSpot("High Beam L", headlightLeft + new Vector3(0f, 1.4f, farLightAhead));
@@ -211,6 +215,15 @@ public class BusLights : MonoBehaviour
             l.spotAngle = lowAngle;
             l.intensity = lowIntensity * day;
             l.transform.localRotation = Quaternion.Euler(lowPitch, 0f, 0f);
+        }
+        // Soft light pools on the road right at the bumper.
+        foreach (var l in new[] { nearLeft, nearRight })
+        {
+            l.enabled = on;
+            l.range = nearRange;
+            l.spotAngle = nearAngle;
+            l.intensity = nearIntensity * day;
+            l.transform.localRotation = Quaternion.Euler(nearPitch, 0f, 0f);
         }
         foreach (var l in new[] { farLeft, farRight })
         {
