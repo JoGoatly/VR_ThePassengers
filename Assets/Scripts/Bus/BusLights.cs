@@ -19,7 +19,11 @@ public class BusLights : MonoBehaviour
     public Color headlightColor = new Color(1f, 0.93f, 0.78f);
     // HPSXRP lights fall off with 1/distance² and the colour is gamma-linearised (intensity^2.2),
     // so a headlight needs a high intensity to still light the road 15-30 m ahead.
-    public float lowRange = 35f, lowAngle = 75f, lowIntensity = 15f, lowPitch = 6f;
+    public float lowRange = 38f, lowAngle = 75f, lowIntensity = 12f, lowPitch = 10f;
+    [Tooltip("The low beam's light sits this far above/ahead of the lamp (unseen): from up there the road right in front of the bus is not blown out while the road further away still gets light")]
+    public Vector3 lowLightOffset = new Vector3(0f, 1.8f, 0.25f);
+    [Tooltip("Headlight strength in daylight (the driving test)")]
+    public float daylightFactor = 0.35f;
     [Header("High beam")]
     [Tooltip("Extra far lights placed this far ahead of the bus, so the road far away gets light without blinding the near field")]
     public float farLightAhead = 12f;
@@ -66,8 +70,8 @@ public class BusLights : MonoBehaviour
 
     void Awake()
     {
-        left = CreateSpot("Headlight L", headlightLeft);
-        right = CreateSpot("Headlight R", headlightRight);
+        left = CreateSpot("Headlight L", headlightLeft + lowLightOffset);
+        right = CreateSpot("Headlight R", headlightRight + lowLightOffset);
         farLeft = CreateSpot("High Beam L", headlightLeft + new Vector3(0f, 1.4f, farLightAhead));
         farRight = CreateSpot("High Beam R", headlightRight + new Vector3(0f, 1.4f, farLightAhead));
         glowLeft = CreateGlow(headlightLeft);
@@ -128,8 +132,11 @@ public class BusLights : MonoBehaviour
         }
     }
 
+    bool appliedDaylight;
+
     void LateUpdate()
     {
+        if (Daylight != appliedDaylight) Apply();
         // Xenon upgrade sees further; the fog gets thicker every night.
         float high = Progress.Owns("highbeam2") ? fogHigh + 10f : fogHigh;
         float targetFog = (mode == Mode.HighBeam ? high : mode == Mode.LowBeam ? fogLow : fogOff) * (1f - 0.25f * DayManager.Dread);
@@ -193,6 +200,8 @@ public class BusLights : MonoBehaviour
         if (left == null) return;
         bool on = mode != Mode.Off && !powerCut && !Exhausted;
         bool high = mode == Mode.HighBeam && !powerCut && !Exhausted;
+        float day = Daylight ? daylightFactor : 1f;
+        appliedDaylight = Daylight;
         if (cabin != null) cabin.enabled = !powerCut;
         // Low beam lights the near field in both modes; high beam adds far lights.
         foreach (var l in new[] { left, right })
@@ -200,7 +209,7 @@ public class BusLights : MonoBehaviour
             l.enabled = on;
             l.range = lowRange;
             l.spotAngle = lowAngle;
-            l.intensity = lowIntensity;
+            l.intensity = lowIntensity * day;
             l.transform.localRotation = Quaternion.Euler(lowPitch, 0f, 0f);
         }
         foreach (var l in new[] { farLeft, farRight })
@@ -209,7 +218,7 @@ public class BusLights : MonoBehaviour
             bool xenon = Progress.Owns("highbeam2");
             l.range = xenon ? farRange * 1.45f : farRange;
             l.spotAngle = farAngle;
-            l.intensity = xenon ? farIntensity * 1.3f : farIntensity;
+            l.intensity = (xenon ? farIntensity * 1.3f : farIntensity) * day;
             l.transform.localRotation = Quaternion.Euler(farPitch, 0f, 0f);
         }
         if (glowLeft) glowLeft.SetActive(on);
