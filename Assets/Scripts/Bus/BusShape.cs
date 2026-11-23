@@ -9,6 +9,7 @@ public class BusShape
 {
     public Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
     readonly System.Collections.Generic.List<Vector3> points = new System.Collections.Generic.List<Vector3>();
+    readonly System.Collections.Generic.List<Vector3> triangles = new System.Collections.Generic.List<Vector3>();   // 3 per triangle, bus space
 
     public bool Valid => !float.IsInfinity(min.x);
 
@@ -27,15 +28,44 @@ public class BusShape
             var mesh = mf.sharedMesh;
             if (mesh == null || !mesh.isReadable || mesh.vertexCount > 200000) continue;
             var toBus = bus.worldToLocalMatrix * mf.transform.localToWorldMatrix;
-            foreach (var v in mesh.vertices)
+            var verts = mesh.vertices;
+            for (int i = 0; i < verts.Length; i++)
             {
-                var p = toBus.MultiplyPoint3x4(v);
+                var p = toBus.MultiplyPoint3x4(verts[i]);
+                verts[i] = p;
                 shape.points.Add(p);
                 shape.min = Vector3.Min(shape.min, p);
                 shape.max = Vector3.Max(shape.max, p);
             }
+            foreach (int t in mesh.triangles) shape.triangles.Add(verts[t]);
         }
         return shape;
+    }
+
+    /// <summary>Casts a ray (bus space) against the body's triangles, both sides. Returns the distance to the first hit.</summary>
+    public bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, out float distance)
+    {
+        distance = maxDistance;
+        bool hit = false;
+        direction.Normalize();
+        for (int i = 0; i + 2 < triangles.Count; i += 3)
+        {
+            // Möller-Trumbore
+            Vector3 a = triangles[i], e1 = triangles[i + 1] - a, e2 = triangles[i + 2] - a;
+            Vector3 pv = Vector3.Cross(direction, e2);
+            float det = Vector3.Dot(e1, pv);
+            if (Mathf.Abs(det) < 1e-8f) continue;
+            float inv = 1f / det;
+            Vector3 tv = origin - a;
+            float u = Vector3.Dot(tv, pv) * inv;
+            if (u < 0f || u > 1f) continue;
+            Vector3 qv = Vector3.Cross(tv, e1);
+            float v = Vector3.Dot(direction, qv) * inv;
+            if (v < 0f || u + v > 1f) continue;
+            float t = Vector3.Dot(e2, qv) * inv;
+            if (t > 0.001f && t < distance) { distance = t; hit = true; }
+        }
+        return hit;
     }
 
     /// <summary>The frontmost (or rearmost) point of the body around the middle, between two heights.</summary>
