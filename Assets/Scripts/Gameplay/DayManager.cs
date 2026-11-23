@@ -157,7 +157,10 @@ public class DayManager : MonoBehaviour
         {
             bool good = escaped && Progress.Data.drivers.Count >= Story.Drivers.Length;
             Progress.DeleteSave();
-            if (menu != null) menu.ShowEnding(good);
+            // The night of the 19th ends with the thing from the forest (it then wears his skin).
+            var creature = game != null && game.malePassengers != null && game.malePassengers.Length > 0 ? game.malePassengers[0] : null;
+            if (creature != null) SkinwalkerEnding.Play(menu, good, creature);
+            else if (menu != null) menu.ShowEnding(good);
             return;
         }
         Progress.AddMoney(wage);

@@ -21,10 +21,14 @@ public class MainMenu : MonoBehaviour
     static bool languageChosen;
     static bool showDayTitleOnLoad;   // set when the next night starts after a shift
     static bool showIntroOnLoad;      // set when the driving test is passed: newspaper, then night 1
-    static bool playOnLoad;           // the driving test scene starts right away
+    static bool playOnLoad;           // the driving test scene starts right away (with the office conversation)
 
     public const string MainScene = "SampleScene";
     public const string TutorialScene = "Tutorial";
+    /// <summary>The main menu lives in the driving test scene: its background is the driving school door.</summary>
+    public const string MenuScene = TutorialScene;
+
+    static bool LiveBackground => OfficeIntro.Instance != null;
     int lastWage;
     bool goodEnding;
 
@@ -63,6 +67,7 @@ public class MainMenu : MonoBehaviour
 
         if (playOnLoad || (skipInEditor && Application.isEditor))
         {
+            startIntro = playOnLoad;
             playOnLoad = false;
             screen = Page.Playing;
             SetPaused(false);
@@ -72,6 +77,17 @@ public class MainMenu : MonoBehaviour
         showDayTitleOnLoad = false;
         showIntroOnLoad = false;
         SetPaused(true);
+    }
+
+    bool startIntro;
+
+    void Start()
+    {
+        if (LiveBackground)
+        {
+            if (startIntro) OfficeIntro.Instance.Play();
+            else OfficeIntro.Instance.ShowMenuShot();
+        }
     }
 
     void OnDestroy()
@@ -232,13 +248,13 @@ public class MainMenu : MonoBehaviour
     public void AfterTutorial()
     {
         showIntroOnLoad = true;
-        BackToMainMenu();
+        LoadScene(MainScene);
     }
 
     void NextNight()
     {
         showDayTitleOnLoad = true;
-        BackToMainMenu();
+        LoadScene(MainScene);
     }
 
     void BackToMainMenu()
@@ -248,7 +264,7 @@ public class MainMenu : MonoBehaviour
         GameUI.MenuOpen = false;
         GameUI.DialogueOpen = false;
         GameUI.TerminalTyping = false;
-        LoadScene(MainScene);
+        LoadScene(MenuScene);
     }
 
     static void LoadScene(string scene)
@@ -271,7 +287,16 @@ public class MainMenu : MonoBehaviour
         float w = RetroGUI.VirtualWidth;
         // The pause menu shows the (frozen) game dimmed behind it.
         bool overGame = settingsReturn == Page.Paused && (screen == Page.Paused || screen == Page.Settings || screen == Page.Keys);
-        RetroGUI.Fill(new Rect(0, 0, w, RetroGUI.VirtualHeight), overGame ? new Color(0f, 0f, 0f, 0.78f) : Bg);
+        float h = RetroGUI.VirtualHeight;
+        bool live = LiveBackground && !overGame && (screen == Page.Menu || screen == Page.Language || screen == Page.Settings || screen == Page.Keys);
+        if (live && screen == Page.Menu)
+        {
+            // The live scene shows through; a dark fade on the left behind the title and buttons.
+            for (int i = 0; i < 24; i++)
+                RetroGUI.Fill(new Rect(i * 12f, 0, 12f, h), new Color(0f, 0f, 0f, Mathf.Lerp(0.82f, 0f, i / 23f)));
+        }
+        else if (live) RetroGUI.Fill(new Rect(0, 0, w, h), new Color(0f, 0f, 0f, 0.6f));
+        else RetroGUI.Fill(new Rect(0, 0, w, h), overGame ? new Color(0f, 0f, 0f, 0.78f) : Bg);
 
         switch (screen)
         {
@@ -341,16 +366,27 @@ public class MainMenu : MonoBehaviour
 
     void DrawMenu(float w)
     {
-        Label(new Rect(0, 60, w, 30), "THE PASSENGERS", title, TitleCol, TextAnchor.MiddleCenter);
-        Label(new Rect(0, 92, w, 14), Loc.T("Nachtlinie 13", "Night Line 13"), text, new Color(0.6f, 0.2f, 0.15f), TextAnchor.MiddleCenter);
+        // Title and buttons on the left, the game (driving school door) on the right.
+        Label(new Rect(34, 58, 300, 30), "THE PASSENGERS", title, TitleCol, TextAnchor.MiddleLeft);
+        Label(new Rect(36, 90, 300, 14), Loc.T("Nachtlinie 13", "Night Line 13"), text, new Color(0.6f, 0.2f, 0.15f), TextAnchor.MiddleLeft);
 
-        float bx = w / 2 - 80, y = 124;
+        float bx = 36, y = 124;
         if (Progress.HasSave && Progress.Data.day > 1)
         {
-            if (MenuButton(new Rect(bx, y, 160, 22), Loc.T($"WEITER (NACHT {Progress.Day})", $"CONTINUE (NIGHT {Progress.Day})"))) Show(Page.DayTitle);
+            if (MenuButton(new Rect(bx, y, 160, 22), Loc.T($"WEITER (NACHT {Progress.Day})", $"CONTINUE (NIGHT {Progress.Day})")))
+            {
+                if (LiveBackground) { showDayTitleOnLoad = true; LoadScene(MainScene); }
+                else Show(Page.DayTitle);
+            }
             y += 30;
         }
-        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("NEUES SPIEL", "NEW GAME"))) { Progress.NewGame(); StartGame(); }   // the driving test first, the newspaper after it
+        if (MenuButton(new Rect(bx, y, 160, 22), Loc.T("NEUES SPIEL", "NEW GAME")))
+        {
+            // The driving test first (through the office door), the newspaper after it.
+            Progress.NewGame();
+            if (LiveBackground) { Show(Page.Playing); SetPaused(false); OfficeIntro.Instance.Play(); }
+            else StartGame();
+        }
         if (MenuButton(new Rect(bx, y + 30, 160, 22), Loc.T("EINSTELLUNGEN", "SETTINGS"))) { settingsReturn = Page.Menu; Show(Page.Settings); }
         if (MenuButton(new Rect(bx, y + 60, 160, 22), Loc.T("SPRACHE", "LANGUAGE"))) Show(Page.Language);
         if (MenuButton(new Rect(bx, y + 90, 160, 22), Loc.T("BEENDEN", "QUIT"))) Application.Quit();
@@ -433,7 +469,8 @@ public class MainMenu : MonoBehaviour
         float t = Time.unscaledTime - screenSince;
         float a = Mathf.Clamp01(t / 1.2f);
         Label(new Rect(0, 110, w, 40), Loc.T($"NACHT {Progress.Day}", $"NIGHT {Progress.Day}"), big, new Color(0.75f, 0.1f, 0.08f, a), TextAnchor.MiddleCenter);
-        Label(new Rect(w / 2 - 200, 160, 400, 60), Story.DayIntro(Progress.Day), text, new Color(0.75f, 0.72f, 0.65f, a), TextAnchor.UpperCenter, true);
+        Label(new Rect(0, 146, w, 12), CitizenRegistry.LongDate(CitizenRegistry.Today), small, new Color(0.6f, 0.58f, 0.52f, a), TextAnchor.MiddleCenter);
+        Label(new Rect(w / 2 - 200, 164, 400, 60), Story.DayIntro(Progress.Day), text, new Color(0.75f, 0.72f, 0.65f, a), TextAnchor.UpperCenter, true);
         Label(new Rect(0, 230, w, 14), Loc.T($"{DayManager.QuotaFor(Progress.Day)} Fahrgäste  -  Konto: {Progress.Money} €",
             $"{DayManager.QuotaFor(Progress.Day)} passengers  -  account: {Progress.Money} €"), small, Grey, TextAnchor.MiddleCenter);
         if (t > 1.5f)
@@ -502,7 +539,7 @@ public class MainMenu : MonoBehaviour
         float x = page.x + 12, pw = page.width - 24;
         Label(new Rect(x, page.y + 8, pw, 26), Loc.T("SCHWARZWÄLDER BOTE", "BLACK FOREST HERALD"), big, Ink, TextAnchor.MiddleCenter);
         RetroGUI.Fill(new Rect(x, page.y + 36, pw, 1), Ink);
-        Label(new Rect(x, page.y + 38, pw, 10), Loc.T("Freitag, 13. November 1998", "Friday, November 13, 1998"), small, Faded, TextAnchor.MiddleLeft);
+        Label(new Rect(x, page.y + 38, pw, 10), Loc.T("Sonntag, 20. Dezember 1998", "Sunday, December 20, 1998"), small, Faded, TextAnchor.MiddleLeft);
         Label(new Rect(x, page.y + 38, pw, 10), Loc.T("Preis: 1,20 DM", "Price: 1.20 DM"), small, Faded, TextAnchor.MiddleRight);
         RetroGUI.Fill(new Rect(x, page.y + 49, pw, 1), Ink);
 
@@ -510,13 +547,13 @@ public class MainMenu : MonoBehaviour
         float colW = pw * 0.56f;
         Label(new Rect(x, page.y + 54, colW, 30), Loc.T("Nachtbus-Fahrer weiterhin vermisst", "Night bus driver still missing"), title, Ink, TextAnchor.UpperLeft, true);
         Label(new Rect(x, page.y + 90, colW, 200), Loc.T(
-            "Seit Dienstag fehlt von dem Fahrer der Nachtlinie 13 jede Spur. Sein Bus wurde am frühen Morgen an der Haltestelle " +
-            "Waldfriedhof gefunden - Türen offen, Scheinwerfer an, Motor aus.\n\n" +
+            "Seit der Nacht zum Sonntag fehlt von dem Fahrer der Nachtlinie 13 jede Spur. Sein Bus wurde am frühen Morgen an der Haltestelle " +
+            "Waldfriedhof gefunden - Türen offen, Scheinwerfer an, Motor aus. Auf dem Fahrersitz lagen seine Brille und sein Ehering.\n\n" +
             "Es ist bereits der vierte Fahrer der Linie, der in diesem Jahr seinen Dienst nicht beendet. Die Verkehrsbetriebe " +
             "sprechen von \"persönlichen Gründen\". Die Polizei bittet Zeugen, sich zu melden.\n\n" +
             "Anwohner berichten von Gestalten am Straßenrand.",
-            "Since Tuesday there has been no trace of the driver of night line 13. His bus was found early in the morning at the " +
-            "Forest Cemetery stop - doors open, headlights on, engine off.\n\n" +
+            "Since Saturday night there has been no trace of the driver of night line 13. His bus was found early in the morning at the " +
+            "Forest Cemetery stop - doors open, headlights on, engine off. On the driver's seat lay his glasses and his wedding ring.\n\n" +
             "He is already the fourth driver of the line this year who did not finish his shift. The transport company speaks of " +
             "\"personal reasons\". The police are asking witnesses to come forward.\n\n" +
             "Residents report figures standing at the roadside."),
