@@ -73,6 +73,14 @@ public class MainMenu : MonoBehaviour
             SetPaused(false);
             return;
         }
+        // The main menu belongs to the driving school (its door is the background): started in the
+        // main scene without a night to begin (e.g. Play in the editor), go there.
+        if (!showIntroOnLoad && !showDayTitleOnLoad && SceneManager.GetActiveScene().name == MainScene)
+        {
+            redirectToMenu = true;
+            SetPaused(true);   // nothing of the night starts in the one frame before the switch
+            return;
+        }
         Show(showIntroOnLoad ? Page.Intro : showDayTitleOnLoad ? Page.DayTitle : languageChosen ? Page.Menu : Page.Language);
         showDayTitleOnLoad = false;
         showIntroOnLoad = false;
@@ -81,8 +89,11 @@ public class MainMenu : MonoBehaviour
 
     bool startIntro;
 
+    bool redirectToMenu;
+
     void Start()
     {
+        if (redirectToMenu) { LoadScene(MenuScene); return; }
         if (LiveBackground)
         {
             if (startIntro) OfficeIntro.Instance.Play();
