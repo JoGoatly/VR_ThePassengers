@@ -25,9 +25,9 @@ public class Tutorial : MonoBehaviour
     public CourseStop stopA, stopB;
     public AudioClip stepSound, passSound;
     [Tooltip("Acceleration factor on the practice ground (1 = like at night)")]
-    public float learnerAcceleration = 0.45f;
+    public float learnerAcceleration = 1f;
     [Tooltip("Top speed on the practice ground (km/h) - only in the driving test")]
-    public float learnerSpeedLimit = 20f;
+    public float learnerSpeedLimit = 40f;
     [Tooltip("Seconds for the last task (to stop B)")]
     public float timedLimit = 90f;
 
@@ -122,7 +122,7 @@ public class Tutorial : MonoBehaviour
                 if (since > 10f || (since > 1f && GameKeys.Held(GameAction.Forward))) Next(Step.Throttle);
                 break;
             case Step.Throttle:
-                if (speed > learnerSpeedLimit - 3f) Next(Step.Brake);   // (nearly) top speed reached
+                if (speed > 20f) Next(Step.Brake);
                 break;
             case Step.Brake:
                 // Steering is learned right away on the way to the slalom (follow the arrows).
@@ -343,12 +343,12 @@ public class Tutorial : MonoBehaviour
         {
             Step.Welcome => Loc.T($"Guten Tag. Brandt, Ihr Prüfer. Bevor Sie die Nachtlinie 13 fahren, zeigen Sie mir hier auf dem Übungsplatz, dass Sie einen Bus fahren können.\nUmsehen mit der Maus. Los geht's: Gas geben mit {K(GameAction.Forward)}.",
                                   $"Good day. Brandt, your examiner. Before you drive night line 13, show me here on the practice ground that you can drive a bus.\nLook around with the mouse. Let's go: accelerate with {K(GameAction.Forward)}."),
-            Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie bis zur Höchstgeschwindigkeit (20 km/h).", $"Accelerate: hold {K(GameAction.Forward)}. Drive up to the top speed (20 km/h)."),
+            Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie über 20 km/h (höchstens 40).", $"Accelerate: hold {K(GameAction.Forward)}. Go faster than 20 km/h (40 at most)."),
             Step.Brake => Loc.T($"Und jetzt bremsen: {K(GameAction.Backward)}. Bis der Bus fast steht.", $"Now brake: {K(GameAction.Backward)}. Until the bus almost stands still."),
             Step.Slalom => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie den grünen Pfeilen und fahren Sie durch die GRÜN leuchtenden Kegel-Tore. Tor {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}",
                                  $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the green arrows and drive through the GREEN glowing cone gates. Gate {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}"),
-            Step.Lights => Loc.T($"Licht: {K(GameAction.Lights)} wechselt zwischen Abblend- und Fernlicht. Das Fernlicht leert einen Akku (Balken am Tacho) - ist er leer, geht ALLES Licht aus, bis er wieder voll ist. Zweimal umschalten.",
-                                 $"Lights: {K(GameAction.Lights)} switches between low and high beam. The high beam drains a battery (bar on the speedometer) - when it's empty ALL lights go out until it's full again. Switch twice."),
+            Step.Lights => Loc.T($"Lenken mit {K(GameAction.SteerLeft)}/{K(GameAction.SteerRight)} - folgen Sie den grünen Pfeilen. Licht: {K(GameAction.Lights)} wechselt zwischen Abblend- und Fernlicht. Das Fernlicht leert einen Akku (Balken am Tacho) - ist er leer, geht ALLES Licht aus, bis er wieder voll ist. Zweimal umschalten.",
+                                 $"Steer with {K(GameAction.SteerLeft)}/{K(GameAction.SteerRight)} - follow the green arrows. Lights: {K(GameAction.Lights)} switches between low and high beam. The high beam drains a battery (bar on the speedometer) - when it's empty ALL lights go out until it's full again. Switch twice."),
             Step.StopAtStop => Loc.T("Halten Sie an Haltestelle A (gelbes Feld, das Licht darüber). Die vordere Tür soll genau am H-Schild stehen, nah am Bordstein, gerade.",
                                      "Stop at bus stop A (yellow box, the light above it). The front door should be right at the H sign, close to the kerb, straight."),
             Step.OpenDoors => Loc.T($"Türen öffnen: {K(GameAction.Doors)}. Wie genau Sie halten, bringt Ihnen später Geld - oder kostet welches.", $"Open the doors: {K(GameAction.Doors)}. How precisely you stop will earn you money later - or cost you."),
@@ -357,8 +357,8 @@ public class Tutorial : MonoBehaviour
             Step.SitDown => Loc.T($"Gehen Sie zurück zum Fahrersitz und setzen Sie sich: {K(GameAction.Interact)}.", $"Go back to the driver's seat and sit down: {K(GameAction.Interact)}."),
             Step.Timed => Loc.T("Letzte Aufgabe: Nachts haben Sie für jede Haltestelle ein Zeitlimit - zu spät heißt gefeuert. Fahren Sie zu Haltestelle B und öffnen Sie dort rechtzeitig die Türen.",
                                 "Last task: at night you have a time limit for every stop - too late means fired. Drive to bus stop B and open the doors there in time."),
-            _ => Loc.T($"Bestanden. Glückwunsch. Umgefahrene Kegel: {ConesHit}.\nIhre erste Schicht beginnt heute Nacht, 23:40 Uhr. Viel Glück. Sie werden es brauchen.",
-                       $"Passed. Congratulations. Cones knocked over: {ConesHit}.\nYour first shift starts tonight, 11:40 PM. Good luck. You'll need it."),
+            _ => Loc.T($"Bestanden. Glückwunsch.\nIhre erste Schicht beginnt heute Nacht, 23:40 Uhr. Viel Glück. Sie werden es brauchen.",
+                       $"Passed. Congratulations.\nYour first shift starts tonight, 11:40 PM. Good luck. You'll need it."),
         };
     }
 
