@@ -20,23 +20,10 @@ public class BusMirrors : MonoBehaviour
     {
         var cam = Camera.main;
         if (cam == null) return;
-        // Size of the bus body from its renderers (the mirrors sit right on it).
-        Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
-        var driver = GetComponentInChildren<DriverBody>();
-        foreach (var r in GetComponentsInChildren<Renderer>())
-        {
-            if (driver != null && r.transform.IsChildOf(driver.transform)) continue;
-            if (r.transform.IsChildOf(cam.transform)) continue;
-            var b = r.bounds;
-            for (int i = 0; i < 8; i++)
-            {
-                var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
-                var local = transform.InverseTransformPoint(corner);
-                min = Vector3.Min(min, local);
-                max = Vector3.Max(max, local);
-            }
-        }
-        if (float.IsInfinity(min.x)) { min = new Vector3(-1.25f, 0f, -6f); max = new Vector3(1.25f, 3.2f, 6f); }
+        // The real body (mesh vertices): the mirrors sit right on it.
+        var shape = BusShape.Measure(transform);
+        Vector3 min = shape.Valid ? shape.min : new Vector3(-1.25f, 0f, -6f);
+        Vector3 max = shape.Valid ? shape.max : new Vector3(1.25f, 3.2f, 6f);
         Vector3 eye = transform.InverseTransformPoint(cam.transform.position);
 
         var lit = Resources.Load<Material>("PSX/PsxLit");
@@ -48,7 +35,11 @@ public class BusMirrors : MonoBehaviour
             for (int side = -1; side <= 1; side += 2)
             {
                 // Just outside the body, on a short bracket.
-                var pos = new Vector3(side < 0 ? min.x - 0.17f : max.x + 0.17f, eye.y + 0.05f, max.z - 0.35f);
+                float y = eye.y + 0.05f;
+                float frontZ = shape.Valid ? shape.EndZ(true, y - 0.3f, y + 0.3f, (max.x - min.x) * 0.5f) : max.z;
+                float z = frontZ - 0.35f;
+                float bodyX = shape.Valid ? shape.SideX(side, z, y, 0.5f) : (side < 0 ? min.x : max.x);
+                var pos = new Vector3(bodyX + side * 0.17f, y, z);
                 // Looking back along the bus side, a little outwards.
                 var look = new Vector3(side * 0.07f, -0.04f, -1f).normalized;
                 Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), new Vector3(-side * 0.17f, 0f, 0f));
