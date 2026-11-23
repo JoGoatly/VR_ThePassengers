@@ -26,7 +26,8 @@ public class Tutorial : MonoBehaviour
     public AudioClip stepSound, passSound;
     [Tooltip("Acceleration factor on the practice ground (1 = like at night)")]
     public float learnerAcceleration = 0.45f;
-    public float learnerSpeedLimit = 35f;
+    [Tooltip("Top speed on the practice ground (km/h) - only in the driving test")]
+    public float learnerSpeedLimit = 20f;
     [Tooltip("Seconds for the last task (to stop B)")]
     public float timedLimit = 90f;
 
@@ -121,7 +122,7 @@ public class Tutorial : MonoBehaviour
                 if (since > 10f || (since > 1f && GameKeys.Held(GameAction.Forward))) Next(Step.Throttle);
                 break;
             case Step.Throttle:
-                if (speed > 20f) Next(Step.Brake);
+                if (speed > learnerSpeedLimit - 3f) Next(Step.Brake);   // (nearly) top speed reached
                 break;
             case Step.Brake:
                 // Steering is learned right away on the way to the slalom (follow the arrows).
@@ -342,7 +343,7 @@ public class Tutorial : MonoBehaviour
         {
             Step.Welcome => Loc.T($"Guten Tag. Brandt, Ihr Prüfer. Bevor Sie die Nachtlinie 13 fahren, zeigen Sie mir hier auf dem Übungsplatz, dass Sie einen Bus fahren können.\nUmsehen mit der Maus. Los geht's: Gas geben mit {K(GameAction.Forward)}.",
                                   $"Good day. Brandt, your examiner. Before you drive night line 13, show me here on the practice ground that you can drive a bus.\nLook around with the mouse. Let's go: accelerate with {K(GameAction.Forward)}."),
-            Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie über 20 km/h.", $"Accelerate: hold {K(GameAction.Forward)}. Go faster than 20 km/h."),
+            Step.Throttle => Loc.T($"Gas geben: {K(GameAction.Forward)} gedrückt halten. Fahren Sie bis zur Höchstgeschwindigkeit (20 km/h).", $"Accelerate: hold {K(GameAction.Forward)}. Drive up to the top speed (20 km/h)."),
             Step.Brake => Loc.T($"Und jetzt bremsen: {K(GameAction.Backward)}. Bis der Bus fast steht.", $"Now brake: {K(GameAction.Backward)}. Until the bus almost stands still."),
             Step.Slalom => Loc.T($"Lenken mit {K(GameAction.SteerLeft)} und {K(GameAction.SteerRight)}. Folgen Sie den grünen Pfeilen und fahren Sie durch die GRÜN leuchtenden Kegel-Tore. Tor {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}",
                                  $"Steer with {K(GameAction.SteerLeft)} and {K(GameAction.SteerRight)}. Follow the green arrows and drive through the GREEN glowing cone gates. Gate {Mathf.Min(nextGate + 1, gates.Length)}/{gates.Length}"),

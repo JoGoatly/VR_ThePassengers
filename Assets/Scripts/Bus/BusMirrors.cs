@@ -20,15 +20,23 @@ public class BusMirrors : MonoBehaviour
     {
         var cam = Camera.main;
         if (cam == null) return;
-        // Bus size from its collider (BusController makes one), eye from the driver camera.
-        var box = GetComponentInChildren<BoxCollider>();
-        Vector3 min, max;
-        if (box != null && box.transform == transform)
+        // Size of the bus body from its renderers (the mirrors sit right on it).
+        Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+        var driver = GetComponentInChildren<DriverBody>();
+        foreach (var r in GetComponentsInChildren<Renderer>())
         {
-            min = box.center - box.size * 0.5f;
-            max = box.center + box.size * 0.5f;
+            if (driver != null && r.transform.IsChildOf(driver.transform)) continue;
+            if (r.transform.IsChildOf(cam.transform)) continue;
+            var b = r.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                var local = transform.InverseTransformPoint(corner);
+                min = Vector3.Min(min, local);
+                max = Vector3.Max(max, local);
+            }
         }
-        else { min = new Vector3(-1.25f, 0f, -6f); max = new Vector3(1.25f, 3.2f, 6f); }
+        if (float.IsInfinity(min.x)) { min = new Vector3(-1.25f, 0f, -6f); max = new Vector3(1.25f, 3.2f, 6f); }
         Vector3 eye = transform.InverseTransformPoint(cam.transform.position);
 
         var lit = Resources.Load<Material>("PSX/PsxLit");
@@ -39,10 +47,11 @@ public class BusMirrors : MonoBehaviour
         {
             for (int side = -1; side <= 1; side += 2)
             {
-                var pos = new Vector3(side * (max.x + 0.28f), eye.y + 0.05f, max.z - 0.45f);
+                // Just outside the body, on a short bracket.
+                var pos = new Vector3(side < 0 ? min.x - 0.17f : max.x + 0.17f, eye.y + 0.05f, max.z - 0.35f);
                 // Looking back along the bus side, a little outwards.
                 var look = new Vector3(side * 0.07f, -0.04f, -1f).normalized;
-                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.26f, 0.4f), new Vector3(-side * 0.28f, 0f, 0.05f));
+                Build(side < 0 ? "Mirror Left" : "Mirror Right", pos, eye, look, new Vector2(0.24f, 0.36f), new Vector3(-side * 0.17f, 0f, 0f));
             }
         }
         if (interiorMirror)
@@ -94,11 +103,11 @@ public class BusMirrors : MonoBehaviour
         glass.transform.localPosition = new Vector3(0f, 0f, -0.012f);
 
         // Housing and bracket.
-        var back = MeshKit.Spawn("Housing", root, MeshKit.Box(new Vector3(size.x + 0.05f, size.y + 0.05f, 0.06f), 1f), housing, root.position, root.rotation, false);
-        back.transform.localPosition = new Vector3(0f, -(size.y + 0.05f) * 0.5f, 0.02f);
+        var back = MeshKit.Spawn("Housing", root, MeshKit.Box(new Vector3(size.x + 0.03f, size.y + 0.03f, 0.035f), 1f), housing, root.position, root.rotation, false);
+        back.transform.localPosition = new Vector3(0f, -(size.y + 0.03f) * 0.5f, 0.012f);
         if (arm.sqrMagnitude > 0.0001f)
         {
-            var bracket = MeshKit.Spawn("Bracket", transform, MeshKit.Box(new Vector3(0.04f, 0.04f, arm.magnitude), 1f), housing, transform.position, transform.rotation, false);
+            var bracket = MeshKit.Spawn("Bracket", transform, MeshKit.Box(new Vector3(0.03f, 0.03f, arm.magnitude), 1f), housing, transform.position, transform.rotation, false);
             bracket.transform.localPosition = pos + arm * 0.5f - new Vector3(0f, 0.02f, 0f);
             bracket.transform.localRotation = Quaternion.LookRotation(arm.normalized, Mathf.Abs(arm.normalized.y) > 0.9f ? Vector3.forward : Vector3.up);
         }
